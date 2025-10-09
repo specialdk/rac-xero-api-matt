@@ -4410,10 +4410,21 @@
         if (!connectedCompany) return;
 
         const orgName = getOrganizationName(connectedCompany.tenantName);
+
+        // ✅ ADD THIS LINE
+        const periodDates = getPeriodDates(selectedPeriod);
+
+        // ✅ ADD THIS DEBUG LINE TOO
+        console.log(
+          `P&L Tab - Loading for ${orgName}: selectedPeriod=${selectedPeriod}, date=${periodDates.periodEnd}, months=${periodDates.months}`
+        );
+
         const response = await fetchWithErrorHandling(
           "/api/profit-loss-summary",
           {
             organizationName: orgName,
+            date: periodDates.periodEnd, // ✅ ADD THIS
+            periodMonths: periodDates.months, // ✅ ADD THIS
           }
         );
 
@@ -4720,6 +4731,9 @@
           accounts: { revenue: {}, expenses: {} },
         };
 
+        // ✅ ADD THIS LINE
+  const periodDates = getPeriodDates(selectedPeriod);
+
         // Load data from each selected company
         for (const tenantId of activeCompanyFilters) {
           const connectedCompany = connectedCompanies.find(
@@ -4732,6 +4746,8 @@
             "/api/profit-loss-summary",
             {
               organizationName: orgName,
+              date: periodDates.periodEnd,      // ✅ ADD THIS
+        periodMonths: periodDates.months, // ✅ ADD THIS
             }
           );
 
