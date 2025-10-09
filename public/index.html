@@ -2063,7 +2063,10 @@
         tenantId
       ) {
         const periodDates = getPeriodDates(selectedPeriod); // ADD THIS LINE
-
+        // ADD THIS DEBUG LINE
+        console.log(
+          `Loading P&L for ${orgName}: selectedPeriod=${selectedPeriod}, date=${periodDates.periodEnd}, months=${periodDates.months}`
+        );
         const [cashResponse, ratiosResponse, profitLossResponse] =
           await Promise.all([
             fetchWithErrorHandling("/api/cash-position", {
