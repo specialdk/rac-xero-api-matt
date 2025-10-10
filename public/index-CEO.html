@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAC CEO Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #f5f5f5;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* HEADER */
+      .header {
+        background: #2c3e50;
+        color: white;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .header h1 {
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .header-controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+      }
+
+      .company-selector {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 4px;
+        background: white;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 500;
+      }
+
+      .nav-button {
+        padding: 8px 16px;
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      .nav-button:hover {
+        background: #2980b9;
+      }
+
+      /* DASHBOARD CONTAINER */
+      .dashboard-container {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      /* 3x3 GRID LAYOUT */
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, minmax(250px, auto));
+        gap: 15px;
+        height: 100%;
+        max-width: 1800px;
+        margin: 0 auto;
+      }
+
+      /* PANEL STYLING */
+      .panel {
+        background: white;
+        border: 2px solid #2c3e50;
+        border-radius: 8px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel h2 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #ecf0f1;
+        padding-bottom: 8px;
+      }
+
+      .panel-content {
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      /* P&L SECTION - TWO COLUMNS */
+      .pl-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        height: 100%;
+      }
+
+      .pl-column {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .pl-column h3 {
+        font-size: 13px;
+        font-weight: 600;
+        color: #34495e;
+        margin-bottom: 10px;
+        padding: 8px;
+        background: #ecf0f1;
+        border-radius: 4px;
+      }
+
+      .budget-section {
+        background: #fffacd;
+        padding: 10px;
+        border-radius: 4px;
+      }
+
+      .budget-section h3 {
+        background: transparent;
+        margin-bottom: 8px;
+      }
+
+      /* METRIC ROWS */
+      .metric-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #ecf0f1;
+        font-size: 13px;
+      }
+
+      .metric-row:last-child {
+        border-bottom: none;
+      }
+
+      .metric-label {
+        color: #34495e;
+      }
+
+      .metric-value {
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      /* INVENTORY TABLE */
+      .inventory-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .inventory-table th {
+        background: #ecf0f1;
+        padding: 8px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #bdc3c7;
+      }
+
+      .inventory-table td {
+        padding: 8px;
+        border-bottom: 1px solid #ecf0f1;
+      }
+
+      .inventory-table .plan-value {
+        color: #3498db;
+        font-weight: 600;
+      }
+
+      /* TOP CUSTOMERS */
+      .customer-list {
+        list-style: none;
+      }
+
+      .customer-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #ecf0f1;
+        font-size: 13px;
+      }
+
+      .customer-name {
+        color: #34495e;
+        font-weight: 500;
+      }
+
+      .customer-value {
+        color: #27ae60;
+        font-weight: 600;
+      }
+
+      /* AGED DEBTORS BAR */
+      .aged-bar-container {
+        margin-top: 20px;
+      }
+
+      .aged-legend {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 10px;
+        font-size: 12px;
+      }
+
+      .aged-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .aged-color-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+      }
+
+      .aged-bar {
+        display: flex;
+        height: 60px;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid #bdc3c7;
+      }
+
+      .aged-segment {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 11px;
+        transition: opacity 0.2s;
+      }
+
+      .aged-segment:hover {
+        opacity: 0.8;
+      }
+
+      .aged-30 {
+        background: #95a5a6;
+      }
+      .aged-60 {
+        background: #f39c12;
+      }
+      .aged-90 {
+        background: #e67e22;
+      }
+      .aged-120 {
+        background: #e74c3c;
+      }
+
+      /* CASH CHART PLACEHOLDER */
+      .cash-chart {
+        margin-top: 15px;
+        height: 150px;
+        border: 1px solid #ecf0f1;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #95a5a6;
+        font-size: 13px;
+      }
+
+      /* LOADING STATE */
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100px;
+        color: #95a5a6;
+        font-size: 14px;
+      }
+
+      .loading-spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HEADER -->
+    <div class="header">
+      <h1>RAC CEO Dashboard - Strategic Overview</h1>
+      <div class="header-controls">
+        <select class="company-selector" id="companySelector">
+          <option value="">Select Company...</option>
+          <option value="Mining">Mining</option>
+          <option value="Aboriginal Corporation">Aboriginal Corporation</option>
+          <option value="Enterprises">Enterprises</option>
+          <option value="Property">Property Management</option>
+          <option value="Ngarrkuwuy">Ngarrkuwuy Developments</option>
+          <option value="Invest">Rirratjingu Invest</option>
+          <option value="Marrin">Marrin Square</option>
+        </select>
+        <a href="index.html" class="nav-button">← Classic Dashboard</a>
+      </div>
+    </div>
+
+    <!-- DASHBOARD GRID -->
+    <div class="dashboard-container">
+      <div class="dashboard-grid">
+        <!-- ROW 1, COL 1: P&L SECTION -->
+        <div class="panel">
+          <h2>P&L Section</h2>
+          <div class="panel-content">
+            <div class="pl-layout">
+              <!-- Left Column: Balance Sheet Summary -->
+              <div class="pl-column">
+                <h3>Balance Sheet</h3>
+                <div class="metric-row">
+                  <span class="metric-label">Current Assets</span>
+                  <span class="metric-value" id="currentAssets">-</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Non Current Assets</span>
+                  <span class="metric-value" id="nonCurrentAssets">-</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Current Liabilities</span>
+                  <span class="metric-value" id="currentLiabilities">-</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Non Current Liabilities</span>
+                  <span class="metric-value" id="nonCurrentLiabilities">-</span>
+                </div>
+                <div
+                  class="metric-row"
+                  style="
+                    margin-top: 15px;
+                    padding-top: 15px;
+                    border-top: 2px solid #2c3e50;
+                  "
+                >
+                  <span class="metric-label">COGS</span>
+                  <span class="metric-value" id="cogs">-</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Overheads</span>
+                  <span class="metric-value" id="overheads">-</span>
+                </div>
+              </div>
+
+              <!-- Right Column: Actual v Budget -->
+              <div class="pl-column">
+                <div class="budget-section">
+                  <h3>Actual v Budget</h3>
+                  <div style="margin-bottom: 15px">
+                    <div
+                      style="
+                        font-weight: 600;
+                        margin-bottom: 5px;
+                        font-size: 12px;
+                      "
+                    >
+                      Revenue
+                    </div>
+                    <div class="metric-row">
+                      <span class="metric-label">Budget</span>
+                      <span class="metric-value" id="revenueBudget">-</span>
+                    </div>
+                    <div class="metric-row">
+                      <span class="metric-label">Actual</span>
+                      <span class="metric-value" id="revenueActual">-</span>
+                    </div>
+                    <div class="metric-row">
+                      <span class="metric-label">Variance</span>
+                      <span class="metric-value" id="revenueVariance">-</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div
+                      style="
+                        font-weight: 600;
+                        margin-bottom: 5px;
+                        font-size: 12px;
+                      "
+                    >
+                      Expenses
+                    </div>
+                    <div class="metric-row">
+                      <span class="metric-label">Budget</span>
+                      <span class="metric-value" id="expensesBudget">-</span>
+                    </div>
+                    <div class="metric-row">
+                      <span class="metric-label">Actual</span>
+                      <span class="metric-value" id="expensesActual">-</span>
+                    </div>
+                    <div class="metric-row">
+                      <span class="metric-label">Variance</span>
+                      <span class="metric-value" id="expensesVariance">-</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 1, COL 2: INVENTORY & FORECASTING -->
+        <div class="panel">
+          <h2>Inventory & Forecasting</h2>
+          <div class="panel-content">
+            <table class="inventory-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Cur.STK</th>
+                  <th>Q2 Plan</th>
+                  <th>Q3/4 Plan</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1. Sand</td>
+                  <td>250</td>
+                  <td>200</td>
+                  <td class="plan-value">800</td>
+                </tr>
+                <tr>
+                  <td>2. 20mm</td>
+                  <td>580</td>
+                  <td>200</td>
+                  <td class="plan-value">200</td>
+                </tr>
+                <tr>
+                  <td>3. 40mm</td>
+                  <td>150</td>
+                  <td>0</td>
+                  <td class="plan-value">500</td>
+                </tr>
+                <tr>
+                  <td>4. 80mm</td>
+                  <td>50</td>
+                  <td>50</td>
+                  <td class="plan-value">300</td>
+                </tr>
+                <tr>
+                  <td>5. RBase</td>
+                  <td>0</td>
+                  <td>100</td>
+                  <td class="plan-value">100</td>
+                </tr>
+                <tr>
+                  <td>6. XYZ</td>
+                  <td>0</td>
+                  <td>150</td>
+                  <td class="plan-value">300</td>
+                </tr>
+              </tbody>
+            </table>
+            <div
+              style="
+                margin-top: 15px;
+                font-size: 11px;
+                color: #7f8c8d;
+                font-style: italic;
+              "
+            >
+              Note: Inventory data requires manual input or separate system
+              integration
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 1, COL 3: OPEN ORDERS -->
+        <div class="panel">
+          <h2>Open Orders</h2>
+          <div class="panel-content">
+            <table class="inventory-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Q1</th>
+                  <th>Q2</th>
+                  <th>Q3</th>
+                  <th>Q4</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1. Sand</td>
+                  <td>80</td>
+                  <td>100</td>
+                  <td class="plan-value">800</td>
+                  <td class="plan-value">300</td>
+                </tr>
+                <tr>
+                  <td>2. 20mm</td>
+                  <td>200</td>
+                  <td>250</td>
+                  <td class="plan-value">500</td>
+                  <td class="plan-value">100</td>
+                </tr>
+                <tr>
+                  <td>3. 40mm</td>
+                  <td>50</td>
+                  <td>0</td>
+                  <td class="plan-value">200</td>
+                  <td class="plan-value">200</td>
+                </tr>
+                <tr>
+                  <td>4. 80mm</td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td class="plan-value">100</td>
+                  <td class="plan-value">100</td>
+                </tr>
+                <tr>
+                  <td>5. RBase</td>
+                  <td>0</td>
+                  <td>80</td>
+                  <td class="plan-value">100</td>
+                  <td class="plan-value">100</td>
+                </tr>
+                <tr>
+                  <td>6. XYZ</td>
+                  <td>0</td>
+                  <td>120</td>
+                  <td class="plan-value">0</td>
+                  <td class="plan-value">300</td>
+                </tr>
+              </tbody>
+            </table>
+            <div
+              style="
+                margin-top: 15px;
+                font-size: 11px;
+                color: #7f8c8d;
+                font-style: italic;
+              "
+            >
+              Note: Order pipeline data requires CRM or order management
+              integration
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 2, COL 1: BALANCE -->
+        <div class="panel">
+          <h2>Balance</h2>
+          <div class="panel-content">
+            <div class="metric-row" style="padding: 15px 0">
+              <span class="metric-label" style="font-size: 14px"
+                >Total Assets</span
+              >
+              <span
+                class="metric-value"
+                style="font-size: 18px; color: #27ae60"
+                id="totalAssets"
+                >-</span
+              >
+            </div>
+            <div class="metric-row" style="padding: 15px 0">
+              <span class="metric-label" style="font-size: 14px"
+                >Total Liabilities</span
+              >
+              <span
+                class="metric-value"
+                style="font-size: 18px; color: #e74c3c"
+                id="totalLiabilities"
+                >-</span
+              >
+            </div>
+            <div class="metric-row" style="padding: 15px 0">
+              <span class="metric-label" style="font-size: 14px"
+                >Total Equity</span
+              >
+              <span
+                class="metric-value"
+                style="font-size: 18px; color: #3498db"
+                id="totalEquity"
+                >-</span
+              >
+            </div>
+            <div
+              style="
+                margin-top: 20px;
+                padding: 15px;
+                background: #ecf0f1;
+                border-radius: 4px;
+                font-size: 12px;
+                color: #7f8c8d;
+              "
+            >
+              Visual balance strength chart placeholder (gauge or bar
+              comparison)
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 2, COL 2: TOP X CUSTOMERS -->
+        <div class="panel">
+          <h2>Top X Customers</h2>
+          <div class="panel-content">
+            <div style="margin-bottom: 10px; font-size: 11px; color: #7f8c8d">
+              FY25/26
+            </div>
+            <ul class="customer-list" id="topCustomers">
+              <li class="customer-item">
+                <span class="customer-name">1. Customer A</span>
+                <span class="customer-value">$250,182</span>
+              </li>
+              <li class="customer-item">
+                <span class="customer-name">2. Customer B</span>
+                <span class="customer-value">$133,156</span>
+              </li>
+              <li class="customer-item">
+                <span class="customer-name">3. Customer Z</span>
+                <span class="customer-value">$87,405</span>
+              </li>
+              <li class="customer-item">
+                <span class="customer-name">4. Customer M</span>
+                <span class="customer-value">$81,002</span>
+              </li>
+              <li class="customer-item">
+                <span class="customer-name">5. Customer E</span>
+                <span class="customer-value">$66,983</span>
+              </li>
+            </ul>
+            <div
+              style="
+                margin-top: 15px;
+                font-size: 11px;
+                color: #7f8c8d;
+                font-style: italic;
+              "
+            >
+              Note: Will populate from Aged Receivables API
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 2, COL 3: AGED DEBTORS -->
+        <div class="panel">
+          <h2>Aged Debtors</h2>
+          <div class="panel-content">
+            <div class="aged-bar-container">
+              <div class="aged-legend">
+                <div class="aged-legend-item">
+                  <div class="aged-color-box aged-30"></div>
+                  <span>30 Days</span>
+                </div>
+                <div class="aged-legend-item">
+                  <div class="aged-color-box aged-60"></div>
+                  <span>60 Days</span>
+                </div>
+                <div class="aged-legend-item">
+                  <div class="aged-color-box aged-90"></div>
+                  <span>90 Days</span>
+                </div>
+                <div class="aged-legend-item">
+                  <div class="aged-color-box aged-120"></div>
+                  <span>120+ Days</span>
+                </div>
+              </div>
+              <div class="aged-bar" id="agedBar">
+                <div class="aged-segment aged-30" style="flex: 3">30%</div>
+                <div class="aged-segment aged-60" style="flex: 2">20%</div>
+                <div class="aged-segment aged-90" style="flex: 2">20%</div>
+                <div class="aged-segment aged-120" style="flex: 3">30%</div>
+              </div>
+              <div style="margin-top: 15px; font-size: 13px">
+                <div class="metric-row">
+                  <span class="metric-label">Total Outstanding</span>
+                  <span class="metric-value" id="totalOutstanding">-</span>
+                </div>
+                <div class="metric-row">
+                  <span class="metric-label">Critical (90+ days)</span>
+                  <span
+                    class="metric-value"
+                    style="color: #e74c3c"
+                    id="criticalOutstanding"
+                    >-</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 3, COL 1: RATIOS -->
+        <div class="panel">
+          <h2>Financial Ratios</h2>
+          <div class="panel-content">
+            <div class="metric-row">
+              <span class="metric-label">Current Ratio</span>
+              <span class="metric-value" id="currentRatio">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Gross Margin %</span>
+              <span class="metric-value" id="grossMargin">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Net Profit Margin %</span>
+              <span class="metric-value" id="netMargin">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Debt to Equity</span>
+              <span class="metric-value" id="debtToEquity">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Return on Assets %</span>
+              <span class="metric-value" id="roa">-</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Debtor Days</span>
+              <span class="metric-value" id="debtorDays">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 3, COL 2: CASH -->
+        <div class="panel">
+          <h2>Cash Position</h2>
+          <div class="panel-content">
+            <div class="metric-row" style="padding: 15px 0">
+              <span class="metric-label" style="font-size: 14px"
+                >Current Cash</span
+              >
+              <span
+                class="metric-value"
+                style="font-size: 20px; color: #27ae60"
+                id="currentCash"
+                >-</span
+              >
+            </div>
+            <div class="cash-chart">
+              Cash Trend Chart (Jul-Jun)<br />
+              <small>Line chart with vertical red line at current month</small>
+            </div>
+            <div
+              style="
+                margin-top: 15px;
+                font-size: 11px;
+                color: #7f8c8d;
+                font-style: italic;
+              "
+            >
+              Note: Chart requires historical cash position data
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 3, COL 3: OPTIONAL / FUTURE -->
+        <div class="panel" style="background: #fafafa; border-style: dashed">
+          <h2>Future Panel</h2>
+          <div
+            class="panel-content"
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #95a5a6;
+            "
+          >
+            <div style="text-align: center">
+              <div style="font-size: 48px; margin-bottom: 10px">+</div>
+              <div style="font-size: 13px">Optional future visualization</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE =
+        "https://rac-xero-api-matt-production.up.railway.app/api";
+      let selectedCompany = "";
+
+      // Company name to organization mapping
+      const companyMap = {
+        Mining: "Rirratjingu Mining Pty Ltd 7168",
+        "Aboriginal Corporation": "Rirratjingu Aboriginal Corporation 8538",
+        Enterprises: "Rirratjingu Enterprises Pty Ltd",
+        Property:
+          "Rirratjingu Property Management & Maintenance Services Pty Ltd",
+        Ngarrkuwuy: "Ngarrkuwuy Developments Pty Ltd",
+        Invest: "Rirratjingu Invest P/L ATF Miliditjpi Trust",
+        Marrin: "Marrin Square Developments Pty Ltd",
+      };
+
+      // Company selector change handler
+      document
+        .getElementById("companySelector")
+        .addEventListener("change", function (e) {
+          selectedCompany = e.target.value;
+          if (selectedCompany) {
+            loadDashboardData();
+          }
+        });
+
+      // Format currency
+      function formatCurrency(amount) {
+        if (amount === null || amount === undefined || isNaN(amount))
+          return "-";
+        return "$" + Math.round(amount).toLocaleString();
+      }
+
+      // Format percentage
+      function formatPercent(value) {
+        if (value === null || value === undefined || isNaN(value)) return "-";
+        return value.toFixed(1) + "%";
+      }
+
+      // Load all dashboard data
+      async function loadDashboardData() {
+        const orgName = companyMap[selectedCompany];
+        if (!orgName) return;
+
+        try {
+          // Load Trial Balance (for Balance Sheet section)
+          await loadTrialBalance(orgName);
+
+          // Load P&L Summary (for P&L section)
+          await loadProfitLoss(orgName);
+
+          // Load Budget Data
+          await loadBudgetData(orgName);
+
+          // Load Cash Position
+          await loadCashPosition(orgName);
+
+          // Load Aged Receivables
+          await loadAgedReceivables(orgName);
+
+          // Load Financial Ratios
+          await loadFinancialRatios(orgName);
+        } catch (error) {
+          console.error("Error loading dashboard data:", error);
+          alert("Error loading data. Check console for details.");
+        }
+      }
+
+      // Load Trial Balance
+      async function loadTrialBalance(orgName) {
+        const response = await fetch(`${API_BASE}/trial-balance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ organizationName: orgName }),
+        });
+
+        const data = await response.json();
+
+        // Update Balance Sheet section
+        document.getElementById("currentAssets").textContent = formatCurrency(
+          data.totals?.totalAssets || 0
+        );
+        document.getElementById("nonCurrentAssets").textContent = "-"; // Need to separate
+        document.getElementById("currentLiabilities").textContent =
+          formatCurrency(data.totals?.totalLiabilities || 0);
+        document.getElementById("nonCurrentLiabilities").textContent = "-"; // Need to separate
+
+        // Update Balance panel
+        document.getElementById("totalAssets").textContent = formatCurrency(
+          data.totals?.totalAssets || 0
+        );
+        document.getElementById("totalLiabilities").textContent =
+          formatCurrency(data.totals?.totalLiabilities || 0);
+        document.getElementById("totalEquity").textContent = formatCurrency(
+          data.totals?.totalEquity || 0
+        );
+      }
+
+      // Load Profit & Loss
+      async function loadProfitLoss(orgName) {
+        const response = await fetch(`${API_BASE}/profit-loss-summary`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            organizationName: orgName,
+            periodMonths: 3, // Current quarter
+          }),
+        });
+
+        const data = await response.json();
+
+        // Update COGS and Overheads
+        document.getElementById("cogs").textContent = formatCurrency(
+          data.cogs || 0
+        );
+        document.getElementById("overheads").textContent = formatCurrency(
+          data.operatingExpenses || 0
+        );
+
+        // Update actual values for budget comparison
+        document.getElementById("revenueActual").textContent = formatCurrency(
+          data.totalRevenue || 0
+        );
+        document.getElementById("expensesActual").textContent = formatCurrency(
+          data.totalExpenses || 0
+        );
+      }
+
+      // Load Budget Data
+      async function loadBudgetData(orgName) {
+        // Determine current quarter
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        let quarter;
+        if (month >= 7 && month <= 9) quarter = "Q1";
+        else if (month >= 10 && month <= 12) quarter = "Q2";
+        else if (month >= 1 && month <= 3) quarter = "Q3";
+        else quarter = "Q4";
+
+        try {
+          const response = await fetch(`${API_BASE}/budget-summary`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              organizationName: orgName,
+              quarter: quarter,
+              fiscalYear: "FY26",
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.budget) {
+            document.getElementById("revenueBudget").textContent =
+              formatCurrency(data.budget.revenue || 0);
+            document.getElementById("expensesBudget").textContent =
+              formatCurrency(data.budget.operatingExpenses || 0);
+
+            // Calculate variance (will need actual values from P&L)
+            // This is a simplified version
+            const revenueActual =
+              parseFloat(
+                document
+                  .getElementById("revenueActual")
+                  .textContent.replace(/[$,]/g, "")
+              ) || 0;
+            const expensesActual =
+              parseFloat(
+                document
+                  .getElementById("expensesActual")
+                  .textContent.replace(/[$,]/g, "")
+              ) || 0;
+
+            const revenueVariance = revenueActual - (data.budget.revenue || 0);
+            const expensesVariance =
+              expensesActual - (data.budget.operatingExpenses || 0);
+
+            document.getElementById("revenueVariance").textContent =
+              formatCurrency(revenueVariance);
+            document.getElementById("expensesVariance").textContent =
+              formatCurrency(expensesVariance);
+
+            // Color code variance
+            document.getElementById("revenueVariance").style.color =
+              revenueVariance >= 0 ? "#27ae60" : "#e74c3c";
+            document.getElementById("expensesVariance").style.color =
+              expensesVariance <= 0 ? "#27ae60" : "#e74c3c";
+          }
+        } catch (error) {
+          console.error("Error loading budget:", error);
+        }
+      }
+
+      // Load Cash Position
+      async function loadCashPosition(orgName) {
+        const response = await fetch(`${API_BASE}/cash-position`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ organizationName: orgName }),
+        });
+
+        const data = await response.json();
+
+        document.getElementById("currentCash").textContent = formatCurrency(
+          data.totalCash || 0
+        );
+      }
+
+      // Load Aged Receivables
+      async function loadAgedReceivables(orgName) {
+        const response = await fetch(`${API_BASE}/aged-receivables`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ organizationName: orgName }),
+        });
+
+        const data = await response.json();
+
+        // Update totals
+        document.getElementById("totalOutstanding").textContent =
+          formatCurrency(data.total || 0);
+
+        // Calculate critical amount (90+ days)
+        const critical = (data.aged90 || 0) + (data.aged120Plus || 0);
+        document.getElementById("criticalOutstanding").textContent =
+          formatCurrency(critical);
+
+        // Update aged bar proportions
+        const total = data.total || 1;
+        const aged30Pct = ((data.aged30 || 0) / total) * 100;
+        const aged60Pct = ((data.aged60 || 0) / total) * 100;
+        const aged90Pct = ((data.aged90 || 0) / total) * 100;
+        const aged120Pct = ((data.aged120Plus || 0) / total) * 100;
+
+        const agedBar = document.getElementById("agedBar");
+        agedBar.innerHTML = `
+        <div class="aged-segment aged-30" style="flex: ${aged30Pct};">${Math.round(
+          aged30Pct
+        )}%</div>
+        <div class="aged-segment aged-60" style="flex: ${aged60Pct};">${Math.round(
+          aged60Pct
+        )}%</div>
+        <div class="aged-segment aged-90" style="flex: ${aged90Pct};">${Math.round(
+          aged90Pct
+        )}%</div>
+        <div class="aged-segment aged-120" style="flex: ${aged120Pct};">${Math.round(
+          aged120Pct
+        )}%</div>
+      `;
+      }
+
+      // Load Financial Ratios
+      async function loadFinancialRatios(orgName) {
+        const response = await fetch(`${API_BASE}/financial-ratios`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ organizationName: orgName }),
+        });
+
+        const data = await response.json();
+
+        document.getElementById("currentRatio").textContent =
+          data.currentRatio?.toFixed(2) || "-";
+        document.getElementById("grossMargin").textContent = formatPercent(
+          data.grossMarginPercent
+        );
+        document.getElementById("netMargin").textContent = formatPercent(
+          data.netProfitMarginPercent
+        );
+        document.getElementById("debtToEquity").textContent =
+          data.debtToEquityRatio?.toFixed(2) || "-";
+        document.getElementById("roa").textContent = formatPercent(
+          data.returnOnAssets
+        );
+        document.getElementById("debtorDays").textContent =
+          Math.round(data.debtorDays || 0) + " days";
+      }
+
+      // Initialize
+      console.log("CEO Dashboard Ready");
+      console.log("Select a company from the dropdown to load data");
+    </script>
+  </body>
+</html>

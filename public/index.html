@@ -776,6 +776,10 @@
             <span class="status-indicator balanced" id="dashboardStatus"></span>
             Financial Dashboard - Live Data
 
+            <button onclick="window.location.href='index-CEO.html'">
+              View CEO Dashboard
+            </button>
+
             <!-- Company filter in header -->
             <div
               style="
@@ -4732,7 +4736,7 @@
         };
 
         // ✅ ADD THIS LINE
-  const periodDates = getPeriodDates(selectedPeriod);
+        const periodDates = getPeriodDates(selectedPeriod);
 
         // Load data from each selected company
         for (const tenantId of activeCompanyFilters) {
@@ -4746,8 +4750,8 @@
             "/api/profit-loss-summary",
             {
               organizationName: orgName,
-              date: periodDates.periodEnd,      // ✅ ADD THIS
-        periodMonths: periodDates.months, // ✅ ADD THIS
+              date: periodDates.periodEnd, // ✅ ADD THIS
+              periodMonths: periodDates.months, // ✅ ADD THIS
             }
           );
 
