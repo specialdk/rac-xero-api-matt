@@ -1453,7 +1453,7 @@ app.post("/api/invoices-detail", async (req, res) => {
     let whereClause = [];
 
     if (dateFrom) {
-      // Xero expects: DateTime(2025,10,01)
+      // Xero expects: DateTime(2025,10,01) with COMMAS
       const [year, month, day] = dateFrom.split("T")[0].split("-");
       whereClause.push(`Date >= DateTime(${year},${month},${day})`);
     }
@@ -1469,59 +1469,31 @@ app.post("/api/invoices-detail", async (req, res) => {
 
     console.log(`Fetching invoices for ${tokenData.tenantName}`);
     console.log(`Date range: ${dateFrom || "any"} to ${dateTo || "any"}`);
-    console.log(`Filter: ${where || "none"}`);
+    console.log(`WHERE clause: ${where || "none"}`);
 
-    // PAGINATION: Fetch all pages of invoices
-    let allInvoices = [];
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      console.log(`Fetching page ${page}...`);
-
-      const response = await xero.accountingApi.getInvoices(
-        actualTenantId,
-        null, // modifiedAfter
-        where, // where clause
-        null, // order
-        null, // IDs
-        null, // invoice numbers
-        null, // contact IDs
-        null, // statuses
-        page, // current page
-        true // includeArchived
-      );
-
-      const pageInvoices = response.body.invoices || [];
-      allInvoices = allInvoices.concat(pageInvoices);
-
-      console.log(
-        `Page ${page}: ${pageInvoices.length} invoices (Total so far: ${allInvoices.length})`
-      );
-
-      // Xero returns 100 invoices per page max
-      // If we get less than 100, we're on the last page
-      if (pageInvoices.length < 100) {
-        hasMore = false;
-      } else {
-        page++;
-        // Safety limit to prevent infinite loops
-        if (page > 100) {
-          console.log("⚠️ Reached page limit of 100");
-          hasMore = false;
-        }
-      }
-    }
-
-    console.log(
-      `✅ Fetched ${allInvoices.length} total invoices across ${page} pages`
+    // Get invoices with line items
+    const response = await xero.accountingApi.getInvoices(
+      actualTenantId,
+      null, // modifiedAfter
+      where, // where clause with proper date format
+      "Date DESC", // order by date descending (newest first)
+      null, // IDs
+      null, // invoice numbers
+      null, // contact IDs
+      null, // statuses
+      1, // page - REQUIRED for line items!
+      true // includeArchived
     );
 
+    const invoices = response.body.invoices || [];
+
+    console.log(`✅ Fetched ${invoices.length} invoices with line items`);
+
     // Format response with line items
-    const detailedInvoices = allInvoices.map((inv) => ({
+    const detailedInvoices = invoices.map((inv) => ({
       invoiceID: inv.invoiceID,
       invoiceNumber: inv.invoiceNumber,
-      type: inv.type, // ACCREC or ACCPAY
+      type: inv.type,
       contact: {
         contactID: inv.contact?.contactID,
         name: inv.contact?.name,
@@ -1536,7 +1508,6 @@ app.post("/api/invoices-detail", async (req, res) => {
       amountDue: parseFloat(inv.amountDue || 0),
       amountPaid: parseFloat(inv.amountPaid || 0),
       currencyCode: inv.currencyCode,
-      // LINE ITEMS - This is what you need for inventory analysis
       lineItems: (inv.lineItems || []).map((item) => ({
         lineItemID: item.lineItemID,
         description: item.description,
@@ -1547,7 +1518,6 @@ app.post("/api/invoices-detail", async (req, res) => {
         taxType: item.taxType,
         taxAmount: parseFloat(item.taxAmount || 0),
         lineAmount: parseFloat(item.lineAmount || 0),
-        // Track inventory items
         tracking: item.tracking || [],
       })),
     }));
@@ -1588,7 +1558,10 @@ app.post("/api/invoices-detail", async (req, res) => {
   }
 });
 
+// ============================================================================
 // Financial Ratios endpoint
+// ============================================================================
+
 app.post("/api/financial-ratios", async (req, res) => {
   try {
     const { organizationName, tenantId, date } = req.body;
