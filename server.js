@@ -1468,27 +1468,54 @@ app.post("/api/invoices-detail", async (req, res) => {
     console.log(`Date range: ${dateFrom || "any"} to ${dateTo || "any"}`);
     console.log(`Filter: ${where || "none"}`);
 
-    // Get invoices with line items - FIXED VERSION
-const response = await xero.accountingApi.getInvoices(
-  actualTenantId,
-  null,     // modifiedAfter
-  where,    // where clause
-  null,     // order
-  null,     // IDs
-  null,     // invoice numbers
-  null,     // contact IDs
-  null,     // statuses
-  1,        // page - start at page 1
-  true,     // includeArchived
-  null,     // createdByMyApp
-  null,     // unitdp
-  null,     // summaryOnly - MUST BE NULL OR FALSE TO GET LINE ITEMS
-);
+    // PAGINATION: Fetch all pages of invoices
+    let allInvoices = [];
+    let page = 1;
+    let hasMore = true;
 
-    const invoices = response.body.invoices || [];
+    while (hasMore) {
+      console.log(`Fetching page ${page}...`);
+
+      const response = await xero.accountingApi.getInvoices(
+        actualTenantId,
+        null, // modifiedAfter
+        where, // where clause
+        null, // order
+        null, // IDs
+        null, // invoice numbers
+        null, // contact IDs
+        null, // statuses
+        page, // current page
+        true // includeArchived
+      );
+
+      const pageInvoices = response.body.invoices || [];
+      allInvoices = allInvoices.concat(pageInvoices);
+
+      console.log(
+        `Page ${page}: ${pageInvoices.length} invoices (Total so far: ${allInvoices.length})`
+      );
+
+      // Xero returns 100 invoices per page max
+      // If we get less than 100, we're on the last page
+      if (pageInvoices.length < 100) {
+        hasMore = false;
+      } else {
+        page++;
+        // Safety limit to prevent infinite loops
+        if (page > 100) {
+          console.log("⚠️ Reached page limit of 100");
+          hasMore = false;
+        }
+      }
+    }
+
+    console.log(
+      `✅ Fetched ${allInvoices.length} total invoices across ${page} pages`
+    );
 
     // Format response with line items
-    const detailedInvoices = invoices.map((inv) => ({
+    const detailedInvoices = allInvoices.map((inv) => ({
       invoiceID: inv.invoiceID,
       invoiceNumber: inv.invoiceNumber,
       type: inv.type, // ACCREC or ACCPAY
