@@ -1453,10 +1453,13 @@ app.post("/api/invoices-detail", async (req, res) => {
     let whereClause = [];
 
     if (dateFrom) {
-      whereClause.push(`Date >= DateTime(${dateFrom.split("T")[0]})`);
+      // Xero expects: DateTime(2025,10,01)
+      const [year, month, day] = dateFrom.split("T")[0].split("-");
+      whereClause.push(`Date >= DateTime(${year},${month},${day})`);
     }
     if (dateTo) {
-      whereClause.push(`Date <= DateTime(${dateTo.split("T")[0]})`);
+      const [year, month, day] = dateTo.split("T")[0].split("-");
+      whereClause.push(`Date <= DateTime(${year},${month},${day})`);
     }
     if (status) {
       whereClause.push(`Status=="${status}"`);
