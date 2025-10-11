@@ -1410,6 +1410,151 @@ app.post("/api/outstanding-invoices", async (req, res) => {
   }
 });
 
+// ============================================================================
+// INVOICE DETAIL ANALYSIS ENDPOINTS
+// ============================================================================
+
+// Get detailed invoices with line items for date range
+app.post("/api/invoices-detail", async (req, res) => {
+  try {
+    const { organizationName, tenantId, dateFrom, dateTo, status } = req.body;
+
+    if (!organizationName && !tenantId) {
+      return res.status(400).json({
+        error: "Organization name or tenant ID required",
+      });
+    }
+
+    // Find tenant ID if organization name provided
+    let actualTenantId = tenantId;
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
+
+    // Get token from database
+    const tokenData = await tokenStorage.getXeroToken(actualTenantId);
+    if (!tokenData) {
+      return res.status(404).json({
+        error: "Tenant not found or token expired",
+      });
+    }
+
+    await xero.setTokenSet(tokenData);
+
+    // Build filter for date range and status
+    let whereClause = [];
+
+    if (dateFrom) {
+      whereClause.push(`Date >= DateTime(${dateFrom.split("T")[0]})`);
+    }
+    if (dateTo) {
+      whereClause.push(`Date <= DateTime(${dateTo.split("T")[0]})`);
+    }
+    if (status) {
+      whereClause.push(`Status=="${status}"`);
+    }
+
+    const where = whereClause.length > 0 ? whereClause.join(" AND ") : null;
+
+    console.log(`Fetching invoices for ${tokenData.tenantName}`);
+    console.log(`Date range: ${dateFrom || "any"} to ${dateTo || "any"}`);
+    console.log(`Filter: ${where || "none"}`);
+
+    // Get invoices with line items
+    const response = await xero.accountingApi.getInvoices(
+      actualTenantId,
+      null, // modifiedAfter
+      where, // where clause
+      null, // order
+      null, // IDs
+      null, // invoice numbers
+      null, // contact IDs
+      null, // statuses
+      null, // page
+      true // includeArchived
+    );
+
+    const invoices = response.body.invoices || [];
+
+    // Format response with line items
+    const detailedInvoices = invoices.map((inv) => ({
+      invoiceID: inv.invoiceID,
+      invoiceNumber: inv.invoiceNumber,
+      type: inv.type, // ACCREC or ACCPAY
+      contact: {
+        contactID: inv.contact?.contactID,
+        name: inv.contact?.name,
+      },
+      date: inv.date,
+      dueDate: inv.dueDate,
+      status: inv.status,
+      lineAmountTypes: inv.lineAmountTypes,
+      subTotal: parseFloat(inv.subTotal || 0),
+      totalTax: parseFloat(inv.totalTax || 0),
+      total: parseFloat(inv.total || 0),
+      amountDue: parseFloat(inv.amountDue || 0),
+      amountPaid: parseFloat(inv.amountPaid || 0),
+      currencyCode: inv.currencyCode,
+      // LINE ITEMS - This is what you need for inventory analysis
+      lineItems: (inv.lineItems || []).map((item) => ({
+        lineItemID: item.lineItemID,
+        description: item.description,
+        quantity: parseFloat(item.quantity || 0),
+        unitAmount: parseFloat(item.unitAmount || 0),
+        itemCode: item.itemCode,
+        accountCode: item.accountCode,
+        taxType: item.taxType,
+        taxAmount: parseFloat(item.taxAmount || 0),
+        lineAmount: parseFloat(item.lineAmount || 0),
+        // Track inventory items
+        tracking: item.tracking || [],
+      })),
+    }));
+
+    // Summary statistics
+    const summary = {
+      totalInvoices: detailedInvoices.length,
+      totalValue: detailedInvoices.reduce((sum, inv) => sum + inv.total, 0),
+      totalOutstanding: detailedInvoices.reduce(
+        (sum, inv) => sum + inv.amountDue,
+        0
+      ),
+      byStatus: {},
+    };
+
+    // Group by status
+    detailedInvoices.forEach((inv) => {
+      if (!summary.byStatus[inv.status]) {
+        summary.byStatus[inv.status] = { count: 0, value: 0 };
+      }
+      summary.byStatus[inv.status].count++;
+      summary.byStatus[inv.status].value += inv.total;
+    });
+
+    res.json({
+      organizationName: tokenData.tenantName,
+      dateFrom: dateFrom || "any",
+      dateTo: dateTo || "any",
+      summary,
+      invoices: detailedInvoices,
+    });
+  } catch (error) {
+    console.error("❌ Error getting invoice details:", error);
+    res.status(500).json({
+      error: "Failed to get invoice details",
+      details: error.message,
+    });
+  }
+});
+
 // Financial Ratios endpoint
 app.post("/api/financial-ratios", async (req, res) => {
   try {
