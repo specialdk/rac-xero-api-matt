@@ -1468,19 +1468,22 @@ app.post("/api/invoices-detail", async (req, res) => {
     console.log(`Date range: ${dateFrom || "any"} to ${dateTo || "any"}`);
     console.log(`Filter: ${where || "none"}`);
 
-    // Get invoices with line items
-    const response = await xero.accountingApi.getInvoices(
-      actualTenantId,
-      null, // modifiedAfter
-      where, // where clause
-      null, // order
-      null, // IDs
-      null, // invoice numbers
-      null, // contact IDs
-      null, // statuses
-      null, // page
-      true // includeArchived
-    );
+    // Get invoices with line items - FIXED VERSION
+const response = await xero.accountingApi.getInvoices(
+  actualTenantId,
+  null,     // modifiedAfter
+  where,    // where clause
+  null,     // order
+  null,     // IDs
+  null,     // invoice numbers
+  null,     // contact IDs
+  null,     // statuses
+  1,        // page - start at page 1
+  true,     // includeArchived
+  null,     // createdByMyApp
+  null,     // unitdp
+  null,     // summaryOnly - MUST BE NULL OR FALSE TO GET LINE ITEMS
+);
 
     const invoices = response.body.invoices || [];
 
