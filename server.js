@@ -1161,6 +1161,78 @@ app.post("/api/budget-summary", async (req, res) => {
 });
 
 // add post here Duane
+
+// GET Invoices Detail endpoint for MCP
+app.get("/api/invoices-detail/:tenantId", async (req, res) => {
+  try {
+    const { dateFrom, dateTo, status } = req.query;
+
+    const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
+    if (!tokenData) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    await xero.setTokenSet(tokenData);
+
+    let whereClause = [];
+    if (dateFrom) {
+      const [year, month, day] = dateFrom.split("-");
+      whereClause.push(`Date >= DateTime(${year},${month},${day})`);
+    }
+    if (dateTo) {
+      const [year, month, day] = dateTo.split("-");
+      whereClause.push(`Date <= DateTime(${year},${month},${day})`);
+    }
+    if (status) whereClause.push(`Status=="${status}"`);
+
+    const where = whereClause.length > 0 ? whereClause.join(" AND ") : null;
+
+    const response = await xero.accountingApi.getInvoices(
+      req.params.tenantId,
+      null,
+      where,
+      "Date DESC",
+      null,
+      null,
+      null,
+      null,
+      1,
+      true
+    );
+
+    const invoices = response.body.invoices || [];
+    const detailedInvoices = invoices.map((inv) => ({
+      invoiceID: inv.invoiceID,
+      invoiceNumber: inv.invoiceNumber,
+      type: inv.type,
+      contact: { contactID: inv.contact?.contactID, name: inv.contact?.name },
+      date: inv.date,
+      status: inv.status,
+      total: parseFloat(inv.total || 0),
+      amountDue: parseFloat(inv.amountDue || 0),
+      lineItems: (inv.lineItems || []).map((item) => ({
+        description: item.description,
+        quantity: parseFloat(item.quantity || 0),
+        unitAmount: parseFloat(item.unitAmount || 0),
+        itemCode: item.itemCode,
+        lineAmount: parseFloat(item.lineAmount || 0),
+      })),
+    }));
+
+    res.json({
+      organizationName: tokenData.tenantName,
+      summary: {
+        totalInvoices: detailedInvoices.length,
+        totalValue: detailedInvoices.reduce((s, i) => s + i.total, 0),
+      },
+      invoices: detailedInvoices,
+    });
+  } catch (error) {
+    console.error("❌ GET invoices error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // === REST API Endpoints for Web Chat Interface ===
 // API endpoint to manually trigger refresh
 app.post("/api/refresh-tokens", async (req, res) => {
