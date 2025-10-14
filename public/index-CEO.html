@@ -808,6 +808,8 @@
     </div>
 
     <script>
+      // API Configuration
+      
       const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
       const MINING_ORG = "Mining";
 
@@ -1259,8 +1261,8 @@ async function loadOpenOrders() {
   
   try {
     // Step 1: Fetch organizations
-    console.log('📡 Fetching organizations from:', `${API_BASE_URL}/api/organizations`);
-    const orgsResponse = await fetch(`${API_BASE_URL}/api/organizations`);
+    console.log('📡 Fetching organizations from:', `${API_BASE}/api/organizations`);
+    const orgsResponse = await fetch(`${API_BASE}/api/organizations`);
     
     if (!orgsResponse.ok) {
       throw new Error(`Organizations fetch failed: ${orgsResponse.status}`);
@@ -1284,7 +1286,7 @@ async function loadOpenOrders() {
     }
 
     // Step 3: Fetch invoices
-    const invoiceUrl = `${API_BASE_URL}/api/invoices-detail/${miningOrg.tenantId}?dateFrom=2025-07-01&dateTo=2026-06-30&status=AUTHORISED`;
+    const invoiceUrl = `${API_BASE}/api/invoices-detail/${miningOrg.tenantId}?dateFrom=2025-07-01&dateTo=2026-06-30&status=AUTHORISED`;
     console.log('📡 Fetching invoices from:', invoiceUrl);
     
     const response = await fetch(invoiceUrl);
