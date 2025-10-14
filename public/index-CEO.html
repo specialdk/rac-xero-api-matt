@@ -1228,22 +1228,55 @@
         }
       }
 
-      // Product mapping from Xero descriptions to standard names
-const productMapping = {
-  'Screened sand': 'Sand',
-  'Crusher dust': 'Sand',
-  '7/10 Aggregate': '20mm',
-  '7/10mm aggregate': '20mm',
-  'Aggregate Concrete 20MM': '20mm',
-  '20mm Aggregate': '20mm',
-  'Type D 250-350mm': '40mm',
-  'Type C (D50 100 - 200MM)': '40mm',
-  'Type E (D50 500 - 700MM)': '80mm',
-  'Oversize rock': '80mm',
-  'Type 2 Road base': 'RBase',
-  'Type 2 Road Base': 'RBase',
-  'Pre-Mix Sand & Gravel': 'XYZ'
-};
+      // Product mapping - now using partial matching
+function mapProductType(description) {
+  const desc = description.toLowerCase();
+  
+  // Sand products
+  if (desc.includes('screened sand') || desc.includes('crusher dust')) {
+    return 'Sand';
+  }
+  
+  // 20mm products
+  if (desc.includes('7/10 aggregate') || 
+      desc.includes('7/10mm aggregate') || 
+      desc.includes('aggregate concrete 20mm') || 
+      desc.includes('20mm aggregate')) {
+    return '20mm';
+  }
+  
+  // 40mm products
+  if (desc.includes('type d 250-350mm') || 
+      desc.includes('type c (d50 100 - 200mm)')) {
+    return '40mm';
+  }
+  
+  // 80mm products
+  if (desc.includes('type e (d50 500 - 700mm)') || 
+      desc.includes('oversize rock')) {
+    return '80mm';
+  }
+  
+  // Road base
+  if (desc.includes('type 2 road base') || 
+      desc.includes('road base')) {
+    return 'RBase';
+  }
+  
+  // Pre-mix
+  if (desc.includes('pre-mix sand & gravel')) {
+    return 'XYZ';
+  }
+  
+  // Skip delivery fees and weighbridge
+  if (desc.includes('delivery') || 
+      desc.includes('weighbridge') || 
+      desc.includes('hire of')) {
+    return null; // Don't count these
+  }
+  
+  return 'Other';
+}
 
 // Determine quarter from date (FY26: July 2025 - June 2026)
 function getQuarter(dateStr) {
@@ -1297,18 +1330,18 @@ async function loadOpenOrders() {
       console.log(`📅 [${idx + 1}/${salesInvoices.length}] Invoice ${inv.invoiceNumber} | Date: ${inv.date} | Quarter: ${quarter} | Lines: ${inv.lineItems.length}`);
       
       inv.lineItems.forEach((item, lineIdx) => {
-        const productType = productMapping[item.description] || 'Other';
-        console.log(`  📦 Line ${lineIdx + 1}: "${item.description}" → ${productType} | Qty: ${item.quantity}t`);
-        
-        if (products[productType]) {
-          const tonnes = item.quantity;
-          products[productType][quarter] += tonnes;
-          products[productType].total += tonnes;
-          console.log(`    ✅ Added ${tonnes}t to ${productType} ${quarter}`);
-        } else if (productType === 'Other') {
-          console.log(`    ⚠️ Unmapped product: "${item.description}"`);
-        }
-      });
+  const productType = mapProductType(item.description); // Use function instead of object lookup
+  console.log(`  📦 Line ${lineIdx + 1}: "${item.description}" → ${productType} | Qty: ${item.quantity}t`);
+  
+  if (productType && productType !== 'Other' && products[productType]) {
+    const tonnes = item.quantity;
+    products[productType][quarter] += tonnes;
+    products[productType].total += tonnes;
+    console.log(`    ✅ Added ${tonnes}t to ${productType} ${quarter}`);
+  } else if (productType === 'Other') {
+    console.log(`    ⚠️ Unmapped product: "${item.description}"`);
+  }
+});
     });
 
     console.log('📈 Final products summary:', products);
