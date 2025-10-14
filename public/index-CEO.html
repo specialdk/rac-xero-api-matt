@@ -864,20 +864,30 @@
             revenue > 0 ? ((grossProfit / revenue) * 100).toFixed(1) : 0;
           const ebitda = netProfit;
 
+          // Smart formatting: use K for thousands, M for millions
+          function formatAmount(amount) {
+            const absAmount = Math.abs(amount);
+            if (absAmount >= 1000000) {
+              return "$" + (amount / 1000000).toFixed(2) + "M";
+            } else if (absAmount >= 1000) {
+              return "$" + (amount / 1000).toFixed(1) + "K";
+            } else {
+              return "$" + amount.toFixed(0);
+            }
+          }
+
           document.getElementById("pl-revenue").textContent =
-            "$" + (revenue / 1000000).toFixed(2) + "M";
-          document.getElementById("pl-cogs").textContent =
-            "$" + (cogs / 1000000).toFixed(2) + "M";
+            formatAmount(revenue);
+          document.getElementById("pl-cogs").textContent = formatAmount(cogs);
           document.getElementById("pl-gross-profit").textContent =
-            "$" + (grossProfit / 1000000).toFixed(2) + "M";
+            formatAmount(grossProfit);
           document.getElementById("pl-margin").textContent =
             "(" + grossMargin + "% Margin)";
-          document.getElementById("pl-opex").textContent =
-            "$" + (opex / 1000000).toFixed(2) + "M";
+          document.getElementById("pl-opex").textContent = formatAmount(opex);
           document.getElementById("pl-ebitda").textContent =
-            "$" + (ebitda / 1000000).toFixed(2) + "M";
+            formatAmount(ebitda);
           document.getElementById("pl-net-profit").textContent =
-            "$" + (netProfit / 1000000).toFixed(2) + "M";
+            formatAmount(netProfit);
 
           document.getElementById("revenue-actual").textContent =
             "$" + revenue.toLocaleString();
