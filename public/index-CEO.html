@@ -1255,13 +1255,11 @@ function getQuarter(dateStr) {
   if (month >= 4 && month <= 6) return 'Q4';
 }
 
-// Load open orders - DEBUG VERSION
 // Load open orders
 async function loadOpenOrders() {
   console.log('🔍 Starting loadOpenOrders()...');
   
   try {
-    // Fetch AUTHORISED invoices (outstanding orders)
     console.log('📡 Fetching invoices...');
     const response = await fetch(`${API_BASE}/api/invoices-detail`, {
       method: "POST",
@@ -1269,8 +1267,8 @@ async function loadOpenOrders() {
       body: JSON.stringify({
         organizationName: MINING_ORG,
         dateFrom: "2025-07-01",
-        dateTo: "2026-06-30"
-        //status: "AUTHORISED"
+        dateTo: "2026-06-30",
+        status: "AUTHORISED"
       }),
     });
 
@@ -1292,16 +1290,23 @@ async function loadOpenOrders() {
       products[p] = { Q1: 0, Q2: 0, Q3: 0, Q4: 0, total: 0 };
     });
 
-    // Process invoices
-    salesInvoices.forEach(inv => {
+    // Process invoices with detailed logging
+    console.log('🔄 Processing invoices...');
+    salesInvoices.forEach((inv, idx) => {
       const quarter = getQuarter(inv.date);
+      console.log(`📅 [${idx + 1}/${salesInvoices.length}] Invoice ${inv.invoiceNumber} | Date: ${inv.date} | Quarter: ${quarter} | Lines: ${inv.lineItems.length}`);
       
-      inv.lineItems.forEach(item => {
+      inv.lineItems.forEach((item, lineIdx) => {
         const productType = productMapping[item.description] || 'Other';
+        console.log(`  📦 Line ${lineIdx + 1}: "${item.description}" → ${productType} | Qty: ${item.quantity}t`);
+        
         if (products[productType]) {
           const tonnes = item.quantity;
           products[productType][quarter] += tonnes;
           products[productType].total += tonnes;
+          console.log(`    ✅ Added ${tonnes}t to ${productType} ${quarter}`);
+        } else if (productType === 'Other') {
+          console.log(`    ⚠️ Unmapped product: "${item.description}"`);
         }
       });
     });
@@ -1320,7 +1325,6 @@ async function loadOpenOrders() {
   }
 }
     
-
 // Render the table
 function renderOpenOrdersTable(products) {
   const tbody = document.getElementById('openOrdersBody');
