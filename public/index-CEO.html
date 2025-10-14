@@ -442,58 +442,105 @@
         <div class="panel">
           <h2>P&L Section</h2>
           <div class="pl-section">
-            <!-- Left: Balance Sheet Mini -->
-            <div class="balance-mini">
-              <h3>Balance Sheet</h3>
-              <div class="balance-row">
-                <span>Current Assets</span>
-                <span id="bs-current-assets">-</span>
+            <!-- Left: P&L Metrics -->
+            <div class="pl-metrics">
+              <div class="pl-row">
+                <span class="pl-label">Revenue</span>
+                <span class="pl-value" id="pl-revenue">$X.XM</span>
               </div>
-              <div class="balance-row">
-                <span>Non Current Assets</span>
-                <span id="bs-non-current-assets">-</span>
+              <div class="pl-row">
+                <span class="pl-label">COGS</span>
+                <span class="pl-value" id="pl-cogs">$X.XM</span>
               </div>
-              <div class="balance-row">
-                <span>Current Liabilities</span>
-                <span id="bs-current-liabilities">-</span>
+              <div class="pl-row pl-highlight">
+                <span class="pl-label">Gross Profit</span>
+                <span class="pl-value" id="pl-gross-profit">$X.XM</span>
+                <span class="pl-percentage" id="pl-margin">(% Margin)</span>
               </div>
-              <div class="balance-row">
-                <span>Non Current Liabilities</span>
-                <span id="bs-non-current-liabilities">-</span>
+
+              <div style="height: 15px"></div>
+
+              <div class="pl-row">
+                <span class="pl-label">Opex</span>
+                <span class="pl-value" id="pl-opex">$X.XM</span>
+              </div>
+              <div class="pl-row">
+                <span class="pl-label">EBITDA</span>
+                <span class="pl-value" id="pl-ebitda">$X.XM</span>
+                <span class="pl-percentage" id="pl-ebitda-vs-budget"
+                  >(vs Budget %)</span
+                >
+              </div>
+              <div class="pl-row pl-highlight">
+                <span class="pl-label">Net Profit</span>
+                <span class="pl-value" id="pl-net-profit">$X.XM</span>
               </div>
             </div>
 
             <!-- Right: Actual v Budget -->
             <div class="budget-comparison">
               <h3>Actual v Budget</h3>
-              <div class="budget-grid">
-                <div></div>
-                <div class="budget-header">Budget</div>
-                <div class="budget-header">Actual</div>
-                <div class="budget-header">Variance</div>
+              <div class="budget-simple">
+                <div class="budget-section">
+                  <div class="budget-section-header">Revenue</div>
+                  <div class="budget-detail-grid">
+                    <span class="budget-detail-label">Budget</span>
+                    <span class="budget-detail-value" id="revenue-budget"
+                      >$3,000</span
+                    >
+                  </div>
+                  <div class="budget-detail-grid">
+                    <span class="budget-detail-label">Actual</span>
+                    <span class="budget-detail-value" id="revenue-actual"
+                      >$1,110,617.73</span
+                    >
+                  </div>
+                  <div class="budget-detail-grid">
+                    <span class="budget-detail-label">Variance</span>
+                    <span
+                      class="budget-detail-value variance"
+                      id="revenue-variance"
+                      >-$1,107,617.73</span
+                    >
+                  </div>
+                </div>
 
-                <div class="budget-label">Revenue</div>
-                <div class="budget-value" id="revenue-budget">-</div>
-                <div class="budget-value" id="revenue-actual">-</div>
-                <div class="budget-value" id="revenue-variance">-</div>
-
-                <div class="budget-label">Expenses</div>
-                <div class="budget-value" id="expenses-budget">-</div>
-                <div class="budget-value" id="expenses-actual">-</div>
-                <div class="budget-value" id="expenses-variance">-</div>
+                <div class="budget-section">
+                  <div class="budget-section-header">Expenses</div>
+                  <div class="budget-detail-grid">
+                    <span class="budget-detail-label">Budget</span>
+                    <span class="budget-detail-value" id="expenses-budget"
+                      >$275,740</span
+                    >
+                  </div>
+                  <div class="budget-detail-grid">
+                    <span class="budget-detail-label">Actual</span>
+                    <span class="budget-detail-value" id="expenses-actual"
+                      >$580,237.25</span
+                    >
+                  </div>
+                  <div class="budget-detail-grid">
+                    <span class="budget-detail-label">Variance</span>
+                    <span
+                      class="budget-detail-value variance"
+                      id="expenses-variance"
+                      >+$304,497.25</span
+                    >
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- COGS & Overheads -->
+          <!-- COGS & Overheads Summary -->
           <div class="cogs-section">
             <div class="cogs-row">
               <strong>COGS</strong>
-              <span id="cogs-value">-</span>
+              <span id="cogs-summary">$348,142</span>
             </div>
             <div class="cogs-row">
               <strong>Overheads</strong>
-              <span id="overheads-value">-</span>
+              <span id="overheads-summary">$232,095</span>
             </div>
           </div>
         </div>
@@ -1024,7 +1071,6 @@
         }
       }
 
-      //test 123
       // Auto-load on page load
       window.addEventListener("load", () => {
         loadDashboard();
