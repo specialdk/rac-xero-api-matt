@@ -1295,86 +1295,79 @@ async function loadOpenOrders() {
   
   try {
     console.log('📡 Fetching invoices...');
-    // Fetch AUTHORISED invoices (ordered but not paid)
-const authResponse = await fetch(`${API_BASE}/api/invoices-detail`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    organizationName: MINING_ORG,
-    dateFrom: "2025-07-01",
-    dateTo: "2026-06-30",
-    status: "AUTHORISED"
-  }),
-});
-
-if (!authResponse.ok) {
-  throw new Error(`Failed to fetch AUTHORISED invoices: ${authResponse.status}`);
-}
-
-const authData = await authResponse.json();
-
-// Fetch PAID invoices (delivered)
-const paidResponse = await fetch(`${API_BASE}/api/invoices-detail`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    organizationName: MINING_ORG,
-    dateFrom: "2025-07-01",
-    dateTo: "2026-06-30",
-    status: "PAID"
-  }),
-});
-
-if (!paidResponse.ok) {
-  throw new Error(`Failed to fetch PAID invoices: ${paidResponse.status}`);
-}
-
-const paidData = await paidResponse.json();
-
-console.log('✅ AUTHORISED invoices:', authData.invoices.length);
-console.log('✅ PAID invoices:', paidData.invoices.length);
-
     
-    const data = await response.json();
-    console.log('✅ Invoices received:', data);
-    console.log('📊 Total invoices:', data.invoices.length);
+    // Fetch AUTHORISED invoices (ordered but not paid)
+    const authResponse = await fetch(`${API_BASE}/api/invoices-detail`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        organizationName: MINING_ORG,
+        dateFrom: "2025-07-01",
+        dateTo: "2026-06-30",
+        status: "AUTHORISED"
+      }),
+    });
+
+    if (!authResponse.ok) {
+      throw new Error(`Failed to fetch AUTHORISED invoices: ${authResponse.status}`);
+    }
+
+    const authData = await authResponse.json();
+
+    // Fetch PAID invoices (delivered)
+    const paidResponse = await fetch(`${API_BASE}/api/invoices-detail`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        organizationName: MINING_ORG,
+        dateFrom: "2025-07-01",
+        dateTo: "2026-06-30",
+        status: "PAID"
+      }),
+    });
+
+    if (!paidResponse.ok) {
+      throw new Error(`Failed to fetch PAID invoices: ${paidResponse.status}`);
+    }
+
+    const paidData = await paidResponse.json();
+
+    console.log('✅ AUTHORISED invoices:', authData.invoices.length);
+    console.log('✅ PAID invoices:', paidData.invoices.length);
+
+    // Combine all invoices
+    const allInvoices = [...authData.invoices, ...paidData.invoices];
+    console.log('📊 Total invoices:', allInvoices.length);
     
     // Filter for sales invoices only
-    const salesInvoices = data.invoices.filter(inv => inv.type === 'ACCREC');
+    const salesInvoices = allInvoices.filter(inv => inv.type === 'ACCREC');
     console.log('💰 Sales invoices (ACCREC):', salesInvoices.length);
     
     // Initialize products
     const products = {};
-['Sand', '20mm', '40mm', '80mm', 'RBase', 'XYZ'].forEach(p => {
-  products[p] = {
-    Q1_ordered: 0,
-    Q1_delivered: 0,
-    Q2_ordered: 0,
-    Q2_delivered: 0,
-    Q34_ordered: 0,
-    total_outstanding: 0
-  };
-});
+    ['Sand', '20mm', '40mm', '80mm', 'RBase', 'XYZ'].forEach(p => {
+      products[p] = { Q1: 0, Q2: 0, Q3: 0, Q4: 0, total: 0 };
+    });
 
-    // Process invoices with detailed logging
+    // Process invoices
     console.log('🔄 Processing invoices...');
     salesInvoices.forEach((inv, idx) => {
       const quarter = getQuarter(inv.date);
       console.log(`📅 [${idx + 1}/${salesInvoices.length}] Invoice ${inv.invoiceNumber} | Date: ${inv.date} | Quarter: ${quarter} | Lines: ${inv.lineItems.length}`);
       
       inv.lineItems.forEach((item, lineIdx) => {
-  const productType = mapProductType(item.description); // Use function instead of object lookup
-  console.log(`  📦 Line ${lineIdx + 1}: "${item.description}" → ${productType} | Qty: ${item.quantity}t`);
-  
-  if (productType && productType !== 'Other' && products[productType]) {
-    const tonnes = item.quantity;
-    products[productType][quarter] += tonnes;
-    products[productType].total += tonnes;
-    console.log(`    ✅ Added ${tonnes}t to ${productType} ${quarter}`);
-  } else if (productType === 'Other') {
-    console.log(`    ⚠️ Unmapped product: "${item.description}"`);
-  }
-});
+        const productType = mapProductType(item.description);
+        console.log(`  📦 Line ${lineIdx + 1}: "${item.description}" → ${productType} | Qty: ${item.quantity}t`);
+        
+        if (productType && productType !== 'Other' && products[productType]) {
+          const tonnes = item.quantity;
+          products[productType][quarter] += tonnes;
+          products[productType].total += tonnes;
+          console.log(`    ✅ Added ${tonnes}t to ${productType} ${quarter}`);
+        } else if (productType === 'Other') {
+          console.log(`    ⚠️ Unmapped product: "${item.description}"`);
+        }
+      });
     });
 
     console.log('📈 Final products summary:', products);
