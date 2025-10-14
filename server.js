@@ -4833,6 +4833,84 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
   }
 });
 
+// POST Invoices Detail endpoint (session-based)
+app.post("/api/invoices-detail", async (req, res) => {
+  try {
+    const { organizationName, dateFrom, dateTo, status } = req.body;
+
+    // Find tenant by organization name
+    const connections = await tokenStorage.getAllXeroConnections();
+    const connection = connections.find((conn) =>
+      conn.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+    );
+
+    if (!connection) {
+      return res
+        .status(404)
+        .json({ error: `Organization '${organizationName}' not found` });
+    }
+
+    await xero.setTokenSet(connection);
+
+    let whereClause = [];
+    if (dateFrom) {
+      const [year, month, day] = dateFrom.split("-");
+      whereClause.push(`Date >= DateTime(${year},${month},${day})`);
+    }
+    if (dateTo) {
+      const [year, month, day] = dateTo.split("-");
+      whereClause.push(`Date <= DateTime(${year},${month},${day})`);
+    }
+    if (status) whereClause.push(`Status=="${status}"`);
+
+    const where = whereClause.length > 0 ? whereClause.join(" AND ") : null;
+
+    const response = await xero.accountingApi.getInvoices(
+      connection.tenantId,
+      null,
+      where,
+      "Date DESC",
+      null,
+      null,
+      null,
+      null,
+      1,
+      true
+    );
+
+    const invoices = response.body.invoices || [];
+    const detailedInvoices = invoices.map((inv) => ({
+      invoiceID: inv.invoiceID,
+      invoiceNumber: inv.invoiceNumber,
+      type: inv.type,
+      contact: { contactID: inv.contact?.contactID, name: inv.contact?.name },
+      date: inv.date,
+      status: inv.status,
+      total: parseFloat(inv.total || 0),
+      amountDue: parseFloat(inv.amountDue || 0),
+      lineItems: (inv.lineItems || []).map((item) => ({
+        description: item.description,
+        quantity: parseFloat(item.quantity || 0),
+        unitAmount: parseFloat(item.unitAmount || 0),
+        itemCode: item.itemCode,
+        lineAmount: parseFloat(item.lineAmount || 0),
+      })),
+    }));
+
+    res.json({
+      organizationName: connection.tenantName,
+      summary: {
+        totalInvoices: detailedInvoices.length,
+        totalValue: detailedInvoices.reduce((s, i) => s + i.total, 0),
+      },
+      invoices: detailedInvoices,
+    });
+  } catch (error) {
+    console.error("❌ POST invoices-detail error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST wrapper for Monthly Breakdown
 app.post("/api/monthly-breakdown", async (req, res) => {
   try {
