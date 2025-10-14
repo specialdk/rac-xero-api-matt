@@ -882,6 +882,7 @@
           await loadProfitLoss(quarterInfo);
           await loadBudget(quarterInfo);
           await loadCashPosition();
+          await loadOpenOrders();
           await loadAgedReceivables();
           await loadFinancialRatios();
         } catch (error) {
