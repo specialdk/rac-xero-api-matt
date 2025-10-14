@@ -380,6 +380,101 @@
         padding: 20px;
         color: #666;
       }
+
+      /* Open Orders Card Styling */
+.open-orders-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.open-orders-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #3498db;
+}
+
+.open-orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.open-orders-table thead tr {
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.open-orders-table th {
+  padding: 10px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.open-orders-table th:first-child {
+  padding-left: 12px;
+}
+
+.open-orders-table th:not(:first-child) {
+  text-align: right;
+}
+
+.open-orders-table tbody tr {
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s;
+}
+
+.open-orders-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.open-orders-table tbody tr:last-child {
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  background-color: #f1f3f5;
+}
+
+.open-orders-table td {
+  padding: 10px 8px;
+  color: #2c3e50;
+}
+
+.open-orders-table td:first-child {
+  padding-left: 12px;
+  font-weight: 500;
+}
+
+.open-orders-table td:not(:first-child) {
+  text-align: right;
+}
+
+.order-value {
+  color: #3498db;
+  font-weight: 500;
+  padding: 4px 8px;
+  background: #e3f2fd;
+  border-radius: 4px;
+  display: inline-block;
+  min-width: 50px;
+  text-align: right;
+}
+
+.order-value.zero {
+  color: #95a5a6;
+  background: transparent;
+  font-weight: 400;
+}
+
+
+
     </style>
   </head>
   <body>
@@ -569,27 +664,31 @@
         </div>
 
         <!-- Open Orders -->
-        <div class="panel">
-          <h2>Open Orders</h2>
-          <table class="orders-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Q1</th>
-                <th>Q2</th>
-                <th>Q3</th>
-                <th>Q4</th>
-              </tr>
-            </thead>
-            <tbody id="open-orders-table">
-              <tr>
-                <td colspan="5" class="loading">Loading...</td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="placeholder-note">Note: Requires CRM integration</div>
-        </div>
-      </div>
+<div class="open-orders-card">
+  <div class="open-orders-header">
+    📦 Open Orders - Customer Pipeline
+  </div>
+  
+  <div id="openOrdersContent">
+    <div class="loading-spinner">Loading open orders...</div>
+  </div>
+
+  <table class="open-orders-table" id="openOrdersTable" style="display: none;">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Q1 (Jul-Sep)</th>
+        <th>Q2 (Oct-Dec)</th>
+        <th>Q3 (Jan-Mar)</th>
+        <th>Q4 (Apr-Jun)</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody id="openOrdersBody">
+      <!-- Data will be populated here -->
+    </tbody>
+  </table>
+</div>
 
       <div class="middle-row">
         <!-- Balance -->
@@ -1125,6 +1224,139 @@
           console.error("Error loading aged receivables:", error);
         }
       }
+
+      // Product mapping from Xero descriptions to standard names
+const productMapping = {
+  'Screened sand': 'Sand',
+  'Crusher dust': 'Sand',
+  '7/10 Aggregate': '20mm',
+  '7/10mm aggregate': '20mm',
+  'Aggregate Concrete 20MM': '20mm',
+  '20mm Aggregate': '20mm',
+  'Type D 250-350mm': '40mm',
+  'Type C (D50 100 - 200MM)': '40mm',
+  'Type E (D50 500 - 700MM)': '80mm',
+  'Oversize rock': '80mm',
+  'Type 2 Road base': 'RBase',
+  'Type 2 Road Base': 'RBase',
+  'Pre-Mix Sand & Gravel': 'XYZ'
+};
+
+// Determine quarter from date (FY26: July 2025 - June 2026)
+function getQuarter(dateStr) {
+  const date = new Date(dateStr);
+  const month = date.getMonth() + 1;
+  if (month >= 7 && month <= 9) return 'Q1';
+  if (month >= 10 && month <= 12) return 'Q2';
+  if (month >= 1 && month <= 3) return 'Q3';
+  if (month >= 4 && month <= 6) return 'Q4';
+}
+
+// Load open orders
+async function loadOpenOrders() {
+  try {
+    const orgsResponse = await fetch(`${API_BASE_URL}/api/organizations`);
+    const orgsData = await orgsResponse.json();
+    
+    const miningOrg = orgsData.organizations.find(org => 
+      org.tenantName.includes('Mining')
+    );
+
+    if (!miningOrg) {
+      document.getElementById('openOrdersContent').innerHTML = 
+        '<div style="text-align: center; padding: 20px; color: #e74c3c;">Mining organization not found</div>';
+      return;
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/invoices-detail/${miningOrg.tenantId}?` + 
+      `dateFrom=2025-07-01&dateTo=2026-06-30&status=AUTHORISED`
+    );
+
+    if (!response.ok) throw new Error('Failed to fetch invoices');
+    const data = await response.json();
+    
+    // Initialize products
+    const products = {};
+    ['Sand', '20mm', '40mm', '80mm', 'RBase', 'XYZ'].forEach(p => {
+      products[p] = { Q1: 0, Q2: 0, Q3: 0, Q4: 0, total: 0 };
+    });
+
+    // Process only sales invoices (ACCREC)
+    data.invoices
+      .filter(inv => inv.type === 'ACCREC')
+      .forEach(inv => {
+        const quarter = getQuarter(inv.date);
+        
+        inv.lineItems.forEach(item => {
+          const productType = productMapping[item.description] || 'Other';
+          if (products[productType]) {
+            const tonnes = item.quantity;
+            products[productType][quarter] += tonnes;
+            products[productType].total += tonnes;
+          }
+        });
+      });
+
+    renderOpenOrdersTable(products);
+
+  } catch (error) {
+    console.error('Error loading open orders:', error);
+    document.getElementById('openOrdersContent').innerHTML = 
+      '<div style="text-align: center; padding: 20px; color: #e74c3c;">Error loading data</div>';
+  }
+}
+
+// Render the table
+function renderOpenOrdersTable(products) {
+  const tbody = document.getElementById('openOrdersBody');
+  tbody.innerHTML = '';
+
+  let grandTotal = { Q1: 0, Q2: 0, Q3: 0, Q4: 0, total: 0 };
+
+  Object.entries(products).forEach(([product, quarters]) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${product}</td>
+      <td>${formatOrderValue(quarters.Q1)}</td>
+      <td>${formatOrderValue(quarters.Q2)}</td>
+      <td>${formatOrderValue(quarters.Q3)}</td>
+      <td>${formatOrderValue(quarters.Q4)}</td>
+      <td><strong>${formatOrderValue(quarters.total)}</strong></td>
+    `;
+    tbody.appendChild(row);
+
+    grandTotal.Q1 += quarters.Q1;
+    grandTotal.Q2 += quarters.Q2;
+    grandTotal.Q3 += quarters.Q3;
+    grandTotal.Q4 += quarters.Q4;
+    grandTotal.total += quarters.total;
+  });
+
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'total-row';
+  totalRow.innerHTML = `
+    <td>TOTAL</td>
+    <td>${formatOrderValue(grandTotal.Q1)}</td>
+    <td>${formatOrderValue(grandTotal.Q2)}</td>
+    <td>${formatOrderValue(grandTotal.Q3)}</td>
+    <td>${formatOrderValue(grandTotal.Q4)}</td>
+    <td><strong>${formatOrderValue(grandTotal.total)}</strong></td>
+  `;
+  tbody.appendChild(totalRow);
+
+  document.getElementById('openOrdersContent').style.display = 'none';
+  document.getElementById('openOrdersTable').style.display = 'table';
+}
+
+// Format order values
+function formatOrderValue(value) {
+  const formatted = value.toFixed(1) + 't';
+  if (value === 0) {
+    return `<span class="order-value zero">-</span>`;
+  }
+  return `<span class="order-value">${formatted}</span>`;
+}
 
       async function loadFinancialRatios() {
         try {
