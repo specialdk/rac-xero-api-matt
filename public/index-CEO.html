@@ -992,40 +992,86 @@
         let revenue = 0;
         let expenses = 0;
 
-        if (!report || !report.rows) return { revenue: 0, expenses: 0 };
+        if (!report || !report.rows) {
+          console.error("Budget report is empty or invalid");
+          return { revenue: 0, expenses: 0 };
+        }
+
+        console.log(
+          "Parsing budget report with",
+          report.rows.length,
+          "sections"
+        );
 
         for (const section of report.rows) {
           if (section.rowType === "Section" && section.title) {
             const title = section.title.toLowerCase();
 
             if (title.includes("income")) {
+              console.log("Found Income section:", section.title);
+
+              // Look for "Total Income" row
               const totalRow = section.rows?.find(
                 (r) =>
                   r.rowType === "SummaryRow" &&
-                  r.cells?.[0]?.value?.includes("Total")
+                  r.cells?.[0]?.value &&
+                  r.cells[0].value.toLowerCase().includes("total")
               );
-              if (totalRow && totalRow.cells) {
-                revenue =
-                  (parseFloat(totalRow.cells[1]?.value) || 0) +
-                  (parseFloat(totalRow.cells[2]?.value) || 0) +
-                  (parseFloat(totalRow.cells[3]?.value) || 0);
+
+              if (totalRow && totalRow.cells && totalRow.cells.length >= 4) {
+                // Sum columns 1, 2, 3 (months of the quarter)
+                const month1 = parseFloat(totalRow.cells[1]?.value || 0);
+                const month2 = parseFloat(totalRow.cells[2]?.value || 0);
+                const month3 = parseFloat(totalRow.cells[3]?.value || 0);
+                revenue = month1 + month2 + month3;
+
+                console.log("Income breakdown:", {
+                  month1,
+                  month2,
+                  month3,
+                  total: revenue,
+                });
+              } else {
+                console.warn(
+                  "Could not find Total Income row or insufficient cells"
+                );
               }
-            } else if (title.includes("expense")) {
+            } else if (
+              title.includes("expense") ||
+              title.includes("operating")
+            ) {
+              console.log("Found Expense section:", section.title);
+
+              // Look for "Total Operating Expenses" or "Total Expenses" row
               const totalRow = section.rows?.find(
                 (r) =>
                   r.rowType === "SummaryRow" &&
-                  r.cells?.[0]?.value?.includes("Total")
+                  r.cells?.[0]?.value &&
+                  r.cells[0].value.toLowerCase().includes("total")
               );
-              if (totalRow && totalRow.cells) {
-                expenses =
-                  (parseFloat(totalRow.cells[1]?.value) || 0) +
-                  (parseFloat(totalRow.cells[2]?.value) || 0) +
-                  (parseFloat(totalRow.cells[3]?.value) || 0);
+
+              if (totalRow && totalRow.cells && totalRow.cells.length >= 4) {
+                const month1 = parseFloat(totalRow.cells[1]?.value || 0);
+                const month2 = parseFloat(totalRow.cells[2]?.value || 0);
+                const month3 = parseFloat(totalRow.cells[3]?.value || 0);
+                expenses = month1 + month2 + month3;
+
+                console.log("Expense breakdown:", {
+                  month1,
+                  month2,
+                  month3,
+                  total: expenses,
+                });
+              } else {
+                console.warn(
+                  "Could not find Total Expenses row or insufficient cells"
+                );
               }
             }
           }
         }
 
+        console.log("Final budget parsed:", { revenue, expenses });
         return { revenue, expenses };
       }
 
