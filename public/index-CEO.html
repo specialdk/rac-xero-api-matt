@@ -1307,6 +1307,12 @@ const authResponse = await fetch(`${API_BASE}/api/invoices-detail`, {
   }),
 });
 
+if (!authResponse.ok) {
+  throw new Error(`Failed to fetch AUTHORISED invoices: ${authResponse.status}`);
+}
+
+const authData = await authResponse.json();
+
 // Fetch PAID invoices (delivered)
 const paidResponse = await fetch(`${API_BASE}/api/invoices-detail`, {
   method: "POST",
@@ -1319,9 +1325,15 @@ const paidResponse = await fetch(`${API_BASE}/api/invoices-detail`, {
   }),
 });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch invoices: ${response.status}`);
-    }
+if (!paidResponse.ok) {
+  throw new Error(`Failed to fetch PAID invoices: ${paidResponse.status}`);
+}
+
+const paidData = await paidResponse.json();
+
+console.log('✅ AUTHORISED invoices:', authData.invoices.length);
+console.log('✅ PAID invoices:', paidData.invoices.length);
+
     
     const data = await response.json();
     console.log('✅ Invoices received:', data);
