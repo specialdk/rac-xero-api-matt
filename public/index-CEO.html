@@ -675,15 +675,16 @@
 
   <table class="open-orders-table" id="openOrdersTable" style="display: none;">
     <thead>
-      <tr>
-        <th>Product</th>
-        <th>Q1 (Jul-Sep)</th>
-        <th>Q2 (Oct-Dec)</th>
-        <th>Q3 (Jan-Mar)</th>
-        <th>Q4 (Apr-Jun)</th>
-        <th>Total</th>
-      </tr>
-    </thead>
+  <tr>
+    <th>Product</th>
+    <th>Q1 Ordered</th>
+    <th>Q1 Delivered</th>
+    <th>Q2 Ordered</th>
+    <th>Q2 Delivered</th>
+    <th>Q3/Q4 Ordered</th>
+    <th>Outstanding</th>
+  </tr>
+</thead>
     <tbody id="openOrdersBody">
       <!-- Data will be populated here -->
     </tbody>
@@ -1294,16 +1295,29 @@ async function loadOpenOrders() {
   
   try {
     console.log('📡 Fetching invoices...');
-    const response = await fetch(`${API_BASE}/api/invoices-detail`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        organizationName: MINING_ORG,
-        dateFrom: "2025-07-01",
-        dateTo: "2026-06-30",
-        status: "AUTHORISED"
-      }),
-    });
+    // Fetch AUTHORISED invoices (ordered but not paid)
+const authResponse = await fetch(`${API_BASE}/api/invoices-detail`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    organizationName: MINING_ORG,
+    dateFrom: "2025-07-01",
+    dateTo: "2026-06-30",
+    status: "AUTHORISED"
+  }),
+});
+
+// Fetch PAID invoices (delivered)
+const paidResponse = await fetch(`${API_BASE}/api/invoices-detail`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    organizationName: MINING_ORG,
+    dateFrom: "2025-07-01",
+    dateTo: "2026-06-30",
+    status: "PAID"
+  }),
+});
 
     if (!response.ok) {
       throw new Error(`Failed to fetch invoices: ${response.status}`);
@@ -1319,9 +1333,16 @@ async function loadOpenOrders() {
     
     // Initialize products
     const products = {};
-    ['Sand', '20mm', '40mm', '80mm', 'RBase', 'XYZ'].forEach(p => {
-      products[p] = { Q1: 0, Q2: 0, Q3: 0, Q4: 0, total: 0 };
-    });
+['Sand', '20mm', '40mm', '80mm', 'RBase', 'XYZ'].forEach(p => {
+  products[p] = {
+    Q1_ordered: 0,
+    Q1_delivered: 0,
+    Q2_ordered: 0,
+    Q2_delivered: 0,
+    Q34_ordered: 0,
+    total_outstanding: 0
+  };
+});
 
     // Process invoices with detailed logging
     console.log('🔄 Processing invoices...');
