@@ -1256,68 +1256,48 @@ function getQuarter(dateStr) {
 }
 
 // Load open orders - DEBUG VERSION
+// Load open orders
 async function loadOpenOrders() {
   console.log('🔍 Starting loadOpenOrders()...');
   
   try {
-    // Step 1: Fetch organizations
-    console.log('📡 Fetching organizations from:', `${API_BASE}/api/organizations`);
-    const orgsResponse = await fetch(`${API_BASE}/api/organizations`);
-    
-    if (!orgsResponse.ok) {
-      throw new Error(`Organizations fetch failed: ${orgsResponse.status}`);
-    }
-    
-    const orgsData = await orgsResponse.json();
-    console.log('✅ Organizations received:', orgsData);
-    
-    // Step 2: Find Mining organization
-    const miningOrg = orgsData.organizations.find(org => 
-      org.tenantName.includes('Mining')
-    );
-    
-    console.log('🏢 Mining org found:', miningOrg);
+    // Fetch AUTHORISED invoices (outstanding orders)
+    console.log('📡 Fetching invoices...');
+    const response = await fetch(`${API_BASE}/api/invoices-detail`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        organizationName: MINING_ORG,
+        dateFrom: "2025-07-01",
+        dateTo: "2026-06-30",
+        status: "AUTHORISED"
+      }),
+    });
 
-    if (!miningOrg) {
-      console.error('❌ Mining organization not found in list');
-      document.getElementById('openOrdersContent').innerHTML = 
-        '<div style="text-align: center; padding: 20px; color: #e74c3c;">Mining organization not found</div>';
-      return;
-    }
-
-    // Step 3: Fetch invoices
-    const invoiceUrl = `${API_BASE}/api/invoices-detail/${miningOrg.tenantId}?dateFrom=2025-07-01&dateTo=2026-06-30&status=AUTHORISED`;
-    console.log('📡 Fetching invoices from:', invoiceUrl);
-    
-    const response = await fetch(invoiceUrl);
-    
     if (!response.ok) {
-      throw new Error(`Invoices fetch failed: ${response.status}`);
+      throw new Error(`Failed to fetch invoices: ${response.status}`);
     }
     
     const data = await response.json();
     console.log('✅ Invoices received:', data);
     console.log('📊 Total invoices:', data.invoices.length);
     
-    // Step 4: Filter for sales invoices only
+    // Filter for sales invoices only
     const salesInvoices = data.invoices.filter(inv => inv.type === 'ACCREC');
     console.log('💰 Sales invoices (ACCREC):', salesInvoices.length);
     
-    // Step 5: Initialize products
+    // Initialize products
     const products = {};
     ['Sand', '20mm', '40mm', '80mm', 'RBase', 'XYZ'].forEach(p => {
       products[p] = { Q1: 0, Q2: 0, Q3: 0, Q4: 0, total: 0 };
     });
 
-    // Step 6: Process invoices
+    // Process invoices
     salesInvoices.forEach(inv => {
       const quarter = getQuarter(inv.date);
-      console.log(`📅 Invoice ${inv.invoiceNumber} - Date: ${inv.date} - Quarter: ${quarter}`);
       
       inv.lineItems.forEach(item => {
         const productType = productMapping[item.description] || 'Other';
-        console.log(`  📦 Line: ${item.description} → ${productType} (${item.quantity}t)`);
-        
         if (products[productType]) {
           const tonnes = item.quantity;
           products[productType][quarter] += tonnes;
@@ -1327,14 +1307,11 @@ async function loadOpenOrders() {
     });
 
     console.log('📈 Final products summary:', products);
-
-    // Step 7: Render table
     renderOpenOrdersTable(products);
     console.log('✅ Open Orders loaded successfully!');
 
   } catch (error) {
     console.error('❌ ERROR in loadOpenOrders:', error);
-    console.error('Error stack:', error.stack);
     document.getElementById('openOrdersContent').innerHTML = 
       `<div style="text-align: center; padding: 20px; color: #e74c3c;">
         Error loading data<br>
@@ -1342,7 +1319,6 @@ async function loadOpenOrders() {
       </div>`;
   }
 }
-
     
 
 // Render the table
