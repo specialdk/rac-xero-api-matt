@@ -473,6 +473,151 @@
   font-weight: 400;
 }
 
+/* Top Customers Card */
+.top-customers-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.top-customers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #3498db;
+}
+
+.customer-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.customer-slider-container label {
+  color: #7f8c8d;
+}
+
+#customerSlider {
+  width: 80px;
+  cursor: pointer;
+}
+
+#customerSliderValue {
+  min-width: 20px;
+  font-weight: 600;
+  color: #3498db;
+}
+
+.customer-legend {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+.legend-color.past {
+  background: #3498db;
+}
+
+.legend-color.future {
+  background: #f39c12;
+}
+
+.customer-item {
+  margin-bottom: 16px;
+}
+
+.customer-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.customer-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.customer-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.customer-revenue {
+  font-weight: 500;
+}
+
+.revenue-past {
+  color: #3498db;
+}
+
+.revenue-future {
+  color: #f39c12;
+}
+
+.customer-bar-container {
+  width: 100%;
+  height: 24px;
+  background: #ecf0f1;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+
+.customer-bar-past {
+  background: #3498db;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  transition: width 0.3s ease;
+}
+
+.customer-bar-future {
+  background: #f39c12;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  transition: width 0.3s ease;
+}
+
+.customer-bar-past:empty,
+.customer-bar-future:empty {
+  justify-content: flex-start;
+}
 
 
     </style>
@@ -710,17 +855,29 @@
           <div class="balance-chart">Visual chart placeholder</div>
         </div>
 
-        <!-- Customers -->
-        <div class="panel">
-          <h2>Top X Customers</h2>
-          <div style="font-size: 11px; color: #666; margin-bottom: 12px">
-            FY25/26
-          </div>
-          <ul class="customer-list" id="customer-list">
-            <li class="loading">Loading...</li>
-          </ul>
-          <div class="placeholder-note">From Aged Receivables API</div>
-        </div>
+        <!-- Top X Customers -->
+<div class="top-customers-card">
+  <div class="top-customers-header">
+    <span>👥 Top Customers (FY26)</span>
+    <div class="customer-slider-container">
+      <label for="customerSlider">Show top</label>
+      <input type="range" id="customerSlider" min="5" max="10" value="5" step="1">
+      <span id="customerSliderValue">5</span>
+    </div>
+  </div>
+  
+  <div id="topCustomersContent">
+    <div class="loading-spinner">Loading customers...</div>
+  </div>
+
+  <div id="topCustomersDisplay" style="display: none;">
+    <div class="customer-legend">
+      <span class="legend-item"><span class="legend-color past"></span> Delivered (Paid + Authorised)</span>
+      <span class="legend-item"><span class="legend-color future"></span> Future Orders (Draft)</span>
+    </div>
+    <div id="topCustomersList"></div>
+  </div>
+</div>
 
         <!-- Aged -->
         <div class="panel">
@@ -886,6 +1043,7 @@
           await loadBudget(quarterInfo);
           await loadCashPosition();
           await loadOpenOrders();
+          await loadTopCustomers();
           await loadAgedReceivables();
           await loadFinancialRatios();
         } catch (error) {
@@ -1433,6 +1591,164 @@ function formatOrderValue(value) {
     return `<span class="order-value zero">-</span>`;
   }
   return `<span class="order-value">${formatted}</span>`;
+}
+
+// Load top customers
+async function loadTopCustomers() {
+  console.log('🔍 Starting loadTopCustomers()...');
+  
+  try {
+    // Fetch all invoice statuses
+    const [draftRes, authRes, paidRes] = await Promise.all([
+      fetch(`${API_BASE}/api/invoices-detail`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationName: MINING_ORG,
+          dateFrom: "2025-07-01",
+          dateTo: "2026-06-30",
+          status: "DRAFT"
+        }),
+      }),
+      fetch(`${API_BASE}/api/invoices-detail`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationName: MINING_ORG,
+          dateFrom: "2025-07-01",
+          dateTo: "2026-06-30",
+          status: "AUTHORISED"
+        }),
+      }),
+      fetch(`${API_BASE}/api/invoices-detail`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationName: MINING_ORG,
+          dateFrom: "2025-07-01",
+          dateTo: "2026-06-30",
+          status: "PAID"
+        }),
+      })
+    ]);
+
+    const draftData = await draftRes.json();
+    const authData = await authRes.json();
+    const paidData = await paidRes.json();
+
+    console.log('✅ DRAFT invoices:', draftData.invoices.length);
+    console.log('✅ AUTHORISED invoices:', authData.invoices.length);
+    console.log('✅ PAID invoices:', paidData.invoices.length);
+
+    // Group by customer
+    const customers = {};
+
+    // Process DRAFT (future orders)
+    draftData.invoices
+      .filter(inv => inv.type === 'ACCREC')
+      .forEach(inv => {
+        const name = inv.contact.name;
+        if (!customers[name]) {
+          customers[name] = { name, past: 0, future: 0, pastOrders: 0, futureOrders: 0 };
+        }
+        customers[name].future += inv.total;
+        customers[name].futureOrders += 1;
+      });
+
+    // Process AUTHORISED + PAID (past delivered orders)
+    [...authData.invoices, ...paidData.invoices]
+      .filter(inv => inv.type === 'ACCREC')
+      .forEach(inv => {
+        const name = inv.contact.name;
+        if (!customers[name]) {
+          customers[name] = { name, past: 0, future: 0, pastOrders: 0, futureOrders: 0 };
+        }
+        customers[name].past += inv.total;
+        customers[name].pastOrders += 1;
+      });
+
+    // Convert to array and calculate totals
+    const customersArray = Object.values(customers).map(c => ({
+      ...c,
+      total: c.past + c.future,
+      totalOrders: c.pastOrders + c.futureOrders
+    }));
+
+    // Sort by total revenue descending
+    customersArray.sort((a, b) => b.total - a.total);
+
+    console.log('📊 Total unique customers:', customersArray.length);
+    console.log('🏆 Top customer:', customersArray[0]);
+
+    // Store for rendering
+    window.topCustomersData = customersArray;
+
+    // Initial render
+    renderTopCustomers(5);
+
+    // Setup slider
+    const slider = document.getElementById('customerSlider');
+    const sliderValue = document.getElementById('customerSliderValue');
+    
+    slider.addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      sliderValue.textContent = value;
+      renderTopCustomers(value);
+    });
+
+    console.log('✅ Top Customers loaded successfully!');
+
+  } catch (error) {
+    console.error('❌ ERROR in loadTopCustomers:', error);
+    document.getElementById('topCustomersContent').innerHTML = 
+      `<div style="text-align: center; padding: 20px; color: #e74c3c;">
+        Error loading customers<br>
+        <small>${error.message}</small>
+      </div>`;
+  }
+}
+
+// Render top X customers
+function renderTopCustomers(topX) {
+  const data = window.topCustomersData || [];
+  const topCustomers = data.slice(0, topX);
+  
+  // Calculate max total for bar sizing
+  const maxTotal = topCustomers[0]?.total || 1;
+
+  const container = document.getElementById('topCustomersList');
+  container.innerHTML = '';
+
+  topCustomers.forEach((customer, idx) => {
+    const pastPercent = (customer.past / maxTotal) * 100;
+    const futurePercent = (customer.future / maxTotal) * 100;
+    const totalPercent = pastPercent + futurePercent;
+
+    const item = document.createElement('div');
+    item.className = 'customer-item';
+    item.innerHTML = `
+      <div class="customer-name-row">
+        <span class="customer-name">${idx + 1}. ${customer.name}</span>
+        <div class="customer-stats">
+          <span class="customer-revenue revenue-past">$${customer.past.toLocaleString()} past</span>
+          <span class="customer-revenue revenue-future">$${customer.future.toLocaleString()} future</span>
+          <span>${customer.totalOrders} orders</span>
+        </div>
+      </div>
+      <div class="customer-bar-container">
+        <div class="customer-bar-past" style="width: ${pastPercent}%">
+          ${pastPercent > 10 ? '$' + (customer.past / 1000).toFixed(0) + 'k' : ''}
+        </div>
+        <div class="customer-bar-future" style="width: ${futurePercent}%">
+          ${futurePercent > 10 ? '$' + (customer.future / 1000).toFixed(0) + 'k' : ''}
+        </div>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+
+  document.getElementById('topCustomersContent').style.display = 'none';
+  document.getElementById('topCustomersDisplay').style.display = 'block';
 }
 
       async function loadFinancialRatios() {
