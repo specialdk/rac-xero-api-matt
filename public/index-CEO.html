@@ -15,14 +15,14 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           "Helvetica Neue", Arial, sans-serif;
         background: #f5f5f5;
-        height: 100vh;
-        overflow: hidden;
+        padding: 20px;
       }
 
       .header {
         background: white;
         padding: 15px 25px;
-        border-bottom: 2px solid #e0e0e0;
+        border-radius: 8px;
+        margin-bottom: 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -54,18 +54,18 @@
         background: white;
       }
 
-      /* ====== CEO DASHBOARD 3x3 GRID - FIXED ====== */
-      .ceo-dashboard-grid {
+      /* ====== CEO DASHBOARD 3x3 GRID ====== */
+      .dashboard {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: repeat(3, 1fr);
         gap: 15px;
-        padding: 15px;
-        height: calc(100vh - 100px); /* Adjust based on header height */
-        overflow: hidden;
+        padding: 20px;
+        max-height: calc(
+          100vh - 200px
+        ); /* Adjust based on your header height */
       }
 
-      .ceo-dashboard-card {
+      .panel {
         background: white;
         border-radius: 8px;
         padding: 15px;
@@ -73,86 +73,144 @@
         border: 1px solid #e0e0e0;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
-        min-height: 0;
+        overflow: hidden; /* Prevent overflow */
       }
 
-      .ceo-dashboard-card h3 {
+      .panel h2 {
         font-size: 16px;
         font-weight: 600;
         margin: 0 0 12px 0;
         padding-bottom: 8px;
         border-bottom: 2px solid #3498db;
         color: #2c3e50;
-        flex-shrink: 0;
+        flex-shrink: 0; /* Don't shrink the header */
       }
 
-      .ceo-dashboard-card > div:not(h3) {
+      .panel-content {
         flex: 1;
-        overflow-y: auto;
+        overflow-y: auto; /* Allow scrolling within panel if needed */
         overflow-x: hidden;
-        min-height: 0;
       }
 
       /* ====== P&L SECTION (2-COLUMN LAYOUT) ====== */
-      .pl-container {
+      .pl-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 15px;
         height: 100%;
       }
 
-      .pl-left {
+      .pl-metrics {
         display: flex;
         flex-direction: column;
         gap: 6px;
       }
 
-      .pl-metric {
+      .pl-row {
         display: flex;
         justify-content: space-between;
+        align-items: baseline;
         padding: 6px 0;
         font-size: 13px;
         border-bottom: 1px solid #f5f5f5;
       }
 
-      .pl-metric-label {
+      .pl-row.pl-highlight {
+        font-weight: 600;
+        font-size: 14px;
+        padding: 8px 0;
+        border-top: 2px solid #e0e0e0;
+        border-bottom: 2px solid #e0e0e0;
+        margin-top: 4px;
+      }
+
+      .pl-label {
         color: #666;
       }
 
-      .pl-metric-value {
+      .pl-value {
         font-weight: 600;
         color: #2c3e50;
       }
 
-      /* Budget Comparison (Right Side of P&L) */
-      .pl-right {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
+      .pl-percentage {
+        font-size: 11px;
+        color: #999;
+        margin-left: 6px;
       }
 
-      .pl-budget-section {
+      /* Budget Comparison (Right Side of P&L) */
+      .budget-comparison {
         background: #fffef0;
         padding: 12px;
-        border-radius: 6px;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .budget-comparison h3 {
+        font-size: 13px;
+        font-weight: 600;
+        margin: 0 0 10px 0;
+        color: #333;
+        text-align: center;
+      }
+
+      .budget-section {
+        background: white;
+        padding: 10px;
+        border-radius: 4px;
         border: 1px solid #f0e68c;
       }
 
-      .pl-budget-section h4 {
-        font-size: 13px;
+      .budget-section-header {
         font-weight: 600;
-        margin: 0 0 8px 0;
+        font-size: 12px;
         color: #333;
+        margin-bottom: 8px;
         padding-bottom: 6px;
         border-bottom: 1px solid #e0e0e0;
       }
 
-      .pl-budget-row {
+      .budget-detail-grid {
+        display: grid;
+        grid-template-columns: 60px 1fr;
+        gap: 8px;
+        padding: 3px 0;
+        font-size: 11px;
+      }
+
+      .budget-detail-label {
+        color: #666;
+      }
+
+      .budget-detail-value {
+        text-align: right;
+        font-weight: 500;
+        color: #000;
+      }
+
+      .budget-variance-positive {
+        color: #27ae60;
+      }
+
+      .budget-variance-negative {
+        color: #e74c3c;
+      }
+
+      /* COGS Section (Bottom of left column in P&L) */
+      .cogs-section {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 2px solid #e0e0e0;
+      }
+
+      .cogs-row {
         display: flex;
         justify-content: space-between;
-        padding: 4px 0;
-        font-size: 12px;
+        padding: 6px 0;
+        font-size: 13px;
       }
 
       /* ====== INVENTORY & ORDERS TABLES ====== */
@@ -273,6 +331,24 @@
         margin-top: 6px;
       }
 
+      /* ====== CASH POSITION ====== */
+      .cash-display {
+        text-align: center;
+        padding: 20px 10px;
+      }
+
+      .cash-amount {
+        font-size: 28px;
+        font-weight: 600;
+        color: #27ae60;
+        margin-bottom: 8px;
+      }
+
+      .cash-note {
+        font-size: 11px;
+        color: #666;
+      }
+
       /* ====== FINANCIAL RATIOS ====== */
       .ratios-grid {
         display: flex;
@@ -297,7 +373,7 @@
         justify-content: center;
       }
 
-      .optional-panel h3 {
+      .optional-panel h2 {
         color: #999 !important;
         border-color: #ccc !important;
       }
@@ -427,81 +503,7 @@
               </tr>
             </thead>
             <tbody id="inventoryBody">
-              <tr>
-                <td>RoadBase</td>
-                <td class="value-cell">8,000t</td>
-                <td class="value-cell">6,000t</td>
-                <td class="value-cell">$561,640</td>
-                <td>
-                  <span class="status-indicator status-at-target"
-                    >✓ At target</span
-                  >
-                </td>
-              </tr>
-              <tr>
-                <td>Type E (D50 500-700)</td>
-                <td class="value-cell">4,517t</td>
-                <td class="value-cell">6,250t*</td>
-                <td class="value-cell">$377,648</td>
-                <td>
-                  <span class="status-indicator status-below">⚠ Below</span>
-                </td>
-              </tr>
-              <tr>
-                <td>20mm Minus</td>
-                <td class="value-cell">12,119t</td>
-                <td class="value-cell">10,000t</td>
-                <td class="value-cell">$1,088,523</td>
-                <td>
-                  <span class="status-indicator status-above"
-                    >✓ Above target</span
-                  >
-                </td>
-              </tr>
-              <tr>
-                <td>Crusher Dust</td>
-                <td class="value-cell">2,092t</td>
-                <td class="value-cell">2,000t</td>
-                <td class="value-cell">$69,420</td>
-                <td>
-                  <span class="status-indicator status-adequate"
-                    >✓ Adequate</span
-                  >
-                </td>
-              </tr>
-              <tr>
-                <td>Sand</td>
-                <td class="value-cell">19,048t</td>
-                <td class="value-cell">15,000t</td>
-                <td class="value-cell">$600,000</td>
-                <td>
-                  <span class="status-indicator status-above"
-                    >✓ Above target</span
-                  >
-                </td>
-              </tr>
-              <tr>
-                <td>Other Rock</td>
-                <td class="value-cell">18,030t</td>
-                <td class="value-cell">8,000t</td>
-                <td class="value-cell">$653,100</td>
-                <td>
-                  <span class="status-indicator status-above"
-                    >✓ Above target</span
-                  >
-                </td>
-              </tr>
-              <tr class="total-row">
-                <td><strong>TOTAL INVENTORY</strong></td>
-                <td class="value-cell"><strong>63,806t</strong></td>
-                <td class="value-cell"><strong>47,250t</strong></td>
-                <td class="value-cell"><strong>$3,350,331</strong></td>
-                <td>
-                  <span class="status-indicator status-matches"
-                    >✓ Matches Xero</span
-                  >
-                </td>
-              </tr>
+              <!-- Populated by JS -->
             </tbody>
           </table>
           <div class="table-footnote">*Includes 3,740t committed to Pond 5</div>
@@ -521,41 +523,7 @@
               </tr>
             </thead>
             <tbody id="openOrdersBody">
-              <tr>
-                <td>Sand</td>
-                <td class="value-cell">978.3t</td>
-                <td class="value-cell">1550.9t</td>
-              </tr>
-              <tr>
-                <td>20mm</td>
-                <td class="value-cell">347.5t</td>
-                <td class="value-cell">2777.8t</td>
-              </tr>
-              <tr>
-                <td>40mm</td>
-                <td class="value-cell">-</td>
-                <td class="value-cell">-</td>
-              </tr>
-              <tr>
-                <td>80mm</td>
-                <td class="value-cell">4825.1t</td>
-                <td class="value-cell">1602.8t</td>
-              </tr>
-              <tr>
-                <td>RBase</td>
-                <td class="value-cell">969.8t</td>
-                <td class="value-cell">2231.9t</td>
-              </tr>
-              <tr>
-                <td>XYZ</td>
-                <td class="value-cell">64.4t</td>
-                <td class="value-cell">-</td>
-              </tr>
-              <tr class="total-row">
-                <td><strong>TOTAL</strong></td>
-                <td class="value-cell"><strong>7185.1t</strong></td>
-                <td class="value-cell"><strong>8163.4t</strong></td>
-              </tr>
+              <!-- Populated by JS -->
             </tbody>
           </table>
         </div>
@@ -584,6 +552,7 @@
       <div class="ceo-dashboard-card">
         <h3>👥 Top Customers (FY26)</h3>
         <div id="topCustomersDisplay">
+          <!-- Your existing top customers code -->
           <p style="font-size: 12px; color: #666">Top 5 customers display</p>
         </div>
       </div>
@@ -592,6 +561,7 @@
       <div class="ceo-dashboard-card">
         <h3>📊 Aged Debtors</h3>
         <div id="agedDebtorsDisplay">
+          <!-- Aged debtors visualization -->
           <p style="font-size: 12px; color: #666">Aged debtors chart</p>
         </div>
       </div>
@@ -633,8 +603,11 @@
       </div>
 
       <!-- ROW 3, COL 3: OPTIONAL/FUTURE -->
-      <div class="ceo-dashboard-card optional-panel">
-        <h3>➕ Optional Future Panel</h3>
+      <div
+        class="ceo-dashboard-card"
+        style="background: #f8f9fa; border-style: dashed"
+      >
+        <h3 style="color: #999">➕ Optional Future Panel</h3>
         <div style="text-align: center; padding: 40px; color: #999">
           <p>Reserved for future visualization</p>
         </div>
@@ -642,7 +615,17 @@
     </div>
 
     <script>
-      // KEEP ALL YOUR EXISTING JAVASCRIPT FROM index-CEO.html
+      // API Configuration
+
+      const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
+      const MINING_ORG = "Mining";
+
+      const QUARTERS = {
+        Q1: { start: "2025-07-01", end: "2025-09-30", days: 92 },
+        Q2: { start: "2025-10-01", end: "2025-12-31", days: 92 },
+        Q3: { start: "2026-01-01", end: "2026-03-31", days: 90 },
+        Q4: { start: "2026-04-01", end: "2026-06-30", days: 91 },
+      };
 
       function getQuarterDates(quarterCode) {
         const quarter = QUARTERS[quarterCode];
