@@ -67,11 +67,11 @@
   overflow: hidden;
 }
 
-     .top-row {
+.top-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 15px;
-  flex: 2;
+  flex: 1.5; /* Reduced from 2 to give more space to row 2 */
   min-height: 0;
 }
 
@@ -117,24 +117,28 @@
         color: #2c3e50;
       }
 
-      /* P&L Section */
-      .pl-section {
-        display: grid;
-        grid-template-columns: 250px 1fr;
-        gap: 20px;
-      }
+     .pl-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  height: 100%;
+}
 
-      .pl-metrics {
-        padding: 10px;
-      }
+      .pl-metrics,
+.budget-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: visible; /* Remove scroll */
+}
 
       .pl-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        padding: 8px 0;
-        font-size: 14px;
-      }
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0; /* Reduced from 8px */
+  font-size: 14px;
+}
 
       .pl-row.pl-highlight {
         font-weight: 600;
@@ -186,13 +190,13 @@
         border-bottom: 1px solid #e0e0e0;
       }
 
-      .budget-detail-grid {
-        display: grid;
-        grid-template-columns: 80px 1fr;
-        gap: 10px;
-        padding: 5px 0;
-        font-size: 12px;
-      }
+     .budget-detail-grid {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 10px;
+  padding: 3px 0; /* Reduced padding */
+  font-size: 12px;
+}
 
       .budget-detail-label {
         color: #666;
@@ -735,8 +739,7 @@
     </table>
     <div class="table-footnote">*Includes 3,740t committed to Pond 5</div>
   </div>
-  <div class="loading" id="inventoryLoading">Loading inventory data...</div>
-</div>
+  </div>
 
 <!-- OPEN ORDERS CARD -->
 <div class="panel">
@@ -753,8 +756,7 @@
       <tbody id="openOrdersBody"></tbody>
     </table>
   </div>
-  <div class="loading" id="openOrdersLoading">Loading orders data...</div>
-</div>
+  </div>
 
       <div class="middle-row">
         <!-- Balance -->
