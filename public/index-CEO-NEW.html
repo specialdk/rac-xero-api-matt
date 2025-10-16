@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAC Mining - CEO Dashboard</title>
+    <style>
+      /* ==========================================
+       🔒 LOCKED TEMPLATE - DO NOT MODIFY 🔒
+       ========================================== */
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: #f5f5f5;
+      }
+
+      /* HEADER - Fixed height */
+      .header {
+        background: white;
+        padding: 15px 25px;
+        border-bottom: 2px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+      }
+
+      /* DASHBOARD GRID - Takes remaining space */
+      .dashboard {
+        flex: 1;
+        display: grid;
+        grid-template-rows: 1.5fr 1fr 0.8fr;
+        gap: 15px;
+        padding: 15px;
+        min-height: 0;
+      }
+
+      /* THREE ROWS */
+      .dashboard-row {
+        display: grid;
+        gap: 15px;
+        min-height: 0;
+      }
+
+      .row-1 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .row-2 {
+        grid-template-columns: 1.2fr 0.8fr 0.8fr 1fr;
+      }
+      .row-3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      /* CARD TEMPLATE */
+      .card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .card-header {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #3498db;
+        color: #2c3e50;
+        flex-shrink: 0;
+      }
+
+      .card-content {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
+      }
+
+      /* ==========================================
+       ✅ CONTENT STYLING - Safe to Modify ✅
+       ========================================== */
+
+      /* Header styles */
+      .header h1 {
+        font-size: 24px;
+        color: #2c3e50;
+      }
+
+      .period-info {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      .company-selector {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .period-selector {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        background: white;
+      }
+
+      /* === P&L SECTION === */
+      .pl-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        height: 100%;
+      }
+
+      .pl-metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .pl-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 6px 0;
+        font-size: 14px;
+        border-bottom: 1px solid #f5f5f5;
+      }
+
+      .pl-row.pl-highlight {
+        font-weight: 600;
+        padding: 8px 0;
+      }
+
+      .pl-value {
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .pl-percentage {
+        font-size: 11px;
+        color: #999;
+        margin-left: 8px;
+      }
+
+      .budget-comparison {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: #fffbeb;
+        padding: 15px;
+        border-radius: 4px;
+      }
+
+      .budget-comparison h3 {
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: #333;
+        text-align: center;
+      }
+
+      .budget-simple {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .budget-section {
+        background: white;
+        padding: 12px;
+        border-radius: 4px;
+      }
+
+      .budget-section-header {
+        font-weight: 600;
+        font-size: 13px;
+        color: #333;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .budget-detail-grid {
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        gap: 8px;
+        padding: 3px 0;
+        font-size: 12px;
+      }
+
+      .budget-detail-label {
+        color: #666;
+      }
+
+      .budget-detail-value {
+        text-align: right;
+        font-weight: 500;
+        color: #000;
+      }
+
+      /* === TABLES === */
+      .inventory-table,
+      .orders-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .inventory-table thead,
+      .orders-table thead {
+        background: #34495e;
+        color: white;
+      }
+
+      .inventory-table th,
+      .orders-table th {
+        padding: 10px 8px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 11px;
+      }
+
+      .inventory-table tbody tr,
+      .orders-table tbody tr {
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .inventory-table tbody tr:hover,
+      .orders-table tbody tr:hover {
+        background: #f8f9fa;
+      }
+
+      .inventory-table tbody tr.total-row,
+      .orders-table tbody tr.total-row {
+        background: #ecf0f1;
+        font-weight: 600;
+        border-top: 2px solid #34495e;
+      }
+
+      .inventory-table td,
+      .orders-table td {
+        padding: 8px;
+      }
+
+      .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .status-at-target {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status-below {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .status-above,
+      .status-adequate {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+
+      .status-matches {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .value-cell {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .empty-cell {
+        color: #ccc;
+        text-align: center;
+      }
+
+      .table-footnote {
+        font-size: 10px;
+        color: #666;
+        font-style: italic;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      /* === BALANCE === */
+      .balance-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        font-size: 13px;
+        border-bottom: 1px solid #f5f5f5;
+      }
+
+      /* === TOP CUSTOMERS === */
+      .top-customers-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .customer-slider-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+
+      #customerSlider {
+        width: 60px;
+        cursor: pointer;
+      }
+
+      .customer-legend {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 12px;
+        font-size: 11px;
+        color: #7f8c8d;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .legend-color {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+      }
+
+      .legend-color.past {
+        background: #3498db;
+      }
+
+      .legend-color.future {
+        background: #f39c12;
+      }
+
+      .customer-item {
+        margin-bottom: 12px;
+      }
+
+      .customer-name-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+        font-size: 12px;
+      }
+
+      .customer-name {
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .customer-stats {
+        display: flex;
+        gap: 10px;
+        font-size: 11px;
+        color: #7f8c8d;
+      }
+
+      .revenue-past {
+        color: #3498db;
+      }
+
+      .revenue-future {
+        color: #f39c12;
+      }
+
+      .customer-bar-container {
+        width: 100%;
+        height: 20px;
+        background: #ecf0f1;
+        border-radius: 4px;
+        overflow: hidden;
+        display: flex;
+      }
+
+      .customer-bar-past,
+      .customer-bar-future {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      .customer-bar-past {
+        background: #3498db;
+      }
+
+      .customer-bar-future {
+        background: #f39c12;
+      }
+
+      /* === AGED DEBTORS === */
+      .aged-legend {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 10px;
+        font-size: 10px;
+      }
+
+      .aged-bar {
+        display: flex;
+        height: 40px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 12px;
+      }
+
+      .aged-segment {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .aged-30 {
+        background: #94a3b8;
+      }
+
+      .aged-60 {
+        background: #fb923c;
+      }
+
+      .aged-90 {
+        background: #f97316;
+      }
+
+      .aged-120 {
+        background: #ef4444;
+      }
+
+      .aged-summary {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 12px;
+        border-top: 1px solid #eee;
+      }
+
+      /* === CASH === */
+      .cash-current {
+        font-size: 28px;
+        font-weight: 700;
+        color: #27ae60;
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      /* === RATIOS === */
+      .ratio-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 12px;
+      }
+
+      .ratio-value {
+        font-weight: 600;
+        color: #3b82f6;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HEADER -->
+    <div class="header">
+      <div>
+        <h1>🏔️ Mining - CEO Dashboard</h1>
+        <div class="period-info" id="period-info">Loading...</div>
+      </div>
+      <div class="company-selector">
+        <select
+          id="periodSelector"
+          class="period-selector"
+          onchange="loadDashboard()"
+        >
+          <option value="Q1">Q1 FY25/26 (Jul-Sep)</option>
+          <option value="Q2" selected>Q2 FY25/26 (Oct-Dec)</option>
+          <option value="Q3">Q3 FY25/26 (Jan-Mar)</option>
+          <option value="Q4">Q4 FY25/26 (Apr-Jun)</option>
+        </select>
+        <button
+          onclick="loadDashboard()"
+          style="
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          LOAD
+        </button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD GRID -->
+    <div class="dashboard">
+      <!-- ROW 1: 3 Cards -->
+      <div class="dashboard-row row-1">
+        <!-- P&L SECTION -->
+        <div class="card">
+          <div class="card-header">💰 P&L Section</div>
+          <div class="card-content">
+            <div class="pl-section">
+              <div class="pl-metrics">
+                <div class="pl-row">
+                  <span>Revenue</span>
+                  <span class="pl-value" id="pl-revenue">$0</span>
+                </div>
+                <div class="pl-row">
+                  <span>COGS</span>
+                  <span class="pl-value" id="pl-cogs">$0</span>
+                </div>
+                <div class="pl-row pl-highlight">
+                  <span>Gross Profit</span>
+                  <span class="pl-value" id="pl-gross-profit">$0</span>
+                  <span class="pl-percentage" id="pl-margin">(0%)</span>
+                </div>
+                <div style="height: 10px"></div>
+                <div class="pl-row">
+                  <span>Opex</span>
+                  <span class="pl-value" id="pl-opex">$0</span>
+                </div>
+                <div class="pl-row">
+                  <span>EBITDA</span>
+                  <span class="pl-value" id="pl-ebitda">$0</span>
+                  <span class="pl-percentage" id="pl-ebitda-vs-budget"
+                    >(0%)</span
+                  >
+                </div>
+                <div class="pl-row pl-highlight">
+                  <span>Net Profit</span>
+                  <span class="pl-value" id="pl-net-profit">$0</span>
+                </div>
+              </div>
+              <div class="budget-comparison">
+                <h3>Actual v Budget</h3>
+                <div class="budget-simple">
+                  <div class="budget-section">
+                    <div class="budget-section-header">Revenue</div>
+                    <div class="budget-detail-grid">
+                      <span class="budget-detail-label">Budget</span>
+                      <span class="budget-detail-value" id="revenue-budget"
+                        >-</span
+                      >
+                    </div>
+                    <div class="budget-detail-grid">
+                      <span class="budget-detail-label">Actual</span>
+                      <span class="budget-detail-value" id="revenue-actual"
+                        >-</span
+                      >
+                    </div>
+                    <div class="budget-detail-grid">
+                      <span class="budget-detail-label">Variance</span>
+                      <span class="budget-detail-value" id="revenue-variance"
+                        >-</span
+                      >
+                    </div>
+                  </div>
+                  <div class="budget-section">
+                    <div class="budget-section-header">Expenses</div>
+                    <div class="budget-detail-grid">
+                      <span class="budget-detail-label">Budget</span>
+                      <span class="budget-detail-value" id="expenses-budget"
+                        >-</span
+                      >
+                    </div>
+                    <div class="budget-detail-grid">
+                      <span class="budget-detail-label">Actual</span>
+                      <span class="budget-detail-value" id="expenses-actual"
+                        >-</span
+                      >
+                    </div>
+                    <div class="budget-detail-grid">
+                      <span class="budget-detail-label">Variance</span>
+                      <span class="budget-detail-value" id="expenses-variance"
+                        >-</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INVENTORY -->
+        <div class="card">
+          <div class="card-header">📦 Inventory & Forecasting</div>
+          <div class="card-content">
+            <table class="inventory-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Current Stock</th>
+                  <th>Target</th>
+                  <th>Value @ Sales</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryBody">
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 20px">
+                    Loading...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="table-footnote">
+              *Includes 3,740t committed to Pond 5
+            </div>
+          </div>
+        </div>
+
+        <!-- OPEN ORDERS -->
+        <div class="card">
+          <div class="card-header">📋 Open Orders</div>
+          <div class="card-content">
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th class="value-cell">Q2 Ordered</th>
+                  <th class="value-cell">Q3/4 Ordered</th>
+                </tr>
+              </thead>
+              <tbody id="openOrdersBody">
+                <tr>
+                  <td colspan="3" style="text-align: center; padding: 20px">
+                    Loading...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2: 4 Cards -->
+      <div class="dashboard-row row-2">
+        <!-- BALANCE -->
+        <div class="card">
+          <div class="card-header">⚖️ Balance</div>
+          <div class="card-content">
+            <div class="balance-item">
+              <span>Total Assets</span>
+              <strong id="total-assets">-</strong>
+            </div>
+            <div class="balance-item">
+              <span>Total Liabilities</span>
+              <strong id="total-liabilities">-</strong>
+            </div>
+            <div class="balance-item">
+              <span>Total Equity</span>
+              <strong id="total-equity">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- AGED DEBTORS -->
+        <div class="card">
+          <div class="card-header">📊 Aged Debtors</div>
+          <div class="card-content">
+            <div class="aged-legend">
+              <div class="legend-item">
+                <div class="legend-color aged-30"></div>
+                <span>30d</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color aged-60"></div>
+                <span>60d</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color aged-90"></div>
+                <span>90d</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color aged-120"></div>
+                <span>120+</span>
+              </div>
+            </div>
+            <div class="aged-bar" id="aged-bar">
+              <div class="aged-segment aged-30" style="width: 30%">30%</div>
+              <div class="aged-segment aged-60" style="width: 20%">20%</div>
+              <div class="aged-segment aged-90" style="width: 20%">20%</div>
+              <div class="aged-segment aged-120" style="width: 30%">30%</div>
+            </div>
+            <div class="aged-summary">
+              <span>Total Outstanding</span>
+              <strong id="aged-total">-</strong>
+            </div>
+            <div class="aged-summary">
+              <span>Critical (90+ days)</span>
+              <strong id="aged-critical">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- CASH -->
+        <div class="card">
+          <div class="card-header">💵 Cash Position</div>
+          <div class="card-content">
+            <div class="cash-current" id="current-cash">-</div>
+          </div>
+        </div>
+
+        <!-- TOP CUSTOMERS -->
+        <div class="card">
+          <div class="card-header">
+            <div class="top-customers-header">
+              <span>👥 Top Customers (FY26)</span>
+              <div class="customer-slider-container">
+                <label for="customerSlider">Top</label>
+                <input
+                  type="range"
+                  id="customerSlider"
+                  min="5"
+                  max="10"
+                  value="5"
+                  step="1"
+                />
+                <span id="customerSliderValue">5</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-content">
+            <div id="topCustomersDisplay">
+              <div class="customer-legend">
+                <span class="legend-item"
+                  ><span class="legend-color past"></span> Delivered</span
+                >
+                <span class="legend-item"
+                  ><span class="legend-color future"></span> Future Orders</span
+                >
+              </div>
+              <div id="topCustomersList">Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: 2 Cards -->
+      <div class="dashboard-row row-3">
+        <!-- RATIOS -->
+        <div class="card">
+          <div class="card-header">📈 Financial Ratios</div>
+          <div class="card-content">
+            <div class="ratio-item">
+              <span>Current Ratio</span>
+              <span class="ratio-value" id="ratio-current">-</span>
+            </div>
+            <div class="ratio-item">
+              <span>Gross Margin %</span>
+              <span class="ratio-value" id="ratio-gross-margin">-</span>
+            </div>
+            <div class="ratio-item">
+              <span>Net Profit Margin %</span>
+              <span class="ratio-value" id="ratio-net-margin">-</span>
+            </div>
+            <div class="ratio-item">
+              <span>Debt to Equity</span>
+              <span class="ratio-value" id="ratio-debt-equity">-</span>
+            </div>
+            <div class="ratio-item">
+              <span>Return on Assets %</span>
+              <span class="ratio-value" id="ratio-roa">-</span>
+            </div>
+            <div class="ratio-item">
+              <span>Debtor Days</span>
+              <span class="ratio-value" id="ratio-debtor-days">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- FUTURE -->
+        <div
+          class="card"
+          style="border: 2px dashed #cbd5e1; background: #f8fafc"
+        >
+          <div class="card-header" style="color: #94a3b8">
+            ➕ Optional Future Panel
+          </div>
+          <div class="card-content">
+            <div style="text-align: center; padding: 40px; color: #999">
+              Reserved for future visualization
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Copy ALL JavaScript from index-CEO-current-working.html
+      const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
+      const MINING_ORG = "Mining";
+
+      const QUARTERS = {
+        Q1: { start: "2025-07-01", end: "2025-09-30", days: 92 },
+        Q2: { start: "2025-10-01", end: "2025-12-31", days: 92 },
+        Q3: { start: "2026-01-01", end: "2026-03-31", days: 90 },
+        Q4: { start: "2026-04-01", end: "2026-06-30", days: 91 },
+      };
+
+      function getQuarterDates(quarterCode) {
+        const quarter = QUARTERS[quarterCode];
+        const today = new Date("2025-10-14");
+        const startDate = new Date(quarter.start);
+        const endDate = new Date(quarter.end);
+
+        let actualEndDate = endDate;
+        let daysElapsed = 0;
+        let isComplete = false;
+        let hasStarted = true;
+
+        if (today < startDate) {
+          hasStarted = false;
+          daysElapsed = 0;
+        } else if (today > endDate) {
+          isComplete = true;
+          daysElapsed = quarter.days;
+        } else {
+          actualEndDate = today;
+          daysElapsed =
+            Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        return {
+          quarterCode,
+          startDate: quarter.start,
+          endDate: isComplete ? quarter.end : today.toISOString().split("T")[0],
+          totalDays: quarter.days,
+          daysElapsed,
+          isComplete,
+          hasStarted,
+          proRateFactor: daysElapsed / quarter.days,
+        };
+      }
+
+      async function loadDashboard() {
+        const period = document.getElementById("periodSelector").value;
+        const quarterInfo = getQuarterDates(period);
+
+        if (!quarterInfo.hasStarted) {
+          document.getElementById(
+            "period-info"
+          ).textContent = `${period} has not started yet`;
+          return;
+        }
+
+        const statusText = quarterInfo.isComplete
+          ? `Complete: ${quarterInfo.startDate} to ${quarterInfo.endDate}`
+          : `${quarterInfo.daysElapsed} of ${quarterInfo.totalDays} days (${(
+              quarterInfo.proRateFactor * 100
+            ).toFixed(1)}%) | ${quarterInfo.startDate} to ${
+              quarterInfo.endDate
+            }`;
+
+        document.getElementById("period-info").textContent = statusText;
+
+        try {
+          await Promise.all([
+            loadTrialBalance(),
+            loadProfitLoss(quarterInfo),
+            loadBudget(quarterInfo),
+            loadCashPosition(),
+            loadInventoryForecasting(),
+            loadOpenOrders(),
+            loadTopCustomers(),
+            loadAgedReceivables(),
+            loadFinancialRatios(),
+          ]);
+        } catch (error) {
+          console.error("Error:", error);
+        }
+      }
+
+      async function loadTrialBalance() {
+        try {
+          const response = await fetch(`${API_BASE}/api/trial-balance`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ organizationName: MINING_ORG }),
+          });
+          const data = await response.json();
+
+          document.getElementById("total-assets").textContent =
+            "$" +
+            (data.trialBalance?.totals?.totalAssets || 0).toLocaleString();
+          document.getElementById("total-liabilities").textContent =
+            "$" +
+            (data.trialBalance?.totals?.totalLiabilities || 0).toLocaleString();
+          document.getElementById("total-equity").textContent =
+            "$" +
+            (data.trialBalance?.totals?.totalEquity || 0).toLocaleString();
+        } catch (error) {
+          console.error("Error loading trial balance:", error);
+        }
+      }
+
+      async function loadProfitLoss(quarterInfo) {
+        try {
+          const start = new Date(quarterInfo.startDate);
+          const end = new Date(quarterInfo.endDate);
+          const monthsDiff =
+            (end.getFullYear() - start.getFullYear()) * 12 +
+            (end.getMonth() - start.getMonth()) +
+            1;
+
+          const response = await fetch(`${API_BASE}/api/profit-loss-summary`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              organizationName: MINING_ORG,
+              date: quarterInfo.endDate,
+              periodMonths: monthsDiff,
+            }),
+          });
+
+          const data = await response.json();
+          const revenue = data.summary?.totalRevenue || 0;
+          const totalExpenses = data.summary?.totalExpenses || 0;
+          const netProfit = data.summary?.netProfit || 0;
+
+          const expenseAccounts = data.summary?.expenseAccounts || [];
+          let cogs = 0;
+          let opex = 0;
+
+          expenseAccounts.forEach((account) => {
+            const name = account.name.toLowerCase();
+            if (
+              name.includes("cost of") ||
+              name.includes("cost -") ||
+              name.includes("haulage") ||
+              name.includes("freight")
+            ) {
+              cogs += account.amount;
+            } else {
+              opex += account.amount;
+            }
+          });
+
+          const grossProfit = revenue - cogs;
+          const grossMargin =
+            revenue > 0 ? ((grossProfit / revenue) * 100).toFixed(1) : 0;
+          const ebitda = netProfit;
+
+          function formatAmount(amount) {
+            const absAmount = Math.abs(amount);
+            if (absAmount >= 1000000) {
+              return "$" + (amount / 1000000).toFixed(2) + "M";
+            } else if (absAmount >= 1000) {
+              return "$" + (amount / 1000).toFixed(1) + "K";
+            } else {
+              return "$" + amount.toFixed(0);
+            }
+          }
+
+          document.getElementById("pl-revenue").textContent =
+            formatAmount(revenue);
+          document.getElementById("pl-cogs").textContent = formatAmount(cogs);
+          document.getElementById("pl-gross-profit").textContent =
+            formatAmount(grossProfit);
+          document.getElementById("pl-margin").textContent =
+            "(" + grossMargin + "% Margin)";
+          document.getElementById("pl-opex").textContent = formatAmount(opex);
+          document.getElementById("pl-ebitda").textContent =
+            formatAmount(ebitda);
+          document.getElementById("pl-net-profit").textContent =
+            formatAmount(netProfit);
+          document.getElementById("revenue-actual").textContent =
+            "$" + revenue.toLocaleString();
+          document.getElementById("expenses-actual").textContent =
+            "$" + totalExpenses.toLocaleString();
+
+          window.plData = { revenue, totalExpenses, ebitda };
+        } catch (error) {
+          console.error("Error loading P&L:", error);
+        }
+      }
+
+      async function loadBudget(quarterInfo) {
+        try {
+          const response = await fetch(`${API_BASE}/api/budget-summary`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              organizationName: MINING_ORG,
+              quarter: quarterInfo.quarterCode,
+            }),
+          });
+
+          const data = await response.json();
+          const budget = parseBudgetFromReport(data.report);
+          const proRatedRevenueBudget = Math.round(
+            budget.revenue * quarterInfo.proRateFactor
+          );
+          const proRatedExpensesBudget = Math.round(
+            budget.expenses * quarterInfo.proRateFactor
+          );
+
+          document.getElementById("revenue-budget").textContent =
+            "$" + proRatedRevenueBudget.toLocaleString();
+          document.getElementById("expenses-budget").textContent =
+            "$" + proRatedExpensesBudget.toLocaleString();
+
+          const revenueActual = window.plData?.revenue || 0;
+          const expensesActual = window.plData?.totalExpenses || 0;
+          const revenueVar = revenueActual - proRatedRevenueBudget;
+          const expensesVar = expensesActual - proRatedExpensesBudget;
+
+          document.getElementById("revenue-variance").textContent =
+            (revenueVar >= 0 ? "+$" : "-$") +
+            Math.abs(revenueVar).toLocaleString();
+          document.getElementById("expenses-variance").textContent =
+            (expensesVar >= 0 ? "+$" : "-$") +
+            Math.abs(expensesVar).toLocaleString();
+
+          const ebitdaActual = window.plData?.ebitda || 0;
+          const budgetNetProfit =
+            proRatedRevenueBudget - proRatedExpensesBudget;
+          const ebitdaVsBudgetPct =
+            budgetNetProfit !== 0
+              ? (
+                  ((ebitdaActual - budgetNetProfit) /
+                    Math.abs(budgetNetProfit)) *
+                  100
+                ).toFixed(1)
+              : 0;
+          document.getElementById("pl-ebitda-vs-budget").textContent =
+            "(" +
+            (ebitdaVsBudgetPct >= 0 ? "+" : "") +
+            ebitdaVsBudgetPct +
+            "% vs Budget)";
+        } catch (error) {
+          console.error("Error loading budget:", error);
+        }
+      }
+
+      function parseBudgetFromReport(report) {
+        let revenue = 0;
+        let expenses = 0;
+
+        if (!report || !report.rows) {
+          return { revenue: 0, expenses: 0 };
+        }
+
+        for (const section of report.rows) {
+          if (section.rowType === "Section" && section.title) {
+            const title = section.title.toLowerCase();
+
+            if (title.includes("income") || title.includes("revenue")) {
+              section.rows?.forEach((row) => {
+                if (row.rowType === "SummaryRow" || row.rowType === "Row") {
+                  const label = row.cells?.[0]?.value || "";
+                  if (
+                    label.toLowerCase().includes("total") &&
+                    row.cells &&
+                    row.cells.length >= 4
+                  ) {
+                    const month1 = parseFloat(row.cells[1]?.value || 0);
+                    const month2 = parseFloat(row.cells[2]?.value || 0);
+                    const month3 = parseFloat(row.cells[3]?.value || 0);
+                    const total = month1 + month2 + month3;
+                    if (total > revenue) revenue = total;
+                  }
+                }
+              });
+            } else if (
+              title.includes("expense") ||
+              title.includes("operating")
+            ) {
+              section.rows?.forEach((row) => {
+                if (row.rowType === "SummaryRow" || row.rowType === "Row") {
+                  const label = row.cells?.[0]?.value || "";
+                  if (
+                    label.toLowerCase().includes("total") &&
+                    row.cells &&
+                    row.cells.length >= 4
+                  ) {
+                    const month1 = parseFloat(row.cells[1]?.value || 0);
+                    const month2 = parseFloat(row.cells[2]?.value || 0);
+                    const month3 = parseFloat(row.cells[3]?.value || 0);
+                    const total = month1 + month2 + month3;
+                    if (total > expenses) expenses = total;
+                  }
+                }
+              });
+            }
+          }
+        }
+
+        return { revenue, expenses };
+      }
+
+      async function loadCashPosition() {
+        try {
+          const response = await fetch(`${API_BASE}/api/cash-position`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ organizationName: MINING_ORG }),
+          });
+          const data = await response.json();
+          document.getElementById("current-cash").textContent =
+            "$" + (data.totalCash || 0).toLocaleString();
+        } catch (error) {
+          console.error("Error loading cash:", error);
+        }
+      }
+
+      async function loadAgedReceivables() {
+        try {
+          const response = await fetch(`${API_BASE}/api/aged-receivables`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ organizationName: MINING_ORG }),
+          });
+          const data = await response.json();
+          const total = data.totalOutstanding || 0;
+          document.getElementById("aged-total").textContent =
+            "$" + total.toLocaleString();
+          document.getElementById("aged-critical").textContent =
+            "$" + Math.round(total * 0.3).toLocaleString();
+        } catch (error) {
+          console.error("Error loading aged receivables:", error);
+        }
+      }
+
+      async function loadInventoryForecasting() {
+        const inventoryData = [
+          {
+            product: "Roadbase",
+            current: "8,000t",
+            target: "8,000t",
+            value: "$563,840",
+            status: "at-target",
+          },
+          {
+            product: "Type E (500-700)",
+            current: "4,510t",
+            target: "8,250t*",
+            value: "$377,848",
+            status: "below",
+          },
+          {
+            product: "20mm Minus",
+            current: "12,118t",
+            target: "10,000t",
+            value: "$1,088,923",
+            status: "above",
+          },
+          {
+            product: "Crusher Dust",
+            current: "2,000t",
+            target: "2,000t",
+            value: "$69,420",
+            status: "at-target",
+          },
+          {
+            product: "Sand",
+            current: "19,084t",
+            target: "15,000t",
+            value: "$600,000",
+            status: "above",
+          },
+          {
+            product: "Other Rock",
+            current: "10,000t",
+            target: "8,000t",
+            value: "$800,000",
+            status: "adequate",
+          },
+        ];
+
+        const tbody = document.getElementById("inventoryBody");
+        tbody.innerHTML = "";
+
+        const statusConfig = {
+          "at-target": {
+            class: "status-at-target",
+            icon: "✅",
+            text: "At target",
+          },
+          below: { class: "status-below", icon: "🔴", text: "Below" },
+          above: { class: "status-above", icon: "✅", text: "Above target" },
+          adequate: { class: "status-adequate", icon: "✅", text: "Adequate" },
+        };
+
+        inventoryData.forEach((item) => {
+          const statusInfo = statusConfig[item.status];
+          const row = document.createElement("tr");
+          row.innerHTML = `
+          <td>${item.product}</td>
+          <td>${item.current}</td>
+          <td>${item.target}</td>
+          <td class="value-cell">${item.value}</td>
+          <td><span class="status-indicator ${statusInfo.class}">${statusInfo.icon} ${statusInfo.text}</span></td>
+        `;
+          tbody.appendChild(row);
+        });
+
+        const totalRow = document.createElement("tr");
+        totalRow.className = "total-row";
+        totalRow.innerHTML = `
+        <td colspan="3"><strong>TOTAL INVENTORY</strong></td>
+        <td class="value-cell"><strong>$3,500,031</strong></td>
+        <td><span class="status-indicator status-matches">✅ Matches Xero</span></td>
+      `;
+        tbody.appendChild(totalRow);
+      }
+
+      async function loadOpenOrders() {
+        const ordersData = [
+          { product: "Type E (500-700mm)", q2: "3,740t", q34: "-" },
+          { product: "Sand", q2: "-", q34: "-" },
+          { product: "20mm Minus", q2: "-", q34: "-" },
+          { product: "Crusher Dust", q2: "-", q34: "-" },
+          { product: "Roadbase", q2: "-", q34: "-" },
+          { product: "Other Rock", q2: "-", q34: "-" },
+        ];
+
+        const tbody = document.getElementById("openOrdersBody");
+        tbody.innerHTML = "";
+
+        ordersData.forEach((item) => {
+          const row = document.createElement("tr");
+          const q2Display =
+            item.q2 === "-"
+              ? `<td class="value-cell empty-cell">-</td>`
+              : `<td class="value-cell"><strong>${item.q2}</strong></td>`;
+          const q34Display =
+            item.q34 === "-"
+              ? `<td class="value-cell empty-cell">-</td>`
+              : `<td class="value-cell"><strong>${item.q34}</strong></td>`;
+          row.innerHTML = `<td>${item.product}</td>${q2Display}${q34Display}`;
+          tbody.appendChild(row);
+        });
+      }
+
+      async function loadTopCustomers() {
+        try {
+          const [draftRes, authRes, paidRes] = await Promise.all([
+            fetch(`${API_BASE}/api/invoices-detail`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: MINING_ORG,
+                dateFrom: "2025-07-01",
+                dateTo: "2026-06-30",
+                status: "DRAFT",
+              }),
+            }),
+            fetch(`${API_BASE}/api/invoices-detail`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: MINING_ORG,
+                dateFrom: "2025-07-01",
+                dateTo: "2026-06-30",
+                status: "AUTHORISED",
+              }),
+            }),
+            fetch(`${API_BASE}/api/invoices-detail`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: MINING_ORG,
+                dateFrom: "2025-07-01",
+                dateTo: "2026-06-30",
+                status: "PAID",
+              }),
+            }),
+          ]);
+
+          const draftData = await draftRes.json();
+          const authData = await authRes.json();
+          const paidData = await paidRes.json();
+
+          const customers = {};
+
+          draftData.invoices
+            .filter((inv) => inv.type === "ACCREC")
+            .forEach((inv) => {
+              const name = inv.contact.name;
+              if (!customers[name])
+                customers[name] = { name, past: 0, future: 0 };
+              customers[name].future += inv.total;
+            });
+
+          [...authData.invoices, ...paidData.invoices]
+            .filter((inv) => inv.type === "ACCREC")
+            .forEach((inv) => {
+              const name = inv.contact.name;
+              if (!customers[name])
+                customers[name] = { name, past: 0, future: 0 };
+              customers[name].past += inv.total;
+            });
+
+          const customersArray = Object.values(customers)
+            .map((c) => ({ ...c, total: c.past + c.future }))
+            .sort((a, b) => b.total - a.total);
+
+          window.topCustomersData = customersArray;
+          renderTopCustomers(5);
+
+          document
+            .getElementById("customerSlider")
+            .addEventListener("input", (e) => {
+              const value = parseInt(e.target.value);
+              document.getElementById("customerSliderValue").textContent =
+                value;
+              renderTopCustomers(value);
+            });
+        } catch (error) {
+          console.error("Error loading customers:", error);
+        }
+      }
+
+      function renderTopCustomers(topX) {
+        const data = window.topCustomersData || [];
+        const topCustomers = data.slice(0, topX);
+        const maxTotal = topCustomers[0]?.total || 1;
+
+        const container = document.getElementById("topCustomersList");
+        container.innerHTML = "";
+
+        topCustomers.forEach((customer, idx) => {
+          const pastPercent = (customer.past / maxTotal) * 100;
+          const futurePercent = (customer.future / maxTotal) * 100;
+
+          const item = document.createElement("div");
+          item.className = "customer-item";
+          item.innerHTML = `
+          <div class="customer-name-row">
+            <span class="customer-name">${idx + 1}. ${customer.name}</span>
+            <div class="customer-stats">
+              <span class="revenue-past">$${customer.past.toLocaleString()}</span>
+              <span class="revenue-future">$${customer.future.toLocaleString()}</span>
+            </div>
+          </div>
+          <div class="customer-bar-container">
+            <div class="customer-bar-past" style="width: ${pastPercent}%">
+              ${
+                pastPercent > 10
+                  ? "$" + (customer.past / 1000).toFixed(0) + "k"
+                  : ""
+              }
+            </div>
+            <div class="customer-bar-future" style="width: ${futurePercent}%">
+              ${
+                futurePercent > 10
+                  ? "$" + (customer.future / 1000).toFixed(0) + "k"
+                  : ""
+              }
+            </div>
+          </div>
+        `;
+          container.appendChild(item);
+        });
+      }
+
+      async function loadFinancialRatios() {
+        try {
+          const response = await fetch(`${API_BASE}/api/financial-ratios`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ organizationName: MINING_ORG }),
+          });
+          const data = await response.json();
+          document.getElementById("ratio-current").textContent = (
+            data.currentRatio || 0
+          ).toFixed(2);
+          document.getElementById("ratio-gross-margin").textContent =
+            (data.grossMargin || 0).toFixed(1) + "%";
+          document.getElementById("ratio-net-margin").textContent =
+            (data.netProfitMargin || 0).toFixed(1) + "%";
+          document.getElementById("ratio-debt-equity").textContent = (
+            data.debtToEquity || 0
+          ).toFixed(2);
+          document.getElementById("ratio-roa").textContent =
+            (data.returnOnAssets || 0).toFixed(1) + "%";
+          document.getElementById("ratio-debtor-days").textContent = Math.round(
+            data.debtorDays || 0
+          );
+        } catch (error) {
+          console.error("Error loading ratios:", error);
+        }
+      }
+
+      window.addEventListener("load", () => loadDashboard());
+    </script>
+  </body>
+</html>
