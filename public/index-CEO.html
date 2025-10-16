@@ -103,7 +103,7 @@
   min-height: 0;
 }
 
-.panel > div {
+.panel > div:not(.pl-section) {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
@@ -124,8 +124,7 @@
   height: 100%;
 }
 
-      .pl-metrics,
-.budget-comparison {
+      .pl-metrics {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -157,23 +156,30 @@
       }
 
       .budget-comparison {
-        background: #fffbeb;
-        padding: 15px;
-        border-radius: 4px;
-      }
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fffbeb;
+  padding: 15px;
+  border-radius: 4px;
+  overflow: visible; /* No scroll */
+  height: 100%; /* Fill available space */
+}
 
       .budget-comparison h3 {
-        font-size: 14px;
-        margin-bottom: 15px;
-        color: #333;
-        text-align: center;
-      }
+  font-size: 14px;
+  margin-bottom: 15px;
+  color: #333;
+  text-align: center;
+}
 
       .budget-simple {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1; /* Take all available space */
+  justify-content: flex-start; /* Align to top */
+}
 
       .budget-section {
         background: white;
@@ -220,11 +226,14 @@
   justify-content: space-between;
   padding: 8px 0;
   font-size: 14px;
-  gap: 20px; /* Add gap instead of space-between spanning full width */
+  border-bottom: 1px solid #f5f5f5; /* Match pl-row styling */
 }
-      
-.cogs-row strong:first-child {
-  min-width: 100px; /* Consistent label width */
+
+.cogs-row strong:last-child {
+  font-weight: 600;
+  color: #2c3e50;
+  text-align: right;
+  min-width: 80px; /* Match value column width */
 }
 
 .cogs-row span {
