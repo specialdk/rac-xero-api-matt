@@ -209,19 +209,28 @@
       }
 
       .cogs-section {
-        margin-top: 15px;
-        padding-top: 15px;
-        border-top: 2px solid #e0e0e0;
-      }
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 2px solid #e0e0e0;
+  max-width: 250px; /* Match the left column width */
+}
 
-      .cogs-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        font-size: 14px;
-      }
-
+.cogs-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  gap: 20px; /* Add gap instead of space-between spanning full width */
+}
       
+.cogs-row strong:first-child {
+  min-width: 100px; /* Consistent label width */
+}
+
+.cogs-row span {
+  text-align: right;
+  white-space: nowrap;
+}
 
       /* Customers */
       .customer-list {
