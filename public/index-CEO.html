@@ -1336,45 +1336,179 @@
 
       // ========== TOP CUSTOMERS ==========
       async function loadTopCustomers() {
-        const customers = [
-          { name: "Laing O'Rourke", past: 65000, future: 20000 },
-          { name: "John Holland", past: 45000, future: 30000 },
-          { name: "Lendlease", past: 38000, future: 25000 },
-          { name: "CPB Contractors", past: 28000, future: 15000 },
-          { name: "Seymour Whyte", past: 22000, future: 10000 },
-        ];
+        console.log("🔍 Starting loadTopCustomers()...");
 
-        const maxTotal = Math.max(...customers.map((c) => c.past + c.future));
-        const container = document.getElementById("customersList");
+        try {
+          // Fetch all invoice statuses
+          const [draftRes, authRes, paidRes] = await Promise.all([
+            fetch(`${API_BASE}/api/invoices-detail`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: MINING_ORG,
+                dateFrom: "2025-07-01",
+                dateTo: "2026-06-30",
+                status: "DRAFT",
+              }),
+            }),
+            fetch(`${API_BASE}/api/invoices-detail`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: MINING_ORG,
+                dateFrom: "2025-07-01",
+                dateTo: "2026-06-30",
+                status: "AUTHORISED",
+              }),
+            }),
+            fetch(`${API_BASE}/api/invoices-detail`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: MINING_ORG,
+                dateFrom: "2025-07-01",
+                dateTo: "2026-06-30",
+                status: "PAID",
+              }),
+            }),
+          ]);
 
-        container.innerHTML = customers
-          .map((customer) => {
-            const pastPct = (customer.past / maxTotal) * 100;
-            const futurePct = (customer.future / maxTotal) * 100;
+          const draftData = await draftRes.json();
+          const authData = await authRes.json();
+          const paidData = await paidRes.json();
 
-            return `
-            <div class="customer-card">
-              <div class="customer-name">${customer.name}</div>
-              <div class="customer-bar">
-                <div class="bar-past" style="width: ${pastPct}%">
-                  ${
-                    pastPct > 10
-                      ? "$" + (customer.past / 1000).toFixed(0) + "k"
-                      : ""
-                  }
-                </div>
-                <div class="bar-future" style="width: ${futurePct}%">
-                  ${
-                    futurePct > 10
-                      ? "$" + (customer.future / 1000).toFixed(0) + "k"
-                      : ""
-                  }
-                </div>
+          console.log("✅ DRAFT invoices:", draftData.invoices.length);
+          console.log("✅ AUTHORISED invoices:", authData.invoices.length);
+          console.log("✅ PAID invoices:", paidData.invoices.length);
+
+          // Group by customer
+          const customers = {};
+
+          // Process DRAFT (future orders)
+          draftData.invoices
+            .filter((inv) => inv.type === "ACCREC")
+            .forEach((inv) => {
+              const name = inv.contact.name;
+              if (!customers[name]) {
+                customers[name] = {
+                  name,
+                  past: 0,
+                  future: 0,
+                  pastOrders: 0,
+                  futureOrders: 0,
+                };
+              }
+              customers[name].future += inv.total;
+              customers[name].futureOrders += 1;
+            });
+
+          // Process AUTHORISED + PAID (past delivered orders)
+          [...authData.invoices, ...paidData.invoices]
+            .filter((inv) => inv.type === "ACCREC")
+            .forEach((inv) => {
+              const name = inv.contact.name;
+              if (!customers[name]) {
+                customers[name] = {
+                  name,
+                  past: 0,
+                  future: 0,
+                  pastOrders: 0,
+                  futureOrders: 0,
+                };
+              }
+              customers[name].past += inv.total;
+              customers[name].pastOrders += 1;
+            });
+
+          // Convert to array and calculate totals
+          const customersArray = Object.values(customers).map((c) => ({
+            ...c,
+            total: c.past + c.future,
+            totalOrders: c.pastOrders + c.futureOrders,
+          }));
+
+          // Sort by total revenue descending
+          customersArray.sort((a, b) => b.total - a.total);
+
+          console.log("📊 Total unique customers:", customersArray.length);
+          console.log("🏆 Top customer:", customersArray[0]);
+
+          // Store for rendering
+          window.topCustomersData = customersArray;
+
+          // Initial render
+          renderTopCustomers(5);
+
+          // Setup slider
+          const slider = document.getElementById("customerSlider");
+          const sliderValue = document.getElementById("customerSliderValue");
+
+          slider.addEventListener("input", (e) => {
+            const value = parseInt(e.target.value);
+            sliderValue.textContent = value;
+            renderTopCustomers(value);
+          });
+
+          console.log("✅ Top Customers loaded successfully!");
+        } catch (error) {
+          console.error("❌ ERROR in loadTopCustomers:", error);
+          document.getElementById(
+            "topCustomersContent"
+          ).innerHTML = `<div style="text-align: center; padding: 20px; color: #e74c3c;">
+              Error loading customers<br>
+              <small>${error.message}</small>
+            </div>`;
+        }
+      }
+
+      // Render top X customers
+      function renderTopCustomers(topX) {
+        const data = window.topCustomersData || [];
+        const topCustomers = data.slice(0, topX);
+
+        // Calculate max total for bar sizing
+        const maxTotal = topCustomers[0]?.total || 1;
+
+        const container = document.getElementById("topCustomersList");
+        container.innerHTML = "";
+
+        topCustomers.forEach((customer, idx) => {
+          const pastPercent = (customer.past / maxTotal) * 100;
+          const futurePercent = (customer.future / maxTotal) * 100;
+
+          const item = document.createElement("div");
+          item.className = "customer-item";
+          item.innerHTML = `
+            <div class="customer-name-row">
+              <span class="customer-name">${idx + 1}. ${customer.name}</span>
+              <div class="customer-stats">
+                <span class="customer-revenue revenue-past">$${customer.past.toLocaleString()} past</span>
+                <span class="customer-revenue revenue-future">$${customer.future.toLocaleString()} future</span>
+                <span>${customer.totalOrders} orders</span>
+              </div>
+            </div>
+            <div class="customer-bar-container">
+              <div class="customer-bar-past" style="width: ${pastPercent}%">
+                ${
+                  pastPercent > 10
+                    ? "$" + (customer.past / 1000).toFixed(0) + "k"
+                    : ""
+                }
+              </div>
+              <div class="customer-bar-future" style="width: ${futurePercent}%">
+                ${
+                  futurePercent > 10
+                    ? "$" + (customer.future / 1000).toFixed(0) + "k"
+                    : ""
+                }
               </div>
             </div>
           `;
-          })
-          .join("");
+          container.appendChild(item);
+        });
+
+        document.getElementById("topCustomersContent").style.display = "none";
+        document.getElementById("topCustomersDisplay").style.display = "block";
       }
 
       // ========== AGED DEBTORS ==========
