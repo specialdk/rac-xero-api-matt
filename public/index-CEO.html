@@ -911,11 +911,12 @@
         document.getElementById("period-info").style.color =
           quarterInfo.isComplete ? "#27ae60" : "#3b82f6";
 
-        // Load all panels in parallel
+        // Load P&L first, then budget (needs P&L data), then everything else in parallel
+        await loadProfitLoss(quarterInfo);
+        await loadBudget(quarterInfo);
+
         await Promise.all([
           loadTrialBalance(),
-          loadProfitLoss(quarterInfo),
-          loadBudget(quarterInfo),
           loadCashPosition(),
           loadInventoryForecasting(),
           loadOpenOrders(),
