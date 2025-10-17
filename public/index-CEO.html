@@ -751,7 +751,21 @@
 
       <!-- Panel 6: Top Customers -->
       <div class="panel panel-customers">
-        <div class="panel-header">👥 Top Customers (FY26)</div>
+        <div class="panel-header">
+          <span>👥 Top Customers (FY26)</span>
+          <div class="customer-slider-container">
+            <label for="customerSlider">Show top</label>
+            <input
+              type="range"
+              id="customerSlider"
+              min="5"
+              max="10"
+              value="5"
+              step="1"
+            />
+            <span id="customerSliderValue">5</span>
+          </div>
+        </div>
         <div class="panel-content">
           <div class="customer-legend">
             <div class="legend-item">
@@ -763,8 +777,20 @@
               <span>Future Orders</span>
             </div>
           </div>
-          <div class="customers-list" id="customersList">
-            <div class="loading">Loading...</div>
+          <div id="topCustomersContent">
+            <div class="loading">Loading customers...</div>
+          </div>
+
+          <div id="topCustomersDisplay" style="display: none">
+            <div class="customer-legend">
+              <span class="legend-item"
+                ><span class="legend-color past"></span> Delivered</span
+              >
+              <span class="legend-item"
+                ><span class="legend-color future"></span> Future Orders</span
+              >
+            </div>
+            <div id="topCustomersList"></div>
           </div>
         </div>
       </div>
