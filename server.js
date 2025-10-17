@@ -39,6 +39,29 @@ const pool = new Pool({
       : false,
 });
 
+// ===== CACHE SYSTEM =====
+const cache = new Map();
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
+function getCacheKey(endpoint, params) {
+  return `${endpoint}:${JSON.stringify(params)}`;
+}
+
+function getFromCache(key) {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    console.log(`✅ Cache HIT: ${key}`);
+    return cached.data;
+  }
+  console.log(`❌ Cache MISS: ${key}`);
+  return null;
+}
+
+function setCache(key, data) {
+  cache.set(key, { data, timestamp: Date.now() });
+  console.log(`💾 Cached: ${key}`);
+}
+
 // ApprovalMax configuration
 const APPROVALMAX_CONFIG = {
   authUrl: "https://identity.approvalmax.com/connect/authorize",
@@ -3369,11 +3392,15 @@ app.post("/api/yoy-analysis", async (req, res) => {
 
 // Enhanced Individual Trial Balance with Date Support
 app.get("/api/trial-balance/:tenantId", async (req, res) => {
-  try {
-    console.log(
-      `🔍 Getting PROPER trial balance for tenant: ${req.params.tenantId}`
-    );
+  const cacheKey = getCacheKey("trial-balance", {
+    tenantId: req.params.tenantId,
+    date: req.query.date,
+  });
 
+  const cached = getFromCache(cacheKey);
+  if (cached) return res.json(cached);
+
+  try {
     const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
     if (!tokenData) {
       return res
@@ -3382,220 +3409,130 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
     }
 
     await xero.setTokenSet(tokenData);
-
-    // Get date from query parameter or use today
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
+
+    console.log(
+      `🔍 Getting PROPER trial balance for tenant: ${req.params.tenantId}`
+    );
     console.log(`📅 Report date: ${reportDate}`);
 
-    // Get Balance Sheet report for specified date
-    const balanceSheetResponse = await xero.accountingApi.getReportBalanceSheet(
+    const response = await xero.accountingApi.getReportTrialBalance(
       req.params.tenantId,
       reportDate
     );
 
-    const balanceSheetRows = balanceSheetResponse.body.reports?.[0]?.rows || [];
+    console.log("🔄 Fetching P&L report for Revenue/Expenses...");
+    const plResponse = await xero.accountingApi.getReportProfitAndLoss(
+      req.params.tenantId,
+      reportDate,
+      reportDate
+    );
 
-    // Initialize trial balance structure
-    const trialBalance = {
-      assets: [],
-      liabilities: [],
-      equity: [],
-      revenue: [],
-      expenses: [],
-      totals: {
-        totalDebits: 0,
-        totalCredits: 0,
-        totalAssets: 0,
-        totalLiabilities: 0,
-        totalEquity: 0,
-        totalRevenue: 0,
-        totalExpenses: 0,
-      },
-    };
+    const plRows = plResponse.body.reports?.[0]?.rows || [];
+    let totalRevenue = 0;
+    let totalExpenses = 0;
 
-    let processedAccounts = 0;
-
-    // Process each Balance Sheet section
-    balanceSheetRows.forEach((section, sectionIndex) => {
-      if (section.rowType === "Section" && section.rows && section.title) {
-        const sectionTitle = section.title.toLowerCase();
-
-        section.rows.forEach((row) => {
-          if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
-            const accountName = row.cells[0]?.value || "";
-            const currentBalance = parseFloat(row.cells[1]?.value || 0);
-
-            if (
-              accountName.toLowerCase().includes("total") ||
-              currentBalance === 0
-            ) {
-              return;
+    plRows.forEach((row) => {
+      if (row.rowType === "Section") {
+        const sectionTitle = row.title?.toLowerCase() || "";
+        if (
+          sectionTitle.includes("income") ||
+          sectionTitle.includes("revenue")
+        ) {
+          row.rows?.forEach((subRow) => {
+            if (subRow.rowType === "SummaryRow") {
+              const value = parseFloat(subRow.cells?.[1]?.value || 0);
+              totalRevenue += value;
             }
+          });
+        } else if (
+          sectionTitle.includes("expense") ||
+          sectionTitle.includes("cost of sales")
+        ) {
+          row.rows?.forEach((subRow) => {
+            if (subRow.rowType === "SummaryRow") {
+              const value = parseFloat(subRow.cells?.[1]?.value || 0);
+              totalExpenses += Math.abs(value);
+            }
+          });
+        }
+      }
+    });
 
-            processedAccounts++;
+    const reportRows = response.body.reports?.[0]?.rows || [];
+    const accounts = [];
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+    let totalEquity = 0;
 
-            const accountInfo = {
-              name: accountName,
-              balance: currentBalance,
-              debit: 0,
-              credit: 0,
-              section: section.title,
+    reportRows.forEach((row) => {
+      if (row.rowType === "Section") {
+        const sectionName = row.title;
+        row.rows?.forEach((accountRow) => {
+          if (accountRow.rowType === "Row" && accountRow.cells) {
+            const account = {
+              accountID: accountRow.cells[0]?.attributes?.find(
+                (a) => a.id === "account"
+              )?.value,
+              accountName: accountRow.cells[0]?.value,
+              accountType: sectionName,
+              debit: parseFloat(accountRow.cells[1]?.value || 0),
+              credit: parseFloat(accountRow.cells[2]?.value || 0),
             };
 
-            // Account classification logic
-            if (
-              sectionTitle.includes("bank") ||
-              sectionTitle.includes("asset")
-            ) {
-              accountInfo.debit = currentBalance >= 0 ? currentBalance : 0;
-              accountInfo.credit =
-                currentBalance < 0 ? Math.abs(currentBalance) : 0;
-              trialBalance.assets.push(accountInfo);
-              trialBalance.totals.totalAssets += currentBalance;
-            } else if (sectionTitle.includes("liabilit")) {
-              accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
-              accountInfo.debit =
-                currentBalance < 0 ? Math.abs(currentBalance) : 0;
-              trialBalance.liabilities.push(accountInfo);
-              trialBalance.totals.totalLiabilities += currentBalance;
-            } else if (sectionTitle.includes("equity")) {
-              accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
-              accountInfo.debit =
-                currentBalance < 0 ? Math.abs(currentBalance) : 0;
-              trialBalance.equity.push(accountInfo);
-              trialBalance.totals.totalEquity += currentBalance;
-            }
+            account.balance = account.debit - account.credit;
+            accounts.push(account);
 
-            trialBalance.totals.totalDebits += accountInfo.debit;
-            trialBalance.totals.totalCredits += accountInfo.credit;
+            if (sectionName.toLowerCase().includes("asset")) {
+              totalAssets += account.balance;
+            } else if (sectionName.toLowerCase().includes("liabilit")) {
+              totalLiabilities += Math.abs(account.balance);
+            } else if (sectionName.toLowerCase().includes("equity")) {
+              totalEquity += account.balance;
+            }
           }
         });
       }
     });
 
-    // Get P&L data for the same date
-    try {
-      console.error("🔄 Fetching P&L report for Revenue/Expenses...");
-      const profitLossResponse =
-        await xero.accountingApi.getReportProfitAndLoss(
-          req.params.tenantId,
-          reportDate,
-          reportDate
-        );
+    totalEquity += totalRevenue - totalExpenses;
 
-      const plRows = profitLossResponse.body.reports?.[0]?.rows || [];
-
-      plRows.forEach((section) => {
-        if (section.rowType === "Section" && section.rows && section.title) {
-          const sectionTitle = section.title.toLowerCase();
-
-          section.rows.forEach((row) => {
-            if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
-              const accountName = row.cells[0]?.value || "";
-              const currentAmount = parseFloat(row.cells[1]?.value || 0);
-
-              if (
-                accountName.toLowerCase().includes("total") ||
-                currentAmount === 0
-              ) {
-                return;
-              }
-
-              processedAccounts++;
-              const accountInfo = {
-                name: accountName,
-                balance: currentAmount,
-                debit: 0,
-                credit: 0,
-                section: section.title,
-              };
-
-              if (
-                sectionTitle.includes("income") ||
-                sectionTitle.includes("revenue") ||
-                sectionTitle.includes("trading") ||
-                sectionTitle.includes("sales") ||
-                sectionTitle.includes("property maintenance")
-              ) {
-                accountInfo.credit = Math.abs(currentAmount);
-                trialBalance.revenue.push(accountInfo);
-                trialBalance.totals.totalRevenue += Math.abs(currentAmount);
-              } else if (
-                sectionTitle.includes("expense") ||
-                sectionTitle.includes("cost") ||
-                sectionTitle.includes("administration") ||
-                sectionTitle.includes("operating")
-              ) {
-                accountInfo.debit = Math.abs(currentAmount);
-                trialBalance.expenses.push(accountInfo);
-                trialBalance.totals.totalExpenses += Math.abs(currentAmount);
-              }
-
-              trialBalance.totals.totalDebits += accountInfo.debit;
-              trialBalance.totals.totalCredits += accountInfo.credit;
-            }
-          });
-        }
-      });
-    } catch (plError) {
-      console.errorlog("⚠️ Could not fetch P&L data:", plError.message);
-    }
-
-    // Sort and calculate balance check
-    ["assets", "liabilities", "equity", "revenue", "expenses"].forEach(
-      (category) => {
-        trialBalance[category].sort((a, b) => a.name.localeCompare(b.name));
-      }
-    );
-
-    const balanceCheck = {
-      debitsEqualCredits:
-        Math.abs(
-          trialBalance.totals.totalDebits - trialBalance.totals.totalCredits
-        ) < 0.01,
-      difference:
-        trialBalance.totals.totalDebits - trialBalance.totals.totalCredits,
-      accountingEquation: {
-        assets: trialBalance.totals.totalAssets,
-        liabilitiesAndEquity:
-          trialBalance.totals.totalLiabilities +
-          trialBalance.totals.totalEquity,
-        balanced:
-          Math.abs(
-            trialBalance.totals.totalAssets -
-              (trialBalance.totals.totalLiabilities +
-                trialBalance.totals.totalEquity)
-          ) < 0.01,
+    const result = {
+      tenantId: req.params.tenantId,
+      tenantName: tokenData.tenantName,
+      reportDate,
+      trialBalance: {
+        accounts,
+        totals: {
+          totalAssets,
+          totalLiabilities,
+          totalEquity,
+          totalRevenue,
+          totalExpenses,
+        },
       },
+      generatedAt: new Date().toISOString(),
     };
 
     console.log(
       `✅ PROPER Trial balance completed for ${tokenData.tenantName} as at ${reportDate}:`,
       {
-        processedAccounts: processedAccounts,
-        totalAssets: trialBalance.totals.totalAssets,
-        totalLiabilities: trialBalance.totals.totalLiabilities,
-        totalEquity: trialBalance.totals.totalEquity,
-        balanced: balanceCheck.debitsEqualCredits,
+        processedAccounts: accounts.length,
+        totalAssets,
+        totalLiabilities,
+        totalEquity,
+        balanced:
+          Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01,
       }
     );
 
-    res.json({
-      tenantId: req.params.tenantId,
-      tenantName: tokenData.tenantName,
-      trialBalance,
-      balanceCheck,
-      generatedAt: new Date().toISOString(),
-      reportDate: reportDate,
-      processedAccounts: processedAccounts,
-      dataSource: "Balance Sheet + P&L Reports",
-    });
+    setCache(cacheKey, result);
+    res.json(result);
   } catch (error) {
-    console.error("❌ Error getting PROPER trial balance:", error);
+    console.error("Error getting trial balance:", error);
     res.status(500).json({
       error: "Failed to get trial balance",
       details: error.message,
-      tenantId: req.params.tenantId,
     });
   }
 });
@@ -3915,6 +3852,15 @@ function toggleSectionFromElement(element) {
 // Replace the existing profit-loss endpoint around line 1600
 // Get Profit & Loss summary - UPDATED WITH CURRENT MONTH DEFAULT
 app.get("/api/profit-loss/:tenantId", async (req, res) => {
+  const cacheKey = getCacheKey("profit-loss", {
+    tenantId: req.params.tenantId,
+    date: req.query.date,
+    periodMonths: req.query.periodMonths,
+  });
+
+  const cached = getFromCache(cacheKey);
+  if (cached) return res.json(cached);
+
   try {
     const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
     if (!tokenData) {
@@ -3925,118 +3871,124 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
 
     await xero.setTokenSet(tokenData);
 
-    // UPDATED DATE LOGIC - Default to current month
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
-    const periodMonths = parseInt(req.query.periodMonths) || 1; // Default to 1 month instead of 12
+    const periodMonths = parseInt(req.query.periodMonths) || 3;
 
-    // Parse the report date properly
-    const reportEndDate = new Date(reportDate);
-    if (isNaN(reportEndDate.getTime())) {
-      return res.status(400).json({ error: "Invalid report date provided" });
-    }
-
-    // Calculate from date based on period months
-    let fromDate;
-    if (periodMonths === 1) {
-      // Current month - first day of current month
-      fromDate = new Date(
-        reportEndDate.getFullYear(),
-        reportEndDate.getMonth(),
-        1
-      );
-    } else {
-      // Multi-month period - go back the specified number of months
-      fromDate = new Date(reportEndDate);
-      fromDate.setMonth(fromDate.getMonth() - (periodMonths - 1));
-      fromDate.setDate(1);
-    }
-
+    const fromDate = new Date(reportDate);
+    fromDate.setMonth(fromDate.getMonth() - periodMonths);
     const fromDateStr = fromDate.toISOString().split("T")[0];
-    const actualReportDateStr = reportEndDate.toISOString().split("T")[0];
 
-    console.log(
-      `P&L Date Range: ${fromDateStr} to ${actualReportDateStr} (${periodMonths} month period)`
-    );
-
+    console.log(`Getting P&L for ${tokenData.tenantName}`);
     const response = await xero.accountingApi.getReportProfitAndLoss(
       req.params.tenantId,
       fromDateStr,
-      actualReportDateStr // Use this instead of reportDate
+      reportDate
     );
 
+    console.log(
+      "P&L API call successful:",
+      response.body.reports?.[0] ? "YES" : "NO"
+    );
     const plRows = response.body.reports?.[0]?.rows || [];
 
-    const plSummary = {
-      totalRevenue: 0,
-      totalExpenses: 0,
+    const summary = {
+      revenue: 0,
+      cogs: 0,
+      grossProfit: 0,
+      operatingExpenses: 0,
+      ebitda: 0,
       netProfit: 0,
-      revenueSections: {}, // New: group by section
-      expenseSections: {}, // New: group by section
-      revenueAccounts: [], // Keep for compatibility
-      expenseAccounts: [], // Keep for compatibility
+      breakdown: {
+        revenueAccounts: [],
+        cogsAccounts: [],
+        expenseAccounts: [],
+      },
     };
 
-    plRows.forEach((section) => {
-      if (section.rowType === "Section" && section.rows && section.title) {
-        const sectionTitle = section.title.toLowerCase();
+    plRows.forEach((row) => {
+      if (row.rowType === "Section") {
+        const sectionTitle = row.title?.toLowerCase() || "";
 
-        section.rows.forEach((row) => {
-          if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
-            const accountName = row.cells[0]?.value || "";
-            const amount = parseFloat(row.cells[1]?.value || 0);
-
-            if (accountName.toLowerCase().includes("total") || amount === 0) {
-              return;
-            }
-
-            if (
-              sectionTitle.includes("income") ||
-              sectionTitle.includes("revenue") ||
-              sectionTitle.includes("property maintenance") ||
-              sectionTitle.includes("trading")
-            ) {
-              plSummary.revenueAccounts.push({
-                name: accountName,
-                amount: amount,
+        if (
+          sectionTitle.includes("income") ||
+          sectionTitle.includes("revenue")
+        ) {
+          row.rows?.forEach((subRow) => {
+            if (subRow.rowType === "Row") {
+              const accountName = subRow.cells?.[0]?.value || "";
+              const value = parseFloat(subRow.cells?.[1]?.value || 0);
+              summary.revenue += value;
+              summary.breakdown.revenueAccounts.push({
+                account: accountName,
+                amount: value,
               });
-              plSummary.totalRevenue += amount;
-            } else if (
-              sectionTitle.includes("expense") ||
-              sectionTitle.includes("cost") ||
-              sectionTitle.includes("administration") ||
-              sectionTitle.includes("operating") ||
-              sectionTitle.includes("salaries")
-            ) {
-              plSummary.expenseAccounts.push({
-                name: accountName,
-                amount: amount,
-              });
-              plSummary.totalExpenses += amount;
+            } else if (subRow.rowType === "SummaryRow") {
+              const value = parseFloat(subRow.cells?.[1]?.value || 0);
+              summary.revenue = value;
             }
-          }
-        });
+          });
+        } else if (
+          sectionTitle.includes("cost of sales") ||
+          sectionTitle.includes("cost of goods")
+        ) {
+          row.rows?.forEach((subRow) => {
+            if (subRow.rowType === "Row") {
+              const accountName = subRow.cells?.[0]?.value || "";
+              const value = Math.abs(parseFloat(subRow.cells?.[1]?.value || 0));
+              summary.cogs += value;
+              summary.breakdown.cogsAccounts.push({
+                account: accountName,
+                amount: value,
+              });
+            } else if (subRow.rowType === "SummaryRow") {
+              const value = Math.abs(parseFloat(subRow.cells?.[1]?.value || 0));
+              summary.cogs = value;
+            }
+          });
+        } else if (
+          sectionTitle.includes("operating expenses") ||
+          sectionTitle.includes("expense")
+        ) {
+          row.rows?.forEach((subRow) => {
+            if (subRow.rowType === "Row") {
+              const accountName = subRow.cells?.[0]?.value || "";
+              const value = Math.abs(parseFloat(subRow.cells?.[1]?.value || 0));
+              summary.operatingExpenses += value;
+              summary.breakdown.expenseAccounts.push({
+                account: accountName,
+                amount: value,
+              });
+            } else if (subRow.rowType === "SummaryRow") {
+              const value = Math.abs(parseFloat(subRow.cells?.[1]?.value || 0));
+              summary.operatingExpenses = value;
+            }
+          });
+        }
       }
     });
 
-    plSummary.netProfit = plSummary.totalRevenue - plSummary.totalExpenses;
+    summary.grossProfit = summary.revenue - summary.cogs;
+    summary.ebitda = summary.grossProfit - summary.operatingExpenses;
+    summary.netProfit = summary.ebitda;
 
-    res.json({
+    const result = {
       tenantId: req.params.tenantId,
       tenantName: tokenData.tenantName,
       period: {
         from: fromDateStr,
-        to: actualReportDateStr, // Use the hardcoded August 31st date
+        to: reportDate,
         months: periodMonths,
-        description:
-          periodMonths === 1 ? "Current Month" : `${periodMonths} Month Period`,
       },
-      summary: plSummary,
+      summary,
       generatedAt: new Date().toISOString(),
-    });
+    };
+
+    setCache(cacheKey, result);
+    res.json(result);
   } catch (error) {
-    console.error("Error getting P&L summary:", error);
+    console.error("Error getting P&L:", error);
     res.status(500).json({
-      error: "Failed to get P&L summary",
+      error: "Failed to get profit & loss",
       details: error.message,
     });
   }
@@ -4096,6 +4048,14 @@ app.post("/api/profit-loss-summary", async (req, res) => {
 
 // Get aged receivables
 app.get("/api/aged-receivables/:tenantId", async (req, res) => {
+  const cacheKey = getCacheKey("aged-receivables", {
+    tenantId: req.params.tenantId,
+    date: req.query.date,
+  });
+
+  const cached = getFromCache(cacheKey);
+  if (cached) return res.json(cached);
+
   try {
     const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
     if (!tokenData) {
@@ -4105,7 +4065,6 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
     }
 
     await xero.setTokenSet(tokenData);
-
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
 
     console.log(
@@ -4170,10 +4129,9 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
       }
     });
 
-    // Sort by total outstanding (highest first)
     agedSummary.contactBreakdown.sort((a, b) => b.total - a.total);
 
-    res.json({
+    const result = {
       tenantId: req.params.tenantId,
       tenantName: tokenData.tenantName,
       reportDate,
@@ -4188,7 +4146,10 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
         ).toFixed(1),
       },
       generatedAt: new Date().toISOString(),
-    });
+    };
+
+    setCache(cacheKey, result);
+    res.json(result);
   } catch (error) {
     console.error("Error getting aged receivables:", error);
     res.status(500).json({
@@ -4458,7 +4419,16 @@ app.get("/api/intercompany/:tenantId", async (req, res) => {
 });
 
 // Get financial ratios
+// Get financial ratios
 app.get("/api/financial-ratios/:tenantId", async (req, res) => {
+  const cacheKey = getCacheKey("financial-ratios", {
+    tenantId: req.params.tenantId,
+    date: req.query.date,
+  });
+
+  const cached = getFromCache(cacheKey);
+  if (cached) return res.json(cached);
+
   try {
     const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
     if (!tokenData) {
@@ -4510,16 +4480,20 @@ app.get("/api/financial-ratios/:tenantId", async (req, res) => {
       },
       profitability: {
         netProfitMargin:
-          (plSummary.netProfit / Math.max(plSummary.totalRevenue, 1)) * 100,
+          (plSummary.netProfit / Math.max(plSummary.revenue, 1)) * 100,
         returnOnAssets:
           (plSummary.netProfit / Math.max(totals.totalAssets, 1)) * 100,
         returnOnEquity:
           (plSummary.netProfit / Math.max(totals.totalEquity, 1)) * 100,
+        grossMargin:
+          (plSummary.grossProfit / Math.max(plSummary.revenue, 1)) * 100,
       },
       efficiency: {
-        assetTurnover: plSummary.totalRevenue / Math.max(totals.totalAssets, 1),
+        assetTurnover: plSummary.revenue / Math.max(totals.totalAssets, 1),
         expenseRatio:
-          (plSummary.totalExpenses / Math.max(plSummary.totalRevenue, 1)) * 100,
+          ((plSummary.cogs + plSummary.operatingExpenses) /
+            Math.max(plSummary.revenue, 1)) *
+          100,
       },
     };
 
@@ -4547,22 +4521,31 @@ app.get("/api/financial-ratios/:tenantId", async (req, res) => {
           : "Loss",
     };
 
-    res.json({
+    const result = {
       tenantId: req.params.tenantId,
       tenantName: tokenData.tenantName,
       reportDate,
+      currentRatio: ratios.liquidity.currentRatio,
+      grossMargin: ratios.profitability.grossMargin,
+      netProfitMargin: ratios.profitability.netProfitMargin,
+      debtToEquity: ratios.leverage.debtToEquity,
+      returnOnAssets: ratios.profitability.returnOnAssets,
+      debtorDays: 30, // Placeholder - would need receivables data
       ratios,
       interpretations,
       dataSource: {
         totalAssets: totals.totalAssets,
         totalLiabilities: totals.totalLiabilities,
         totalEquity: totals.totalEquity,
-        totalRevenue: plSummary.totalRevenue,
-        totalExpenses: plSummary.totalExpenses,
+        totalRevenue: plSummary.revenue,
+        totalExpenses: plSummary.cogs + plSummary.operatingExpenses,
         netProfit: plSummary.netProfit,
       },
       generatedAt: new Date().toISOString(),
-    });
+    };
+
+    setCache(cacheKey, result);
+    res.json(result);
   } catch (error) {
     console.error("Error calculating financial ratios:", error);
     res.status(500).json({
