@@ -841,7 +841,7 @@
 
     <script>
       const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
-      const MINING_ORG = "Rirratjingu Mining Pty Ltd 7168";
+      const MINING_ORG = "Mining";
 
       // ========== QUARTER DATE CALCULATIONS ==========
       function getQuarterDates(quarter) {
@@ -883,6 +883,7 @@
           : 0;
 
         return {
+          quarterCode: quarter,
           startDate: q.start.toISOString().split("T")[0],
           endDate: isComplete
             ? q.end.toISOString().split("T")[0]
@@ -958,23 +959,53 @@
       // ========== PROFIT & LOSS ==========
       async function loadProfitLoss(quarterInfo) {
         try {
+          const start = new Date(quarterInfo.startDate);
+          const end = new Date(quarterInfo.endDate);
+          const monthsDiff =
+            (end.getFullYear() - start.getFullYear()) * 12 +
+            (end.getMonth() - start.getMonth()) +
+            1;
+
           const response = await fetch(`${API_BASE}/api/profit-loss-summary`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               organizationName: MINING_ORG,
-              date: quarterInfo.startDate,
-              periodMonths: 3,
+              date: quarterInfo.endDate,
+              periodMonths: monthsDiff,
             }),
           });
+
           const data = await response.json();
+          console.log("P&L:", data);
 
           const revenue = data.summary?.totalRevenue || 0;
-          const cogs = Math.abs(data.summary?.totalCOGS || 0);
+          const totalExpenses = data.summary?.totalExpenses || 0;
+          const netProfit = data.summary?.netProfit || 0;
+
+          // Categorize COGS vs Opex
+          const expenseAccounts = data.summary?.expenseAccounts || [];
+          let cogs = 0;
+          let opex = 0;
+
+          expenseAccounts.forEach((account) => {
+            const name = account.name.toLowerCase();
+            // COGS patterns: "cost of", "costs of goods sold", "cost -", "haulage expense", "freight"
+            if (
+              name.includes("cost of") ||
+              name.includes("costs of goods sold") ||
+              name.includes("cost -") ||
+              name.includes("haulage expense") ||
+              name.includes("freight")
+            ) {
+              cogs += account.amount;
+            } else {
+              opex += account.amount;
+            }
+          });
+
           const gross = revenue - cogs;
-          const opex = Math.abs(data.summary?.totalOperatingExpenses || 0);
-          const ebitda = gross - opex;
-          const net = data.summary?.netProfit || 0;
+          const ebitda = netProfit;
 
           document.getElementById("pl-revenue").textContent =
             "$" + revenue.toLocaleString();
@@ -987,7 +1018,10 @@
           document.getElementById("pl-ebitda").textContent =
             "$" + ebitda.toLocaleString();
           document.getElementById("pl-net").textContent =
-            "$" + net.toLocaleString();
+            "$" + netProfit.toLocaleString();
+
+          // Store for budget comparison
+          window.plData = { revenue, totalExpenses, ebitda };
         } catch (error) {
           console.error("Error loading P&L:", error);
         }
@@ -1006,23 +1040,18 @@
             }),
           });
           const data = await response.json();
-          const budget = parseBudgetReport(data.budgetReport);
+          console.log("Budget:", data);
 
-          const proRatedRevenue = budget.revenue * quarterInfo.proRateFactor;
-          const proRatedExpenses = budget.expenses * quarterInfo.proRateFactor;
+          const budget = parseBudgetFromReport(data.report);
+          const proRatedRevenue = Math.round(
+            budget.revenue * quarterInfo.proRateFactor
+          );
+          const proRatedExpenses = Math.round(
+            budget.expenses * quarterInfo.proRateFactor
+          );
 
-          const actualRevenue =
-            parseFloat(
-              document
-                .getElementById("pl-revenue")
-                .textContent.replace(/[$,]/g, "")
-            ) || 0;
-          const actualExpenses =
-            parseFloat(
-              document
-                .getElementById("pl-cogs")
-                .textContent.replace(/[$,]/g, "")
-            ) || 0;
+          const actualRevenue = window.plData?.revenue || 0;
+          const actualExpenses = window.plData?.totalExpenses || 0;
 
           const revVar =
             proRatedRevenue > 0
@@ -1036,7 +1065,7 @@
           document.getElementById("b-rev-actual").textContent =
             "$" + actualRevenue.toLocaleString();
           document.getElementById("b-rev-budget").textContent =
-            "Budget: $" + Math.round(proRatedRevenue).toLocaleString();
+            "Budget: $" + proRatedRevenue.toLocaleString();
           document.getElementById("b-rev-var").textContent =
             (revVar >= 0 ? "+" : "") + revVar.toFixed(1) + "%";
           document.getElementById("b-rev-var").className =
@@ -1046,7 +1075,7 @@
           document.getElementById("b-exp-actual").textContent =
             "$" + actualExpenses.toLocaleString();
           document.getElementById("b-exp-budget").textContent =
-            "Budget: $" + Math.round(proRatedExpenses).toLocaleString();
+            "Budget: $" + proRatedExpenses.toLocaleString();
           document.getElementById("b-exp-var").textContent =
             (expVar >= 0 ? "+" : "") + expVar.toFixed(1) + "%";
           document.getElementById("b-exp-var").className =
@@ -1057,29 +1086,86 @@
         }
       }
 
-      function parseBudgetReport(report) {
+      function parseBudgetFromReport(report) {
         let revenue = 0;
         let expenses = 0;
 
-        if (report?.rows) {
-          report.rows.forEach((row) => {
-            if (row.title && row.cells) {
-              const label = row.title.toLowerCase();
-              if (label.includes("total revenue")) {
-                revenue =
-                  parseFloat(row.cells[1]?.value || 0) +
-                  parseFloat(row.cells[2]?.value || 0) +
-                  parseFloat(row.cells[3]?.value || 0);
-              }
-              if (label.includes("total") && row.cells.length >= 4) {
-                const total =
-                  parseFloat(row.cells[1]?.value || 0) +
-                  parseFloat(row.cells[2]?.value || 0) +
-                  parseFloat(row.cells[3]?.value || 0);
-                if (total > expenses) expenses = total;
-              }
+        if (!report || !report.rows) {
+          console.error("❌ Budget report is empty or invalid");
+          return { revenue: 0, expenses: 0 };
+        }
+
+        console.log("📊 Parsing budget report...");
+
+        for (const section of report.rows) {
+          if (section.rowType === "Section" && section.title) {
+            const title = section.title.toLowerCase();
+
+            if (title.includes("income") || title.includes("revenue")) {
+              section.rows?.forEach((row) => {
+                if (row.rowType === "SummaryRow" || row.rowType === "Row") {
+                  const label = row.cells?.[0]?.value || "";
+
+                  if (
+                    label.toLowerCase().includes("total") &&
+                    row.cells &&
+                    row.cells.length >= 4
+                  ) {
+                    const month1 = parseFloat(row.cells[1]?.value || 0);
+                    const month2 = parseFloat(row.cells[2]?.value || 0);
+                    const month3 = parseFloat(row.cells[3]?.value || 0);
+                    const total = month1 + month2 + month3;
+
+                    if (total > revenue) {
+                      revenue = total;
+                      console.log("✅ Found revenue:", {
+                        month1,
+                        month2,
+                        month3,
+                        total,
+                      });
+                    }
+                  }
+                }
+              });
+            } else if (
+              title.includes("expense") ||
+              title.includes("operating")
+            ) {
+              section.rows?.forEach((row) => {
+                if (row.rowType === "SummaryRow" || row.rowType === "Row") {
+                  const label = row.cells?.[0]?.value || "";
+
+                  if (
+                    label.toLowerCase().includes("total") &&
+                    row.cells &&
+                    row.cells.length >= 4
+                  ) {
+                    const month1 = parseFloat(row.cells[1]?.value || 0);
+                    const month2 = parseFloat(row.cells[2]?.value || 0);
+                    const month3 = parseFloat(row.cells[3]?.value || 0);
+                    const total = month1 + month2 + month3;
+
+                    if (total > expenses) {
+                      expenses = total;
+                      console.log("✅ Found expenses:", {
+                        month1,
+                        month2,
+                        month3,
+                        total,
+                      });
+                    }
+                  }
+                }
+              });
             }
-          });
+          }
+        }
+
+        console.log("📋 Final budget parsed:", { revenue, expenses });
+
+        if (revenue === 0 || expenses === 0) {
+          console.warn("⚠️ Budget parsing may have failed - got zero values");
         }
 
         return { revenue, expenses };
