@@ -861,6 +861,10 @@
               <span>Total Outstanding</span>
               <span id="aged-total">$0</span>
             </div>
+            <div class="aged-summary">
+              <span>Critical (90+ days)</span>
+              <span id="aged-critical">$0</span>
+            </div>
           </div>
         </div>
       </div>
@@ -870,6 +874,7 @@
       const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
       const MINING_ORG = "Mining";
 
+      
       // ========== QUARTER DATE CALCULATIONS ==========
       function getQuarterDates(quarter) {
         const today = new Date();
