@@ -376,86 +376,84 @@
         box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
       }
 
-      
-
       /* New Top Customers styles for updated structure */
-.customer-item {
-  margin-bottom: 16px;
-}
+      .customer-item {
+        margin-bottom: 16px;
+      }
 
-.customer-name-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-  font-size: 13px;
-}
+      .customer-name-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
 
-.customer-stats {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #7f8c8d;
-}
+      .customer-stats {
+        display: flex;
+        gap: 12px;
+        font-size: 12px;
+        color: #7f8c8d;
+      }
 
-.customer-revenue {
-  font-weight: 500;
-}
+      .customer-revenue {
+        font-weight: 500;
+      }
 
-.revenue-past {
-  color: #3498db;
-}
+      .revenue-past {
+        color: #3498db;
+      }
 
-.revenue-future {
-  color: #f39c12;
-}
+      .revenue-future {
+        color: #f39c12;
+      }
 
-.customer-bar-container {
-  width: 100%;
-  height: 24px;
-  background: #ecf0f1;
-  border-radius: 4px;
-  overflow: hidden;
-  display: flex;
-}
+      .customer-bar-container {
+        width: 100%;
+        height: 24px;
+        background: #ecf0f1;
+        border-radius: 4px;
+        overflow: hidden;
+        display: flex;
+      }
 
-.customer-bar-past {
-  background: #3498db;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  transition: width 0.3s ease;
-}
+      .customer-bar-past {
+        background: #3498db;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+        transition: width 0.3s ease;
+      }
 
-.customer-bar-future {
-  background: #f39c12;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  transition: width 0.3s ease;
-}
+      .customer-bar-future {
+        background: #f39c12;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+        transition: width 0.3s ease;
+      }
 
-.legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-}
+      .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+      }
 
-.legend-color.past {
-  background: #3498db;
-}
+      .legend-color.past {
+        background: #3498db;
+      }
 
-.legend-color.future {
-  background: #f39c12;
-}
+      .legend-color.future {
+        background: #f39c12;
+      }
 
       /* Financial Ratios */
       .ratios-list {
@@ -1543,11 +1541,14 @@
           });
           const data = await response.json();
 
-          const aged30 = data.aged30Days || 0;
-          const aged60 = data.aged60Days || 0;
-          const aged90 = data.aged90Days || 0;
-          const aged120 = data.agedOver120Days || 0;
-          const total = aged30 + aged60 + aged90 + aged120;
+          const aged30 = data.summary?.days1to30 || 0;
+          const aged60 = data.summary?.days31to60 || 0;
+          const aged90 = data.summary?.days61to90 || 0;
+          const aged120 = data.summary?.over90days || 0;
+          const total =
+            data.summary?.totalOutstanding ||
+            aged30 + aged60 + aged90 + aged120;
+          const critical = aged90 + aged120; // Critical = 61-90 days + 90+ days
 
           const pct30 = total > 0 ? (aged30 / total) * 100 : 0;
           const pct60 = total > 0 ? (aged60 / total) * 100 : 0;
@@ -1595,6 +1596,8 @@
 
           document.getElementById("aged-total").textContent =
             "$" + total.toLocaleString();
+          document.getElementById("aged-critical").textContent =
+            "$" + critical.toLocaleString();
         } catch (error) {
           console.error("Error loading aged receivables:", error);
         }
