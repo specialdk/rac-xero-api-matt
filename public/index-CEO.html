@@ -849,45 +849,38 @@
         const year =
           today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
 
+        // Use explicit date strings to avoid timezone issues
         const quarters = {
-          Q1: {
-            start: new Date(year, 6, 1),
-            end: new Date(year, 8, 30),
-            days: 92,
-          },
-          Q2: {
-            start: new Date(year, 9, 1),
-            end: new Date(year, 11, 31),
-            days: 92,
-          },
+          Q1: { start: `${year}-07-01`, end: `${year}-09-30`, days: 92 },
+          Q2: { start: `${year}-10-01`, end: `${year}-12-31`, days: 92 },
           Q3: {
-            start: new Date(year + 1, 0, 1),
-            end: new Date(year + 1, 2, 31),
+            start: `${year + 1}-01-01`,
+            end: `${year + 1}-03-31`,
             days: 90,
           },
           Q4: {
-            start: new Date(year + 1, 3, 1),
-            end: new Date(year + 1, 5, 30),
+            start: `${year + 1}-04-01`,
+            end: `${year + 1}-06-30`,
             days: 91,
           },
         };
 
         const q = quarters[quarter];
+        const startDate = new Date(q.start);
+        const endDate = new Date(q.end);
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
 
-        const hasStarted = yesterday >= q.start;
-        const isComplete = yesterday >= q.end;
+        const hasStarted = yesterday >= startDate;
+        const isComplete = yesterday >= endDate;
         const daysElapsed = hasStarted
-          ? Math.floor((yesterday - q.start) / (1000 * 60 * 60 * 24)) + 1
+          ? Math.floor((yesterday - startDate) / (1000 * 60 * 60 * 24)) + 1
           : 0;
 
         return {
           quarterCode: quarter,
-          startDate: q.start.toISOString().split("T")[0],
-          endDate: isComplete
-            ? q.end.toISOString().split("T")[0]
-            : today.toISOString().split("T")[0],
+          startDate: q.start,
+          endDate: isComplete ? q.end : today.toISOString().split("T")[0],
           totalDays: q.days,
           daysElapsed,
           isComplete,
