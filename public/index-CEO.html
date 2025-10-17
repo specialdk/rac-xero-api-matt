@@ -1482,25 +1482,17 @@
             <div class="customer-name-row">
               <span class="customer-name">${idx + 1}. ${customer.name}</span>
               <div class="customer-stats">
-                <span class="customer-revenue revenue-past">$${customer.past.toLocaleString()} past</span>
-                <span class="customer-revenue revenue-future">$${customer.future.toLocaleString()} future</span>
+                <span class="customer-revenue revenue-past">${customer.past.toLocaleString()} past</span>
+                <span class="customer-revenue revenue-future">${customer.future.toLocaleString()} future</span>
                 <span>${customer.totalOrders} orders</span>
               </div>
             </div>
             <div class="customer-bar-container">
               <div class="customer-bar-past" style="width: ${pastPercent}%">
-                ${
-                  pastPercent > 10
-                    ? "$" + (customer.past / 1000).toFixed(0) + "k"
-                    : ""
-                }
+                ${pastPercent > 15 ? pastPercent.toFixed(0) + "%" : ""}
               </div>
               <div class="customer-bar-future" style="width: ${futurePercent}%">
-                ${
-                  futurePercent > 10
-                    ? "$" + (customer.future / 1000).toFixed(0) + "k"
-                    : ""
-                }
+                ${futurePercent > 15 ? futurePercent.toFixed(0) + "%" : ""}
               </div>
             </div>
           `;
