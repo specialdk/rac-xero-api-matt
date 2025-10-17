@@ -4112,9 +4112,8 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
       `Getting aged receivables for ${tokenData.tenantName} as at ${reportDate}`
     );
 
-    const response = await xero.accountingApi.getReportAgedReceivablesByContact(
+    const response = await xero.accountingApi.getReportAgedReceivables(
       req.params.tenantId,
-      null, // contactId
       reportDate
     );
 
