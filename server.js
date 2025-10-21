@@ -1581,8 +1581,21 @@ app.post("/api/invoices-detail", async (req, res) => {
     );
 
     const invoices = response.body.invoices || [];
+    console.log(`Found ${invoices.length} outstanding invoices`);
 
-    console.log(`✅ Fetched ${invoices.length} invoices with line items`);
+    // DEBUG: Log invoice statuses
+    const statusCounts = {};
+    invoices.forEach((inv) => {
+      statusCounts[inv.status] = (statusCounts[inv.status] || 0) + 1;
+    });
+    console.log("Invoice status breakdown:", JSON.stringify(statusCounts));
+
+    // DEBUG: Log total amounts
+    const totalDue = invoices.reduce(
+      (sum, inv) => sum + (parseFloat(inv.amountDue) || 0),
+      0
+    );
+    console.log(`Total amountDue: $${totalDue.toFixed(2)}`);
 
     // Format response with line items
     const detailedInvoices = invoices.map((inv) => ({
