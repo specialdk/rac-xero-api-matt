@@ -4138,9 +4138,6 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
     date: req.query.date,
   });
 
-  console.log("Raw Xero response:", JSON.stringify(response.body, null, 2));
-  console.log("Report rows:", reportRows);
-
   const cached = getFromCache(cacheKey);
   if (cached) return res.json(cached);
 
@@ -4160,25 +4157,16 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
       `Getting aged receivables for ${tokenData.tenantName} as at ${reportDate}`
     );
 
-    // Get aged receivables using the Report endpoint instead
-    const response = await xero.accountingApi.getReportsList(
-      req.params.tenantId
+    // CORRECT API CALL:
+    const response = await xero.accountingApi.getReportAgedReceivablesByContact(
+      req.params.tenantId,
+      null, // contactId - null means all contacts
+      reportDate
     );
 
-    // Find the Aged Receivables report ID
-    const agedReceivablesReportId = response.body.reports?.find(
-      (r) => r.reportID === "AgedReceivablesByContact"
-    )?.reportID;
-
-    if (!agedReceivablesReportId) {
-      throw new Error("Aged Receivables report not available");
-    }
-
-    // Now get the actual report data
-    const reportResponse = await xero.accountingApi.getReportsList(
-      req.params.tenantId
-    );
-
+    // DEBUG LOGGING - ADD HERE:
+    console.log("Raw Xero response:", JSON.stringify(response.body, null, 2));
+    
     const reportRows = response.body.reports?.[0]?.rows || [];
 
     const agedSummary = {
@@ -4262,6 +4250,8 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
     });
   }
 });
+
+
 
 // Get expense analysis
 app.get("/api/expense-analysis/:tenantId", async (req, res) => {
