@@ -4603,6 +4603,9 @@ app.get("/api/financial-ratios/:tenantId", async (req, res) => {
     const totals = tbData.trialBalance.totals;
     const plSummary = plData.summary;
 
+    // DEBUG: Log the P&L structure
+console.log('📊 P&L Summary structure:', JSON.stringify(plSummary, null, 2));
+
     // Extract COGS from expense sections in P&L
     let costOfGoodsSold = 0;
     if (plSummary.expenseSections) {
