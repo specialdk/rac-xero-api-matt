@@ -4619,6 +4619,24 @@ app.get("/api/financial-ratios/:tenantId", async (req, res) => {
         .reduce((sum, acc) => sum + (acc.amount || 0), 0);
     }
 
+    // ADD THIS LINE:
+    let accountsReceivable = 0;
+
+    // Extract Accounts Receivable from trial balance accounts
+    if (tbData.trialBalance?.accounts) {
+      accountsReceivable = tbData.trialBalance.accounts
+        .filter((acc) => {
+          const name = (acc.name || "").toLowerCase();
+          return (
+            acc.section === "ASSETS" &&
+            (name.includes("receivable") ||
+              name.includes("debtor") ||
+              name.includes("trade debtor"))
+          );
+        })
+        .reduce((sum, acc) => sum + Math.abs(acc.balance || 0), 0);
+    }
+
     // Calculate Gross Profit
     const grossProfit = plSummary.totalRevenue - costOfGoodsSold;
 
