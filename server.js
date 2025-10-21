@@ -4187,78 +4187,82 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
     const today = new Date();
 
     const agedSummary = {
-  totalOutstanding: 0,
-  current: 0,           // Not overdue yet
-  lessThan1Month: 0,    // 1-30 days overdue
-  oneMonth: 0,          // 31-60 days overdue
-  twoMonths: 0,         // 61-90 days overdue
-  threeMonths: 0,       // 91-120 days overdue
-  older: 0,             // 120+ days overdue
-  contactBreakdown: []
-};
-
-// Group by contact and calculate aging
-const contactMap = {};
-
-invoices.forEach(inv => {
-  if (!inv.amountDue || inv.amountDue <= 0) return;
-  
-  const contactId = inv.contact?.contactID;
-  const contactName = inv.contact?.name || 'Unknown';
-  const dueDate = new Date(inv.dueDate);
-  const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
-  const amount = parseFloat(inv.amountDue);
-  
-  if (!contactMap[contactId]) {
-    contactMap[contactId] = {
-      name: contactName,
-      total: 0,
-      current: 0,
-      lessThan1Month: 0,
-      oneMonth: 0,
-      twoMonths: 0,
-      threeMonths: 0,
-      older: 0
+      totalOutstanding: 0,
+      current: 0, // Not overdue yet
+      lessThan1Month: 0, // 1-30 days overdue
+      oneMonth: 0, // 31-60 days overdue
+      twoMonths: 0, // 61-90 days overdue
+      threeMonths: 0, // 91-120 days overdue
+      older: 0, // 120+ days overdue
+      contactBreakdown: [],
     };
-  }
-  
-  contactMap[contactId].total += amount;
-  
-  // Match Xero's bucketing structure
-  if (daysOverdue <= 0) {
-    contactMap[contactId].current += amount;
-  } else if (daysOverdue <= 30) {
-    contactMap[contactId].lessThan1Month += amount;
-  } else if (daysOverdue <= 60) {
-    contactMap[contactId].oneMonth += amount;
-  } else if (daysOverdue <= 90) {
-    contactMap[contactId].twoMonths += amount;
-  } else if (daysOverdue <= 120) {
-    contactMap[contactId].threeMonths += amount;
-  } else {
-    contactMap[contactId].older += amount;
-  }
-});
 
-// Convert to array and calculate totals
-Object.values(contactMap).forEach(contact => {
-  agedSummary.totalOutstanding += contact.total;
-  agedSummary.current += contact.current;
-  agedSummary.lessThan1Month += contact.lessThan1Month;
-  agedSummary.oneMonth += contact.oneMonth;
-  agedSummary.twoMonths += contact.twoMonths;
-  agedSummary.threeMonths += contact.threeMonths;
-  agedSummary.older += contact.older;
-  
-  agedSummary.contactBreakdown.push({
-    ...contact,
-    riskLevel: contact.older > contact.total * 0.3 ? 'HIGH' : 
-               contact.threeMonths > contact.total * 0.2 ? 'MEDIUM' : 'LOW'
-  });
-});
+    // Group by contact and calculate aging
+    const contactMap = {};
 
-// Sort by total outstanding (highest first)
-agedSummary.contactBreakdown.sort((a, b) => b.total - a.total);
+    invoices.forEach((inv) => {
+      if (!inv.amountDue || inv.amountDue <= 0) return;
+
+      const contactId = inv.contact?.contactID;
+      const contactName = inv.contact?.name || "Unknown";
+      const dueDate = new Date(inv.dueDate);
+      const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+      const amount = parseFloat(inv.amountDue);
+
+      if (!contactMap[contactId]) {
+        contactMap[contactId] = {
+          name: contactName,
+          total: 0,
+          current: 0,
+          lessThan1Month: 0,
+          oneMonth: 0,
+          twoMonths: 0,
+          threeMonths: 0,
+          older: 0,
+        };
+      }
+
+      contactMap[contactId].total += amount;
+
+      // Match Xero's bucketing structure
+      if (daysOverdue <= 0) {
+        contactMap[contactId].current += amount;
+      } else if (daysOverdue <= 30) {
+        contactMap[contactId].lessThan1Month += amount;
+      } else if (daysOverdue <= 60) {
+        contactMap[contactId].oneMonth += amount;
+      } else if (daysOverdue <= 90) {
+        contactMap[contactId].twoMonths += amount;
+      } else if (daysOverdue <= 120) {
+        contactMap[contactId].threeMonths += amount;
+      } else {
+        contactMap[contactId].older += amount;
+      }
+    });
+
+    // Convert to array and calculate totals
+    Object.values(contactMap).forEach((contact) => {
+      agedSummary.totalOutstanding += contact.total;
+      agedSummary.current += contact.current;
+      agedSummary.lessThan1Month += contact.lessThan1Month;
+      agedSummary.oneMonth += contact.oneMonth;
+      agedSummary.twoMonths += contact.twoMonths;
+      agedSummary.threeMonths += contact.threeMonths;
+      agedSummary.older += contact.older;
+
+      agedSummary.contactBreakdown.push({
+        ...contact,
+        riskLevel:
+          contact.older > contact.total * 0.3
+            ? "HIGH"
+            : contact.threeMonths > contact.total * 0.2
+            ? "MEDIUM"
+            : "LOW",
+      });
+    });
+
+    // Sort by total outstanding (highest first)
+    agedSummary.contactBreakdown.sort((a, b) => b.total - a.total);
 
     const result = {
       tenantId: req.params.tenantId,
@@ -4600,14 +4604,16 @@ app.get("/api/financial-ratios/:tenantId", async (req, res) => {
     const plSummary = plData.summary;
 
     // Extract Accounts Receivable from trial balance accounts
-    const accountsReceivable = tbData.trialBalance.accounts
-      ?.filter(acc => 
-        acc.section === 'ASSETS' && 
-        (acc.name?.toLowerCase().includes('receivable') || 
-         acc.name?.toLowerCase().includes('debtors') ||
-         acc.name?.toLowerCase().includes('trade debtors'))
-      )
-      .reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0;
+    const accountsReceivable =
+      tbData.trialBalance.accounts
+        ?.filter(
+          (acc) =>
+            acc.section === "ASSETS" &&
+            (acc.name?.toLowerCase().includes("receivable") ||
+              acc.name?.toLowerCase().includes("debtors") ||
+              acc.name?.toLowerCase().includes("trade debtors"))
+        )
+        .reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0;
 
     // Get COGS from P&L summary
     const costOfGoodsSold = plSummary.costOfGoodsSold || 0;
@@ -4626,9 +4632,10 @@ app.get("/api/financial-ratios/:tenantId", async (req, res) => {
         equityRatio: totals.totalEquity / Math.max(totals.totalAssets, 1),
       },
       profitability: {
-        grossProfitMargin: plSummary.totalRevenue > 0
-          ? (grossProfit / plSummary.totalRevenue) * 100
-          : 0,
+        grossProfitMargin:
+          plSummary.totalRevenue > 0
+            ? (grossProfit / plSummary.totalRevenue) * 100
+            : 0,
         netProfitMargin:
           (plSummary.netProfit / Math.max(plSummary.totalRevenue, 1)) * 100,
         returnOnAssets:
@@ -4640,9 +4647,10 @@ app.get("/api/financial-ratios/:tenantId", async (req, res) => {
         assetTurnover: plSummary.totalRevenue / Math.max(totals.totalAssets, 1),
         expenseRatio:
           (plSummary.totalExpenses / Math.max(plSummary.totalRevenue, 1)) * 100,
-        debtorDays: plSummary.totalRevenue > 0 && accountsReceivable > 0
-          ? (accountsReceivable / (plSummary.totalRevenue / 365))
-          : 0,
+        debtorDays:
+          plSummary.totalRevenue > 0 && accountsReceivable > 0
+            ? accountsReceivable / (plSummary.totalRevenue / 365)
+            : 0,
       },
     };
 
