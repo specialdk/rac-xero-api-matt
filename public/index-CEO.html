@@ -513,6 +513,22 @@
         transform: scale(1.01);
       }
 
+      .aged-segment.aged-current {
+        background: #2ecc71; /* Green - not overdue */
+      }
+
+      .aged-segment.aged-older {
+        background: #c0392b; /* Dark red - very overdue */
+      }
+
+      .legend-dot.aged-current {
+        background: #2ecc71;
+      }
+
+      .legend-dot.aged-older {
+        background: #c0392b;
+      }
+
       .segment-percent {
         font-size: 16px;
       }
@@ -838,20 +854,28 @@
           <div class="aged-container">
             <div class="aged-legend">
               <div class="legend-item">
+                <div class="legend-dot aged-current"></div>
+                <span>Current</span>
+              </div>
+              <div class="legend-item">
                 <div class="legend-dot aged-30d"></div>
-                <span>0-30 days</span>
+                <span>&lt;1 Month</span>
               </div>
               <div class="legend-item">
                 <div class="legend-dot aged-60d"></div>
-                <span>31-60 days</span>
+                <span>1 Month</span>
               </div>
               <div class="legend-item">
                 <div class="legend-dot aged-90d"></div>
-                <span>61-90 days</span>
+                <span>2 Months</span>
               </div>
               <div class="legend-item">
                 <div class="legend-dot aged-120d"></div>
-                <span>90+ days</span>
+                <span>3 Months</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot aged-older"></div>
+                <span>Older</span>
               </div>
             </div>
             <div class="aged-bar" id="agedBar">
@@ -874,7 +898,6 @@
       const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
       const MINING_ORG = "Mining";
 
-      
       // ========== QUARTER DATE CALCULATIONS ==========
       function getQuarterDates(quarter) {
         const today = new Date();
@@ -1546,63 +1569,83 @@
           });
           const data = await response.json();
 
-          const aged30 = data.summary?.days1to30 || 0;
-          const aged60 = data.summary?.days31to60 || 0;
-          const aged90 = data.summary?.days61to90 || 0;
-          const aged120 = data.summary?.over90days || 0;
-          const total =
-            data.summary?.totalOutstanding ||
-            aged30 + aged60 + aged90 + aged120;
-          const critical = aged90 + aged120; // Critical = 61-90 days + 90+ days
+          const current = data.summary?.current || 0;
+          const lessThan1Month = data.summary?.lessThan1Month || 0;
+          const oneMonth = data.summary?.oneMonth || 0;
+          const twoMonths = data.summary?.twoMonths || 0;
+          const threeMonths = data.summary?.threeMonths || 0;
+          const older = data.summary?.older || 0;
+          const total = data.summary?.totalOutstanding || 0;
 
-          const pct30 = total > 0 ? (aged30 / total) * 100 : 0;
-          const pct60 = total > 0 ? (aged60 / total) * 100 : 0;
-          const pct90 = total > 0 ? (aged90 / total) * 100 : 0;
-          const pct120 = total > 0 ? (aged120 / total) * 100 : 0;
+          // Calculate percentages
+          const pctCurrent = total > 0 ? (current / total) * 100 : 0;
+          const pctLess1 = total > 0 ? (lessThan1Month / total) * 100 : 0;
+          const pct1Month = total > 0 ? (oneMonth / total) * 100 : 0;
+          const pct2Months = total > 0 ? (twoMonths / total) * 100 : 0;
+          const pct3Months = total > 0 ? (threeMonths / total) * 100 : 0;
+          const pctOlder = total > 0 ? (older / total) * 100 : 0;
 
           document.getElementById("agedBar").innerHTML = `
-            <div class="aged-segment aged-30d" style="width: ${pct30}%">
-              ${
-                pct30 > 8
-                  ? `<span class="segment-percent">${pct30.toFixed(
-                      0
-                    )}%</span><span class="segment-label">30d</span>`
-                  : ""
-              }
-            </div>
-            <div class="aged-segment aged-60d" style="width: ${pct60}%">
-              ${
-                pct60 > 8
-                  ? `<span class="segment-percent">${pct60.toFixed(
-                      0
-                    )}%</span><span class="segment-label">60d</span>`
-                  : ""
-              }
-            </div>
-            <div class="aged-segment aged-90d" style="width: ${pct90}%">
-              ${
-                pct90 > 8
-                  ? `<span class="segment-percent">${pct90.toFixed(
-                      0
-                    )}%</span><span class="segment-label">90d</span>`
-                  : ""
-              }
-            </div>
-            <div class="aged-segment aged-120d" style="width: ${pct120}%">
-              ${
-                pct120 > 8
-                  ? `<span class="segment-percent">${pct120.toFixed(
-                      0
-                    )}%</span><span class="segment-label">120d+</span>`
-                  : ""
-              }
-            </div>
-          `;
+      <div class="aged-segment aged-current" style="width: ${pctCurrent}%">
+        ${
+          pctCurrent > 8
+            ? `<span class="segment-percent">${pctCurrent.toFixed(
+                0
+              )}%</span><span class="segment-label">Current</span>`
+            : ""
+        }
+      </div>
+      <div class="aged-segment aged-30d" style="width: ${pctLess1}%">
+        ${
+          pctLess1 > 8
+            ? `<span class="segment-percent">${pctLess1.toFixed(
+                0
+              )}%</span><span class="segment-label">&lt;1M</span>`
+            : ""
+        }
+      </div>
+      <div class="aged-segment aged-60d" style="width: ${pct1Month}%">
+        ${
+          pct1Month > 8
+            ? `<span class="segment-percent">${pct1Month.toFixed(
+                0
+              )}%</span><span class="segment-label">1M</span>`
+            : ""
+        }
+      </div>
+      <div class="aged-segment aged-90d" style="width: ${pct2Months}%">
+        ${
+          pct2Months > 8
+            ? `<span class="segment-percent">${pct2Months.toFixed(
+                0
+              )}%</span><span class="segment-label">2M</span>`
+            : ""
+        }
+      </div>
+      <div class="aged-segment aged-120d" style="width: ${pct3Months}%">
+        ${
+          pct3Months > 8
+            ? `<span class="segment-percent">${pct3Months.toFixed(
+                0
+              )}%</span><span class="segment-label">3M</span>`
+            : ""
+        }
+      </div>
+      <div class="aged-segment aged-older" style="width: ${pctOlder}%">
+        ${
+          pctOlder > 8
+            ? `<span class="segment-percent">${pctOlder.toFixed(
+                0
+              )}%</span><span class="segment-label">Older</span>`
+            : ""
+        }
+      </div>
+    `;
 
           document.getElementById("aged-total").textContent =
             "$" + total.toLocaleString();
           document.getElementById("aged-critical").textContent =
-            "$" + critical.toLocaleString();
+            "$" + (older + threeMonths).toLocaleString();
         } catch (error) {
           console.error("Error loading aged receivables:", error);
         }
