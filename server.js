@@ -4603,45 +4603,20 @@ app.get("/api/financial-ratios/:tenantId", async (req, res) => {
     const totals = tbData.trialBalance.totals;
     const plSummary = plData.summary;
 
-    // DEBUG: Log the P&L structure
-console.log('📊 P&L Summary structure:', JSON.stringify(plSummary, null, 2));
-
-    // Extract COGS from expense sections in P&L
+    // Extract COGS from expenseAccounts array
     let costOfGoodsSold = 0;
-    if (plSummary.expenseSections) {
-      // Look for "Cost of Goods Sold" or "Cost of Sales" section
-      for (const [sectionName, sectionData] of Object.entries(
-        plSummary.expenseSections
-      )) {
-        if (
-          sectionName.toLowerCase().includes("cost of goods") ||
-          sectionName.toLowerCase().includes("cost of sales") ||
-          sectionName.toLowerCase().includes("cogs")
-        ) {
-          costOfGoodsSold += sectionData.total || 0;
-        }
-      }
-    }
-
-    // If still zero, check if there's a cogs property directly
-    if (costOfGoodsSold === 0) {
-      costOfGoodsSold = plSummary.costOfGoodsSold || 0;
-    }
-
-    // Extract Accounts Receivable from trial balance accounts
-    let accountsReceivable = 0;
-    if (tbData.trialBalance?.accounts) {
-      accountsReceivable = tbData.trialBalance.accounts
+    if (plSummary.expenseAccounts && Array.isArray(plSummary.expenseAccounts)) {
+      costOfGoodsSold = plSummary.expenseAccounts
         .filter((acc) => {
           const name = (acc.name || "").toLowerCase();
           return (
-            acc.section === "ASSETS" &&
-            (name.includes("receivable") ||
-              name.includes("debtor") ||
-              name.includes("trade debtor"))
+            name.includes("cost of") ||
+            name.includes("cogs") ||
+            name.includes("haulage expense") ||
+            name.includes("cost - ")
           );
         })
-        .reduce((sum, acc) => sum + Math.abs(acc.balance || 0), 0);
+        .reduce((sum, acc) => sum + (acc.amount || 0), 0);
     }
 
     // Calculate Gross Profit
@@ -4649,7 +4624,7 @@ console.log('📊 P&L Summary structure:', JSON.stringify(plSummary, null, 2));
 
     console.log("📊 Financial Ratios Debug:", {
       costOfGoodsSold,
-      accountsReceivable,
+      accountsReceivable: 0, // We'll fix this next
       grossProfit,
       totalRevenue: plSummary.totalRevenue,
     });
