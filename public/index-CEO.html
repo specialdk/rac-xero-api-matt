@@ -522,12 +522,12 @@
       }
 
       .segment-amount {
-  display: block;
-  font-size: 0.85em;
-  font-weight: 600;
-  margin-top: 2px;
-  opacity: 0.95;
-}
+        display: block;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin-top: 2px;
+        opacity: 0.95;
+      }
 
       .legend-dot.aged-current {
         background: #2ecc71;
@@ -1594,46 +1594,82 @@
           const pctOlder = total > 0 ? (older / total) * 100 : 0;
 
           // Helper function to format currency
-const formatCurrency = (amount) => {
-  if (amount >= 1000000) {
-    return '$' + (amount / 1000000).toFixed(1) + 'M';
-  } else if (amount >= 1000) {
-    return '$' + (amount / 1000).toFixed(1) + 'k';
-  } else {
-    return '$' + amount.toFixed(0);
-  }
-};
+          const formatCurrency = (amount) => {
+            if (amount >= 1000000) {
+              return "$" + (amount / 1000000).toFixed(1) + "M";
+            } else if (amount >= 1000) {
+              return "$" + (amount / 1000).toFixed(1) + "k";
+            } else {
+              return "$" + amount.toFixed(0);
+            }
+          };
 
-document.getElementById("agedBar").innerHTML = `
+          document.getElementById("agedBar").innerHTML = `
   <div class="aged-segment aged-current" style="width: ${pctCurrent}%">
-    ${pctCurrent > 8 
-      ? `<span class="segment-percent">${pctCurrent.toFixed(0)}%</span><span class="segment-amount">${formatCurrency(current)}</span><span class="segment-label">Current</span>` 
-      : ""}
+    ${
+      pctCurrent > 8
+        ? `<span class="segment-percent">${pctCurrent.toFixed(
+            0
+          )}%</span><span class="segment-amount">${formatCurrency(
+            current
+          )}</span><span class="segment-label">Current</span>`
+        : ""
+    }
   </div>
   <div class="aged-segment aged-30d" style="width: ${pctLess1}%">
-    ${pctLess1 > 8 
-      ? `<span class="segment-percent">${pctLess1.toFixed(0)}%</span><span class="segment-amount">${formatCurrency(lessThan1Month)}</span><span class="segment-label">&lt;1M</span>` 
-      : ""}
+    ${
+      pctLess1 > 8
+        ? `<span class="segment-percent">${pctLess1.toFixed(
+            0
+          )}%</span><span class="segment-amount">${formatCurrency(
+            lessThan1Month
+          )}</span><span class="segment-label">&lt;1M</span>`
+        : ""
+    }
   </div>
   <div class="aged-segment aged-60d" style="width: ${pct1Month}%">
-    ${pct1Month > 8 
-      ? `<span class="segment-percent">${pct1Month.toFixed(0)}%</span><span class="segment-amount">${formatCurrency(oneMonth)}</span><span class="segment-label">1M</span>` 
-      : ""}
+    ${
+      pct1Month > 8
+        ? `<span class="segment-percent">${pct1Month.toFixed(
+            0
+          )}%</span><span class="segment-amount">${formatCurrency(
+            oneMonth
+          )}</span><span class="segment-label">1M</span>`
+        : ""
+    }
   </div>
   <div class="aged-segment aged-90d" style="width: ${pct2Months}%">
-    ${pct2Months > 8 
-      ? `<span class="segment-percent">${pct2Months.toFixed(0)}%</span><span class="segment-amount">${formatCurrency(twoMonths)}</span><span class="segment-label">2M</span>` 
-      : ""}
+    ${
+      pct2Months > 8
+        ? `<span class="segment-percent">${pct2Months.toFixed(
+            0
+          )}%</span><span class="segment-amount">${formatCurrency(
+            twoMonths
+          )}</span><span class="segment-label">2M</span>`
+        : ""
+    }
   </div>
   <div class="aged-segment aged-120d" style="width: ${pct3Months}%">
-    ${pct3Months > 8 
-      ? `<span class="segment-percent">${pct3Months.toFixed(0)}%</span><span class="segment-amount">${formatCurrency(threeMonths)}</span><span class="segment-label">3M</span>` 
-      : ""}
+    ${
+      pct3Months > 8
+        ? `<span class="segment-percent">${pct3Months.toFixed(
+            0
+          )}%</span><span class="segment-amount">${formatCurrency(
+            threeMonths
+          )}</span><span class="segment-label">3M</span>`
+        : ""
+    }
   </div>
   <div class="aged-segment aged-older" style="width: ${pctOlder}%">
-    ${pctOlder > 8 
-      ? `<span class="segment-percent">${pctOlder.toFixed(0)}%</span><span class="segment-amount">${formatCurrency(older)}</span><span class="segment-label">Older</span>` 
-      : ""}
+    ${
+      pctOlder > 8
+        ? `<span class="segment-percent">${pctOlder.toFixed(
+            0
+          )}%</span><span class="segment-amount">${formatCurrency(
+            older
+          )}</span><span class="segment-label">Older</span>`
+        : ""
+    }
   </div>
 `;
 
