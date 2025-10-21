@@ -4603,23 +4603,53 @@ app.get("/api/financial-ratios/:tenantId", async (req, res) => {
     const totals = tbData.trialBalance.totals;
     const plSummary = plData.summary;
 
-    // Extract Accounts Receivable from trial balance accounts
-    const accountsReceivable =
-      tbData.trialBalance.accounts
-        ?.filter(
-          (acc) =>
-            acc.section === "ASSETS" &&
-            (acc.name?.toLowerCase().includes("receivable") ||
-              acc.name?.toLowerCase().includes("debtors") ||
-              acc.name?.toLowerCase().includes("trade debtors"))
-        )
-        .reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0;
+    // Extract COGS from expense sections in P&L
+    let costOfGoodsSold = 0;
+    if (plSummary.expenseSections) {
+      // Look for "Cost of Goods Sold" or "Cost of Sales" section
+      for (const [sectionName, sectionData] of Object.entries(
+        plSummary.expenseSections
+      )) {
+        if (
+          sectionName.toLowerCase().includes("cost of goods") ||
+          sectionName.toLowerCase().includes("cost of sales") ||
+          sectionName.toLowerCase().includes("cogs")
+        ) {
+          costOfGoodsSold += sectionData.total || 0;
+        }
+      }
+    }
 
-    // Get COGS from P&L summary
-    const costOfGoodsSold = plSummary.costOfGoodsSold || 0;
+    // If still zero, check if there's a cogs property directly
+    if (costOfGoodsSold === 0) {
+      costOfGoodsSold = plSummary.costOfGoodsSold || 0;
+    }
+
+    // Extract Accounts Receivable from trial balance accounts
+    let accountsReceivable = 0;
+    if (tbData.trialBalance?.accounts) {
+      accountsReceivable = tbData.trialBalance.accounts
+        .filter((acc) => {
+          const name = (acc.name || "").toLowerCase();
+          return (
+            acc.section === "ASSETS" &&
+            (name.includes("receivable") ||
+              name.includes("debtor") ||
+              name.includes("trade debtor"))
+          );
+        })
+        .reduce((sum, acc) => sum + Math.abs(acc.balance || 0), 0);
+    }
 
     // Calculate Gross Profit
     const grossProfit = plSummary.totalRevenue - costOfGoodsSold;
+
+    console.log("📊 Financial Ratios Debug:", {
+      costOfGoodsSold,
+      accountsReceivable,
+      grossProfit,
+      totalRevenue: plSummary.totalRevenue,
+    });
 
     const ratios = {
       liquidity: {
