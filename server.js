@@ -4188,11 +4188,12 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
 
     const agedSummary = {
       totalOutstanding: 0,
-      current: 0,
-      days1to30: 0,
-      days31to60: 0,
-      days61to90: 0,
-      over90days: 0,
+      current: 0, // Not overdue yet
+      lessThan1Month: 0, // 1-30 days overdue
+      oneMonth: 0, // 31-60 days overdue
+      twoMonths: 0, // 61-90 days overdue
+      threeMonths: 0, // 91-120 days overdue
+      older: 0, // 120+ days overdue
       contactBreakdown: [],
     };
 
@@ -4213,25 +4214,29 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
           name: contactName,
           total: 0,
           current: 0,
-          days1to30: 0,
-          days31to60: 0,
-          days61to90: 0,
-          over90: 0,
+          lessThan1Month: 0,
+          oneMonth: 0,
+          twoMonths: 0,
+          threeMonths: 0,
+          older: 0,
         };
       }
 
       contactMap[contactId].total += amount;
 
+      // Match Xero's bucketing structure
       if (daysOverdue <= 0) {
         contactMap[contactId].current += amount;
       } else if (daysOverdue <= 30) {
-        contactMap[contactId].days1to30 += amount;
+        contactMap[contactId].lessThan1Month += amount;
       } else if (daysOverdue <= 60) {
-        contactMap[contactId].days31to60 += amount;
+        contactMap[contactId].oneMonth += amount;
       } else if (daysOverdue <= 90) {
-        contactMap[contactId].days61to90 += amount;
+        contactMap[contactId].twoMonths += amount;
+      } else if (daysOverdue <= 120) {
+        contactMap[contactId].threeMonths += amount;
       } else {
-        contactMap[contactId].over90 += amount;
+        contactMap[contactId].older += amount;
       }
     });
 
@@ -4239,17 +4244,18 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
     Object.values(contactMap).forEach((contact) => {
       agedSummary.totalOutstanding += contact.total;
       agedSummary.current += contact.current;
-      agedSummary.days1to30 += contact.days1to30;
-      agedSummary.days31to60 += contact.days31to60;
-      agedSummary.days61to90 += contact.days61to90;
-      agedSummary.over90days += contact.over90;
+      agedSummary.lessThan1Month += contact.lessThan1Month;
+      agedSummary.oneMonth += contact.oneMonth;
+      agedSummary.twoMonths += contact.twoMonths;
+      agedSummary.threeMonths += contact.threeMonths;
+      agedSummary.older += contact.older;
 
       agedSummary.contactBreakdown.push({
         ...contact,
         riskLevel:
-          contact.over90 > contact.total * 0.3
+          contact.older > contact.total * 0.3
             ? "HIGH"
-            : contact.days61to90 > contact.total * 0.2
+            : contact.threeMonths > contact.total * 0.2
             ? "MEDIUM"
             : "LOW",
       });
