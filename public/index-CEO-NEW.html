@@ -1356,10 +1356,10 @@
           });
           const data = await response.json();
 
-          const aged30 = data.aged30Days || 0;
-          const aged60 = data.aged60Days || 0;
-          const aged90 = data.aged90Days || 0;
-          const aged120 = data.agedOver120Days || 0;
+          const aged30 = data.summary?.days1to30 || 0;
+          const aged60 = data.summary?.days31to60 || 0;
+          const aged90 = data.summary?.days61to90 || 0;
+          const aged120 = data.summary?.over90days || 0;
           const total = aged30 + aged60 + aged90 + aged120;
 
           const pct30 = total > 0 ? (aged30 / total) * 100 : 0;

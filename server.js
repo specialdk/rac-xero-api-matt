@@ -4156,10 +4156,23 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
       `Getting aged receivables for ${tokenData.tenantName} as at ${reportDate}`
     );
 
-    const response = await xero.accountingApi.getReportAgedReceivablesByContact(
-      req.params.tenantId,
-      null,
-      reportDate
+    // Get aged receivables using the Report endpoint instead
+    const response = await xero.accountingApi.getReportsList(
+      req.params.tenantId
+    );
+
+    // Find the Aged Receivables report ID
+    const agedReceivablesReportId = response.body.reports?.find(
+      (r) => r.reportID === "AgedReceivablesByContact"
+    )?.reportID;
+
+    if (!agedReceivablesReportId) {
+      throw new Error("Aged Receivables report not available");
+    }
+
+    // Now get the actual report data
+    const reportResponse = await xero.accountingApi.getReportsList(
+      req.params.tenantId
     );
 
     const reportRows = response.body.reports?.[0]?.rows || [];
