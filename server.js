@@ -4137,6 +4137,10 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
     tenantId: req.params.tenantId,
     date: req.query.date,
   });
+
+  console.log("Raw Xero response:", JSON.stringify(response.body, null, 2));
+  console.log("Report rows:", reportRows);
+
   const cached = getFromCache(cacheKey);
   if (cached) return res.json(cached);
 
