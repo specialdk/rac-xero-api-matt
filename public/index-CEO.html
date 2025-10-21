@@ -1692,23 +1692,32 @@
           });
           const data = await response.json();
 
-          document.getElementById("ratio-current").textContent = (
-            data.currentRatio || 0
-          ).toFixed(2);
+          console.log("📊 Financial Ratios Data:", data);
+
+          // Extract ratios from the response
+          const currentRatio = data.ratios?.liquidity?.currentRatio || 0;
+          const grossMargin =
+            data.ratios?.profitability?.grossProfitMargin || 0;
+          const netMargin = data.ratios?.profitability?.netProfitMargin || 0;
+          const debtToEquity = data.ratios?.leverage?.debtToEquity || 0;
+          const roa = data.ratios?.profitability?.returnOnAssets || 0;
+          const debtorDays = data.ratios?.efficiency?.debtorDays || 0;
+
+          // Update the display
+          document.getElementById("ratio-current").textContent =
+            currentRatio.toFixed(2);
           document.getElementById("ratio-gross").textContent =
-            (data.grossMargin || 0).toFixed(1) + "%";
+            grossMargin.toFixed(1) + "%";
           document.getElementById("ratio-net").textContent =
-            (data.netProfitMargin || 0).toFixed(1) + "%";
-          document.getElementById("ratio-debt").textContent = (
-            data.debtToEquity || 0
-          ).toFixed(2);
+            netMargin.toFixed(1) + "%";
+          document.getElementById("ratio-debt").textContent =
+            debtToEquity.toFixed(2);
           document.getElementById("ratio-roa").textContent =
-            (data.returnOnAssets || 0).toFixed(1) + "%";
-          document.getElementById("ratio-debtor").textContent = Math.round(
-            data.debtorDays || 0
-          );
+            roa.toFixed(1) + "%";
+          document.getElementById("ratio-debtor").textContent =
+            Math.round(debtorDays);
         } catch (error) {
-          console.error("Error loading ratios:", error);
+          console.error("Error loading financial ratios:", error);
         }
       }
 
