@@ -4131,6 +4131,7 @@ app.post("/api/profit-loss-summary", async (req, res) => {
 });
 
 // Get aged receivables
+// Get aged receivables - BUILT FROM INVOICES
 app.get("/api/aged-receivables/:tenantId", async (req, res) => {
   // Cache check
   const cacheKey = getCacheKey("aged-receivables", {
@@ -4151,23 +4152,26 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
 
     await xero.setTokenSet(tokenData);
 
-    const reportDate = req.query.date || new Date().toISOString().split("T")[0];
-
     console.log(
-      `Getting aged receivables for ${tokenData.tenantName} as at ${reportDate}`
+      `Building aged receivables from invoices for ${tokenData.tenantName}`
     );
 
-    // CORRECT API CALL:
-    const response = await xero.accountingApi.getReportAgedReceivablesByContact(
+    // Get all AUTHORISED invoices (outstanding/unpaid)
+    const response = await xero.accountingApi.getInvoices(
       req.params.tenantId,
-      null, // contactId - null means all contacts
-      reportDate
+      null, // ifModifiedSince
+      null, // where
+      null, // order
+      null, // IDs
+      null, // invoiceNumbers
+      null, // contactIDs
+      ["AUTHORISED"] // statuses - only get unpaid invoices
     );
 
-    // DEBUG LOGGING - ADD HERE:
-    console.log("Raw Xero response:", JSON.stringify(response.body, null, 2));
-    
-    const reportRows = response.body.reports?.[0]?.rows || [];
+    const invoices = response.body.invoices || [];
+    console.log(`Found ${invoices.length} outstanding invoices`);
+
+    const today = new Date();
 
     const agedSummary = {
       totalOutstanding: 0,
@@ -4179,68 +4183,91 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
       contactBreakdown: [],
     };
 
-    reportRows.forEach((row) => {
-      if (row.rowType === "Row" && row.cells && row.cells.length >= 6) {
-        const contactName = row.cells[0]?.value || "";
-        const total = parseFloat(row.cells[1]?.value || 0);
-        const current = parseFloat(row.cells[2]?.value || 0);
-        const days1to30 = parseFloat(row.cells[3]?.value || 0);
-        const days31to60 = parseFloat(row.cells[4]?.value || 0);
-        const days61to90 = parseFloat(row.cells[5]?.value || 0);
-        const over90 = parseFloat(row.cells[6]?.value || 0);
+    // Group by contact and calculate aging
+    const contactMap = {};
 
-        if (
-          total > 0 &&
-          contactName &&
-          !contactName.toLowerCase().includes("total")
-        ) {
-          agedSummary.contactBreakdown.push({
-            contactName,
-            total,
-            current,
-            days1to30,
-            days31to60,
-            days61to90,
-            over90days: over90,
-            riskLevel:
-              over90 > total * 0.3
-                ? "HIGH"
-                : days61to90 > total * 0.2
-                ? "MEDIUM"
-                : "LOW",
-          });
+    invoices.forEach((inv) => {
+      if (!inv.amountDue || inv.amountDue <= 0) return;
 
-          agedSummary.totalOutstanding += total;
-          agedSummary.current += current;
-          agedSummary.days1to30 += days1to30;
-          agedSummary.days31to60 += days31to60;
-          agedSummary.days61to90 += days61to90;
-          agedSummary.over90days += over90;
-        }
+      const contactId = inv.contact?.contactID;
+      const contactName = inv.contact?.name || "Unknown";
+      const dueDate = new Date(inv.dueDate);
+      const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+      const amount = parseFloat(inv.amountDue);
+
+      if (!contactMap[contactId]) {
+        contactMap[contactId] = {
+          name: contactName,
+          total: 0,
+          current: 0,
+          days1to30: 0,
+          days31to60: 0,
+          days61to90: 0,
+          over90: 0,
+        };
+      }
+
+      contactMap[contactId].total += amount;
+
+      if (daysOverdue <= 0) {
+        contactMap[contactId].current += amount;
+      } else if (daysOverdue <= 30) {
+        contactMap[contactId].days1to30 += amount;
+      } else if (daysOverdue <= 60) {
+        contactMap[contactId].days31to60 += amount;
+      } else if (daysOverdue <= 90) {
+        contactMap[contactId].days61to90 += amount;
+      } else {
+        contactMap[contactId].over90 += amount;
       }
     });
 
+    // Convert to array and calculate totals
+    Object.values(contactMap).forEach((contact) => {
+      agedSummary.totalOutstanding += contact.total;
+      agedSummary.current += contact.current;
+      agedSummary.days1to30 += contact.days1to30;
+      agedSummary.days31to60 += contact.days31to60;
+      agedSummary.days61to90 += contact.days61to90;
+      agedSummary.over90days += contact.over90;
+
+      agedSummary.contactBreakdown.push({
+        ...contact,
+        riskLevel:
+          contact.over90 > contact.total * 0.3
+            ? "HIGH"
+            : contact.days61to90 > contact.total * 0.2
+            ? "MEDIUM"
+            : "LOW",
+      });
+    });
+
+    // Sort by total outstanding (highest first)
     agedSummary.contactBreakdown.sort((a, b) => b.total - a.total);
 
     const result = {
       tenantId: req.params.tenantId,
       tenantName: tokenData.tenantName,
-      reportDate,
+      reportDate: today.toISOString().split("T")[0],
       summary: agedSummary,
       riskAnalysis: {
         highRiskCustomers: agedSummary.contactBreakdown.filter(
           (c) => c.riskLevel === "HIGH"
         ).length,
-        over90DaysPercentage: (
-          (agedSummary.over90days / agedSummary.totalOutstanding) *
-          100
-        ).toFixed(1),
+        over90DaysPercentage:
+          agedSummary.totalOutstanding > 0
+            ? (
+                (agedSummary.over90days / agedSummary.totalOutstanding) *
+                100
+              ).toFixed(1)
+            : "0.0",
       },
       generatedAt: new Date().toISOString(),
     };
 
     // Cache the result
     setCache(cacheKey, result);
+
     res.json(result);
   } catch (error) {
     console.error("Error getting aged receivables:", error);
@@ -4250,8 +4277,6 @@ app.get("/api/aged-receivables/:tenantId", async (req, res) => {
     });
   }
 });
-
-
 
 // Get expense analysis
 app.get("/api/expense-analysis/:tenantId", async (req, res) => {
