@@ -1213,15 +1213,39 @@
 
       // ========== SPARKLINE CHARTS ==========
       function initSparklines() {
+        // Month labels for sparklines (last 7 months)
+        const monthLabels = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
+        
         const sparklineConfig = {
           type: 'line',
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { enabled: false } },
-            scales: { x: { display: false }, y: { display: false } },
+            plugins: { 
+              legend: { display: false }, 
+              tooltip: { 
+                enabled: true,
+                callbacks: {
+                  label: function(context) {
+                    return '$' + context.raw.toLocaleString();
+                  }
+                }
+              } 
+            },
+            scales: { 
+              x: { 
+                display: true,
+                grid: { display: false },
+                ticks: { 
+                  font: { size: 9 },
+                  color: '#8A8886',
+                  maxRotation: 0
+                }
+              }, 
+              y: { display: false } 
+            },
             elements: { 
-              point: { radius: 0 },
+              point: { radius: 0, hoverRadius: 4 },
               line: { borderWidth: 2, tension: 0.4 }
             }
           }
@@ -1231,7 +1255,7 @@
         new Chart(document.getElementById('sparkCash'), {
           ...sparklineConfig,
           data: {
-            labels: ['', '', '', '', '', '', ''],
+            labels: monthLabels,
             datasets: [{
               data: [380000, 420000, 395000, 450000, 430000, 465000, 481818],
               borderColor: '#107C10',
@@ -1245,7 +1269,7 @@
         new Chart(document.getElementById('sparkRevenue'), {
           ...sparklineConfig,
           data: {
-            labels: ['', '', '', '', '', '', ''],
+            labels: monthLabels,
             datasets: [{
               data: [150000, 180000, 120000, 95000, 80000, 60000, -85480],
               borderColor: '#D13438',
@@ -1259,7 +1283,7 @@
         new Chart(document.getElementById('sparkProfit'), {
           ...sparklineConfig,
           data: {
-            labels: ['', '', '', '', '', '', ''],
+            labels: monthLabels,
             datasets: [{
               data: [25000, 35000, 15000, -5000, -12000, -8000, -6851],
               borderColor: '#D13438',
@@ -1273,7 +1297,7 @@
         new Chart(document.getElementById('sparkReceivables'), {
           ...sparklineConfig,
           data: {
-            labels: ['', '', '', '', '', '', ''],
+            labels: monthLabels,
             datasets: [{
               data: [165000, 172000, 168000, 180000, 175000, 178000, 175754],
               borderColor: '#0078D4',
@@ -1287,7 +1311,7 @@
         new Chart(document.getElementById('sparkInventory'), {
           ...sparklineConfig,
           data: {
-            labels: ['', '', '', '', '', '', ''],
+            labels: monthLabels,
             datasets: [{
               data: [3200000, 3350000, 3400000, 3450000, 3480000, 3490000, 3500031],
               borderColor: '#107C10',
