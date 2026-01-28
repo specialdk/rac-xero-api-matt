@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RAC Mining - Executive Dashboard</title>
-    <!-- Chart.js for visualizations -->
+    <!-- Chart.js for visualizations v3-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       /* ========== CSS VARIABLES (Design System) ========== */
@@ -337,6 +337,117 @@
         min-height: 150px;
       }
 
+      /* ========== BUDGET HORIZONTAL BARS ========== */
+      .budget-bars-container {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-md);
+        padding: var(--spacing-sm) 0;
+      }
+
+      .budget-bar-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .budget-bar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+      }
+
+      .budget-bar-label {
+        font-weight: 500;
+        color: var(--color-text-primary);
+      }
+
+      .budget-bar-values {
+        display: flex;
+        gap: var(--spacing-sm);
+        align-items: center;
+      }
+
+      .budget-bar-actual {
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
+
+      .budget-bar-target {
+        color: var(--color-text-muted);
+        font-size: 12px;
+      }
+
+      .budget-bar-variance {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .budget-bar-variance.positive {
+        background: #E6F4EA;
+        color: var(--color-positive);
+      }
+
+      .budget-bar-variance.negative {
+        background: #FDECE9;
+        color: var(--color-negative);
+      }
+
+      .budget-bar-track {
+        height: 24px;
+        background: var(--color-border);
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .budget-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        padding-left: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: white;
+        transition: width 0.5s ease;
+      }
+
+      .budget-bar-fill.under-budget {
+        background: linear-gradient(90deg, var(--color-positive), #34D058);
+      }
+
+      .budget-bar-fill.over-budget {
+        background: linear-gradient(90deg, var(--color-negative), #F97583);
+      }
+
+      .budget-bar-fill.at-budget {
+        background: linear-gradient(90deg, var(--color-primary), #58A6FF);
+      }
+
+      .budget-bar-marker {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--color-text-primary);
+        border-radius: 2px;
+      }
+
+      .budget-bar-marker::after {
+        content: 'Budget';
+        position: absolute;
+        top: -16px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 9px;
+        color: var(--color-text-muted);
+        white-space: nowrap;
+      }
+
       /* ========== SUMMARY ROW (Bottom) ========== */
       .summary-row {
         display: grid;
@@ -446,15 +557,15 @@
         overflow: hidden;
       }
 
-      .budget-bar-fill {
+      .budget-bar-fill-small {
         height: 100%;
         border-radius: 3px;
         transition: width 0.5s ease;
       }
 
-      .budget-bar-fill.under { background: var(--color-positive); }
-      .budget-bar-fill.over { background: var(--color-negative); }
-      .budget-bar-fill.at-target { background: var(--color-primary); }
+      .budget-bar-fill-small.under { background: var(--color-positive); }
+      .budget-bar-fill-small.over { background: var(--color-negative); }
+      .budget-bar-fill-small.at-target { background: var(--color-primary); }
 
       /* Inventory Summary Card */
       .inventory-total {
@@ -845,6 +956,12 @@
         background: var(--bg-page);
       }
 
+      /* Loading state */
+      .loading {
+        color: var(--color-text-muted);
+        font-style: italic;
+      }
+
       /* ========== RESPONSIVE ========== */
       @media (max-width: 1400px) {
         .kpi-row {
@@ -868,11 +985,11 @@
         <h1>⛏️ RAC Mining - Executive Dashboard</h1>
         <div class="header-status">
           <span class="status-dot" id="healthDot"></span>
-          <span id="healthStatus">Healthy</span>
+          <span id="healthStatus">Loading...</span>
         </div>
       </div>
       <div class="header-right">
-        <select class="period-selector" id="periodSelector">
+        <select class="period-selector" id="periodSelector" onchange="loadDashboard()">
           <option value="Q1">Q1 FY25/26 (Jul-Sep)</option>
           <option value="Q2">Q2 FY25/26 (Oct-Dec)</option>
           <option value="Q3" selected>Q3 FY25/26 (Jan-Mar)</option>
@@ -896,30 +1013,26 @@
               <div class="kpi-label">Cash Position</div>
               <span class="kpi-arrow">→</span>
             </div>
-            <div class="kpi-value" id="kpi-cash">$481,818</div>
-            <div class="kpi-trend positive" id="kpi-cash-trend">
-              <span>↑</span> 12% vs last month
-            </div>
+            <div class="kpi-value" id="kpi-cash">Loading...</div>
+            <div class="kpi-trend neutral" id="kpi-cash-trend">--</div>
             <div class="kpi-sparkline">
               <canvas id="sparkCash"></canvas>
             </div>
-            <div class="kpi-status-bar healthy"></div>
+            <div class="kpi-status-bar healthy" id="kpi-cash-status"></div>
           </div>
 
-          <!-- Revenue YTD -->
+          <!-- Revenue -->
           <div class="kpi-card" onclick="openDrawer('revenue')">
             <div class="kpi-header">
-              <div class="kpi-label">Revenue YTD</div>
+              <div class="kpi-label">Revenue (Period)</div>
               <span class="kpi-arrow">→</span>
             </div>
-            <div class="kpi-value" id="kpi-revenue">$776K</div>
-            <div class="kpi-trend negative" id="kpi-revenue-trend">
-              <span>↓</span> 18% vs budget
-            </div>
+            <div class="kpi-value" id="kpi-revenue">Loading...</div>
+            <div class="kpi-trend neutral" id="kpi-revenue-trend">--</div>
             <div class="kpi-sparkline">
               <canvas id="sparkRevenue"></canvas>
             </div>
-            <div class="kpi-status-bar warning"></div>
+            <div class="kpi-status-bar warning" id="kpi-revenue-status"></div>
           </div>
 
           <!-- Net Profit -->
@@ -928,14 +1041,12 @@
               <div class="kpi-label">Net Profit</div>
               <span class="kpi-arrow">→</span>
             </div>
-            <div class="kpi-value" id="kpi-profit">-$6,851</div>
-            <div class="kpi-trend negative" id="kpi-profit-trend">
-              <span>↓</span> Loss position
-            </div>
+            <div class="kpi-value" id="kpi-profit">Loading...</div>
+            <div class="kpi-trend neutral" id="kpi-profit-trend">--</div>
             <div class="kpi-sparkline">
               <canvas id="sparkProfit"></canvas>
             </div>
-            <div class="kpi-status-bar critical"></div>
+            <div class="kpi-status-bar critical" id="kpi-profit-status"></div>
           </div>
 
           <!-- Receivables -->
@@ -944,14 +1055,12 @@
               <div class="kpi-label">Receivables</div>
               <span class="kpi-arrow">→</span>
             </div>
-            <div class="kpi-value smaller" id="kpi-receivables">$175,754</div>
-            <div class="kpi-trend neutral" id="kpi-receivables-trend">
-              72% current • 19% 30+ days
-            </div>
+            <div class="kpi-value smaller" id="kpi-receivables">Loading...</div>
+            <div class="kpi-trend neutral" id="kpi-receivables-trend">--</div>
             <div class="kpi-sparkline">
               <canvas id="sparkReceivables"></canvas>
             </div>
-            <div class="kpi-status-bar healthy"></div>
+            <div class="kpi-status-bar healthy" id="kpi-receivables-status"></div>
           </div>
 
           <!-- Inventory Value -->
@@ -960,14 +1069,12 @@
               <div class="kpi-label">Inventory Value</div>
               <span class="kpi-arrow">→</span>
             </div>
-            <div class="kpi-value" id="kpi-inventory">$3.5M</div>
-            <div class="kpi-trend positive" id="kpi-inventory-trend">
-              <span>✓</span> Stock levels healthy
-            </div>
+            <div class="kpi-value" id="kpi-inventory">Loading...</div>
+            <div class="kpi-trend neutral" id="kpi-inventory-trend">--</div>
             <div class="kpi-sparkline">
               <canvas id="sparkInventory"></canvas>
             </div>
-            <div class="kpi-status-bar healthy"></div>
+            <div class="kpi-status-bar healthy" id="kpi-inventory-status"></div>
           </div>
         </div>
 
@@ -991,16 +1098,62 @@
             </div>
           </div>
 
-          <!-- Monthly Comparison -->
+          <!-- Budget vs Actual - Horizontal Bars -->
           <div class="chart-card">
             <div class="chart-header">
               <div>
                 <div class="chart-title">Budget vs Actual</div>
-                <div class="chart-subtitle">Current quarter</div>
+                <div class="chart-subtitle" id="budget-period">Current quarter (pro-rated)</div>
               </div>
             </div>
-            <div class="chart-container">
-              <canvas id="budgetChart"></canvas>
+            <div class="budget-bars-container" id="budgetBars">
+              <!-- Revenue Bar -->
+              <div class="budget-bar-item">
+                <div class="budget-bar-header">
+                  <span class="budget-bar-label">Revenue</span>
+                  <div class="budget-bar-values">
+                    <span class="budget-bar-actual" id="bar-rev-actual">$0</span>
+                    <span class="budget-bar-target" id="bar-rev-target">of $0</span>
+                    <span class="budget-bar-variance negative" id="bar-rev-var">0%</span>
+                  </div>
+                </div>
+                <div class="budget-bar-track">
+                  <div class="budget-bar-fill at-budget" id="bar-rev-fill" style="width: 0%"></div>
+                  <div class="budget-bar-marker" id="bar-rev-marker" style="left: 100%"></div>
+                </div>
+              </div>
+
+              <!-- Expenses Bar -->
+              <div class="budget-bar-item">
+                <div class="budget-bar-header">
+                  <span class="budget-bar-label">Expenses</span>
+                  <div class="budget-bar-values">
+                    <span class="budget-bar-actual" id="bar-exp-actual">$0</span>
+                    <span class="budget-bar-target" id="bar-exp-target">of $0</span>
+                    <span class="budget-bar-variance negative" id="bar-exp-var">0%</span>
+                  </div>
+                </div>
+                <div class="budget-bar-track">
+                  <div class="budget-bar-fill at-budget" id="bar-exp-fill" style="width: 0%"></div>
+                  <div class="budget-bar-marker" id="bar-exp-marker" style="left: 100%"></div>
+                </div>
+              </div>
+
+              <!-- Gross Profit Bar -->
+              <div class="budget-bar-item">
+                <div class="budget-bar-header">
+                  <span class="budget-bar-label">Gross Profit</span>
+                  <div class="budget-bar-values">
+                    <span class="budget-bar-actual" id="bar-gp-actual">$0</span>
+                    <span class="budget-bar-target" id="bar-gp-target">of $0</span>
+                    <span class="budget-bar-variance negative" id="bar-gp-var">0%</span>
+                  </div>
+                </div>
+                <div class="budget-bar-track">
+                  <div class="budget-bar-fill at-budget" id="bar-gp-fill" style="width: 0%"></div>
+                  <div class="budget-bar-marker" id="bar-gp-marker" style="left: 100%"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1008,54 +1161,43 @@
         <!-- Summary Row - Detail Cards -->
         <div class="summary-row">
           
-          <!-- Budget vs Actual -->
+          <!-- Budget Progress (Detailed) -->
           <div class="summary-card">
             <div class="card-header">
               <div>
-                <div class="card-title">Budget Progress</div>
-                <div class="card-subtitle">Q3 FY25/26 (Pro-rated)</div>
+                <div class="card-title">P&L Summary</div>
+                <div class="card-subtitle" id="pl-period">Q3 FY25/26</div>
               </div>
             </div>
             <div class="card-content">
               <div class="budget-item">
                 <div class="budget-item-header">
                   <span class="budget-item-label">Revenue</span>
-                  <div class="budget-item-values">
-                    <span class="budget-actual">-$85,480</span>
-                    <span class="budget-target">of $113K</span>
-                    <span class="budget-variance negative">-175.6%</span>
-                  </div>
-                </div>
-                <div class="budget-bar">
-                  <div class="budget-bar-fill over" style="width: 0%"></div>
+                  <span class="budget-actual" id="pl-revenue">$0</span>
                 </div>
               </div>
-
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label">Expenses</span>
-                  <div class="budget-item-values">
-                    <span class="budget-actual">-$78,629</span>
-                    <span class="budget-target">of $62K</span>
-                    <span class="budget-variance negative">+26.6%</span>
-                  </div>
-                </div>
-                <div class="budget-bar">
-                  <div class="budget-bar-fill over" style="width: 100%"></div>
+                  <span class="budget-item-label">COGS</span>
+                  <span class="budget-actual" id="pl-cogs">$0</span>
                 </div>
               </div>
-
+              <div class="budget-item" style="background: #FFFBEB; margin: 0 -16px; padding: 10px 16px;">
+                <div class="budget-item-header">
+                  <span class="budget-item-label"><strong>Gross Profit</strong></span>
+                  <span class="budget-actual" id="pl-gross"><strong>$0</strong></span>
+                </div>
+              </div>
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label">Gross Profit</span>
-                  <div class="budget-item-values">
-                    <span class="budget-actual">-$1,480</span>
-                    <span class="budget-target">of $51K</span>
-                    <span class="budget-variance negative">-102.9%</span>
-                  </div>
+                  <span class="budget-item-label">OpEx</span>
+                  <span class="budget-actual" id="pl-opex">$0</span>
                 </div>
-                <div class="budget-bar">
-                  <div class="budget-bar-fill over" style="width: 0%"></div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label"><strong>Net Profit</strong></span>
+                  <span class="budget-actual" id="pl-net"><strong>$0</strong></span>
                 </div>
               </div>
             </div>
@@ -1071,26 +1213,11 @@
             </div>
             <div class="card-content">
               <div class="inventory-total">
-                <div class="inventory-total-value">$3,500,031</div>
+                <div class="inventory-total-value" id="inv-total-value">$0</div>
                 <div class="inventory-total-label">Total Inventory Value</div>
               </div>
-              <div class="inventory-status-list">
-                <div class="inventory-status-item">
-                  <span>Roadbase</span>
-                  <span class="status-badge at-target">At Target</span>
-                </div>
-                <div class="inventory-status-item">
-                  <span>Type E (500-700)</span>
-                  <span class="status-badge below">Below</span>
-                </div>
-                <div class="inventory-status-item">
-                  <span>20mm Minus</span>
-                  <span class="status-badge above">Above</span>
-                </div>
-                <div class="inventory-status-item">
-                  <span>Sand</span>
-                  <span class="status-badge above">Above</span>
-                </div>
+              <div class="inventory-status-list" id="inventoryStatusList">
+                <div class="inventory-status-item loading">Loading inventory...</div>
               </div>
             </div>
           </div>
@@ -1104,34 +1231,8 @@
               </div>
             </div>
             <div class="card-content">
-              <div class="customer-list">
-                <div class="customer-item">
-                  <span class="customer-rank">1</span>
-                  <div class="customer-info">
-                    <div class="customer-name">Liberty Industrial Pty Ltd</div>
-                    <div class="customer-orders">2 orders</div>
-                    <div class="customer-bar"><div class="customer-bar-fill" style="width: 100%"></div></div>
-                  </div>
-                  <span class="customer-value">$205,723</span>
-                </div>
-                <div class="customer-item">
-                  <span class="customer-rank">2</span>
-                  <div class="customer-info">
-                    <div class="customer-name">RMG Project Construction</div>
-                    <div class="customer-orders">13 orders</div>
-                    <div class="customer-bar"><div class="customer-bar-fill" style="width: 36%"></div></div>
-                  </div>
-                  <span class="customer-value">$73,088</span>
-                </div>
-                <div class="customer-item">
-                  <span class="customer-rank">3</span>
-                  <div class="customer-info">
-                    <div class="customer-name">Sitzler</div>
-                    <div class="customer-orders">6 orders</div>
-                    <div class="customer-bar"><div class="customer-bar-fill" style="width: 32%"></div></div>
-                  </div>
-                  <span class="customer-value">$65,073</span>
-                </div>
+              <div class="customer-list" id="customerList">
+                <div class="customer-item loading">Loading customers...</div>
               </div>
             </div>
           </div>
@@ -1148,8 +1249,8 @@
           <button class="action-btn" onclick="openDrawer('ratios')">
             <span class="icon">📈</span> Ratios
           </button>
-          <button class="action-btn" onclick="openDrawer('orders')">
-            <span class="icon">📦</span> Orders
+          <button class="action-btn" onclick="openDrawer('aged')">
+            <span class="icon">📅</span> Aged Debtors
           </button>
           <button class="action-btn" onclick="window.location.href='index.html'">
             <span class="icon">🔗</span> Full Dashboard
@@ -1204,16 +1305,402 @@
       const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
       const MINING_ORG = "Mining";
 
-      // ========== CHART INITIALIZATION ==========
-      document.addEventListener('DOMContentLoaded', () => {
+      // Store loaded data globally
+      window.dashboardData = {
+        pl: {},
+        budget: {},
+        cash: {},
+        receivables: {},
+        balance: {}
+      };
+
+      // ========== QUARTER DATE CALCULATIONS ==========
+      function getQuarterDates(quarter) {
+        const today = new Date();
+        const year = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
+
+        const quarters = {
+          Q1: { start: `${year}-07-01`, end: `${year}-09-30`, days: 92 },
+          Q2: { start: `${year}-10-01`, end: `${year}-12-31`, days: 92 },
+          Q3: { start: `${year + 1}-01-01`, end: `${year + 1}-03-31`, days: 90 },
+          Q4: { start: `${year + 1}-04-01`, end: `${year + 1}-06-30`, days: 91 },
+        };
+
+        const q = quarters[quarter];
+        const startDate = new Date(q.start);
+        const endDate = new Date(q.end);
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const hasStarted = yesterday >= startDate;
+        const isComplete = yesterday >= endDate;
+        const daysElapsed = hasStarted
+          ? Math.min(Math.floor((yesterday - startDate) / (1000 * 60 * 60 * 24)) + 1, q.days)
+          : 0;
+
+        return {
+          quarterCode: quarter,
+          startDate: q.start,
+          endDate: isComplete ? q.end : today.toISOString().split("T")[0],
+          totalDays: q.days,
+          daysElapsed,
+          isComplete,
+          hasStarted,
+          proRateFactor: daysElapsed / q.days,
+        };
+      }
+
+      // ========== MAIN DASHBOARD LOAD ==========
+      async function loadDashboard() {
+        const period = document.getElementById("periodSelector").value;
+        const quarterInfo = getQuarterDates(period);
+
+        console.log("Loading dashboard for:", period, quarterInfo);
+
+        // Update period displays
+        document.getElementById("budget-period").textContent = 
+          `${period} (${Math.round(quarterInfo.proRateFactor * 100)}% elapsed)`;
+        document.getElementById("pl-period").textContent = 
+          `${period} FY25/26`;
+
+        // Load all data
+        await Promise.all([
+          loadCashPosition(),
+          loadTrialBalance(),
+          loadProfitLoss(quarterInfo),
+          loadAgedReceivables(),
+          loadInventory(),
+          loadTopCustomers(),
+        ]);
+
+        // Load budget after P&L (needs P&L data)
+        await loadBudget(quarterInfo);
+
+        // Update health status
+        updateHealthStatus();
+
+        // Initialize charts
         initSparklines();
         initTrendChart();
-        initBudgetChart();
-      });
+      }
+
+      // ========== CASH POSITION ==========
+      async function loadCashPosition() {
+        try {
+          const response = await fetch(`${API_BASE}/api/cash-position`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ organizationName: MINING_ORG }),
+          });
+          const data = await response.json();
+          
+          const totalCash = data.totalCash || 0;
+          window.dashboardData.cash = data;
+
+          document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
+          document.getElementById("kpi-cash-trend").innerHTML = 
+            `<span>💰</span> ${data.accounts?.length || 0} accounts`;
+          document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
+          
+        } catch (error) {
+          console.error("Error loading cash:", error);
+          document.getElementById("kpi-cash").textContent = "Error";
+        }
+      }
+
+      // ========== TRIAL BALANCE ==========
+      async function loadTrialBalance() {
+        try {
+          const response = await fetch(`${API_BASE}/api/trial-balance`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ organizationName: MINING_ORG }),
+          });
+          const data = await response.json();
+          
+          window.dashboardData.balance = data.trialBalance?.totals || {};
+          
+        } catch (error) {
+          console.error("Error loading trial balance:", error);
+        }
+      }
+
+      // ========== PROFIT & LOSS ==========
+      async function loadProfitLoss(quarterInfo) {
+        try {
+          const start = new Date(quarterInfo.startDate);
+          const end = new Date(quarterInfo.endDate);
+          let periodMonths = quarterInfo.isComplete ? 3 : 
+            (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+
+          const response = await fetch(`${API_BASE}/api/profit-loss-summary`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              organizationName: MINING_ORG,
+              date: quarterInfo.endDate,
+              periodMonths: periodMonths,
+            }),
+          });
+
+          const data = await response.json();
+          console.log("P&L Response:", data);
+
+          const revenue = data.summary?.totalRevenue || 0;
+          const totalExpenses = data.summary?.totalExpenses || 0;
+          const netProfit = data.summary?.netProfit || 0;
+
+          // Categorize COGS vs Opex
+          const expenseAccounts = data.summary?.expenseAccounts || [];
+          let cogs = 0;
+          let opex = 0;
+
+          expenseAccounts.forEach((account) => {
+            const name = account.name.toLowerCase();
+            if (name.includes("cost of") || name.includes("cost -") || 
+                name.includes("haulage expense") || name.includes("freight")) {
+              cogs += account.amount;
+            } else {
+              opex += account.amount;
+            }
+          });
+
+          const gross = revenue - cogs;
+
+          // Store for budget comparison
+          window.dashboardData.pl = { revenue, totalExpenses, cogs, opex, gross, netProfit };
+
+          // Update KPI cards
+          document.getElementById("kpi-revenue").textContent = "$" + revenue.toLocaleString();
+          document.getElementById("kpi-revenue-trend").innerHTML = 
+            revenue >= 0 ? `<span>↑</span> Period revenue` : `<span>↓</span> Negative revenue`;
+          document.getElementById("kpi-revenue-trend").className = 
+            revenue >= 0 ? "kpi-trend positive" : "kpi-trend negative";
+          document.getElementById("kpi-revenue-status").className = 
+            revenue >= 0 ? "kpi-status-bar healthy" : "kpi-status-bar warning";
+
+          document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
+          document.getElementById("kpi-profit-trend").innerHTML = 
+            netProfit >= 0 ? `<span>↑</span> Profitable` : `<span>↓</span> Loss position`;
+          document.getElementById("kpi-profit-trend").className = 
+            netProfit >= 0 ? "kpi-trend positive" : "kpi-trend negative";
+          document.getElementById("kpi-profit-status").className = 
+            netProfit >= 0 ? "kpi-status-bar healthy" : "kpi-status-bar critical";
+
+          // Update P&L summary card
+          document.getElementById("pl-revenue").textContent = "$" + revenue.toLocaleString();
+          document.getElementById("pl-cogs").textContent = "$" + cogs.toLocaleString();
+          document.getElementById("pl-gross").innerHTML = "<strong>$" + gross.toLocaleString() + "</strong>";
+          document.getElementById("pl-opex").textContent = "$" + opex.toLocaleString();
+          document.getElementById("pl-net").innerHTML = "<strong>$" + netProfit.toLocaleString() + "</strong>";
+
+        } catch (error) {
+          console.error("Error loading P&L:", error);
+        }
+      }
+
+      // ========== BUDGET ==========
+      async function loadBudget(quarterInfo) {
+        try {
+          const response = await fetch(`${API_BASE}/api/budget-summary`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              organizationName: MINING_ORG,
+              quarter: quarterInfo.quarterCode,
+            }),
+          });
+          const data = await response.json();
+          
+          const budget = parseBudgetFromReport(data.report);
+          const proRatedRevenue = Math.round(budget.revenue * quarterInfo.proRateFactor);
+          const proRatedExpenses = Math.round(budget.expenses * quarterInfo.proRateFactor);
+          const proRatedGrossProfit = proRatedRevenue - (proRatedExpenses * 0.55); // Approximate COGS
+
+          const actualRevenue = window.dashboardData.pl?.revenue || 0;
+          const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
+          const actualGross = window.dashboardData.pl?.gross || 0;
+
+          // Calculate variances
+          const revVar = proRatedRevenue > 0 ? ((actualRevenue - proRatedRevenue) / proRatedRevenue) * 100 : 0;
+          const expVar = proRatedExpenses > 0 ? ((actualExpenses - proRatedExpenses) / proRatedExpenses) * 100 : 0;
+          const gpVar = proRatedGrossProfit > 0 ? ((actualGross - proRatedGrossProfit) / proRatedGrossProfit) * 100 : 0;
+
+          // Update horizontal budget bars
+          updateBudgetBar('rev', actualRevenue, proRatedRevenue, revVar);
+          updateBudgetBar('exp', actualExpenses, proRatedExpenses, expVar);
+          updateBudgetBar('gp', actualGross, proRatedGrossProfit, gpVar);
+
+        } catch (error) {
+          console.error("Error loading budget:", error);
+        }
+      }
+
+      function updateBudgetBar(type, actual, budget, variance) {
+        const maxVal = Math.max(Math.abs(actual), Math.abs(budget)) * 1.2;
+        const fillPct = budget > 0 ? Math.min(Math.abs(actual) / maxVal * 100, 100) : 0;
+        const markerPct = budget > 0 ? Math.min(budget / maxVal * 100, 100) : 0;
+
+        document.getElementById(`bar-${type}-actual`).textContent = "$" + actual.toLocaleString();
+        document.getElementById(`bar-${type}-target`).textContent = "of $" + budget.toLocaleString();
+        
+        const varEl = document.getElementById(`bar-${type}-var`);
+        varEl.textContent = (variance >= 0 ? "+" : "") + variance.toFixed(1) + "%";
+        varEl.className = "budget-bar-variance " + (
+          type === 'exp' ? (variance <= 0 ? "positive" : "negative") :
+          (variance >= 0 ? "positive" : "negative")
+        );
+
+        const fillEl = document.getElementById(`bar-${type}-fill`);
+        fillEl.style.width = fillPct + "%";
+        
+        // Color based on type and performance
+        if (type === 'exp') {
+          fillEl.className = "budget-bar-fill " + (actual <= budget ? "under-budget" : "over-budget");
+        } else {
+          fillEl.className = "budget-bar-fill " + (actual >= budget ? "under-budget" : "over-budget");
+        }
+
+        document.getElementById(`bar-${type}-marker`).style.left = markerPct + "%";
+      }
+
+      function parseBudgetFromReport(report) {
+        let revenue = 0;
+        let expenses = 0;
+
+        if (report?.Reports?.[0]?.Rows) {
+          report.Reports[0].Rows.forEach(row => {
+            if (row.RowType === "Section" && row.Rows) {
+              row.Rows.forEach(subRow => {
+                if (subRow.RowType === "SummaryRow" && subRow.Cells) {
+                  const label = subRow.Cells[0]?.Value?.toLowerCase() || "";
+                  const month1 = parseFloat(subRow.Cells[1]?.Value) || 0;
+                  const month2 = parseFloat(subRow.Cells[2]?.Value) || 0;
+                  const month3 = parseFloat(subRow.Cells[3]?.Value) || 0;
+                  const total = month1 + month2 + month3;
+
+                  if (label.includes("total income") || label.includes("total revenue")) {
+                    if (total > revenue) revenue = total;
+                  }
+                  if (label.includes("total operating expenses") || label.includes("total expenses")) {
+                    if (total > expenses) expenses = total;
+                  }
+                }
+              });
+            }
+          });
+        }
+        return { revenue, expenses };
+      }
+
+      // ========== AGED RECEIVABLES ==========
+      async function loadAgedReceivables() {
+        try {
+          const response = await fetch(`${API_BASE}/api/aged-receivables`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ organizationName: MINING_ORG }),
+          });
+          const data = await response.json();
+
+          const total = (data.aged30Days || 0) + (data.aged60Days || 0) + 
+                       (data.aged90Days || 0) + (data.agedOver120Days || 0);
+          
+          window.dashboardData.receivables = data;
+
+          document.getElementById("kpi-receivables").textContent = "$" + total.toLocaleString();
+          
+          const currentPct = total > 0 ? Math.round((data.aged30Days || 0) / total * 100) : 0;
+          document.getElementById("kpi-receivables-trend").textContent = 
+            `${currentPct}% current • ${100 - currentPct}% overdue`;
+          document.getElementById("kpi-receivables-trend").className = 
+            currentPct >= 70 ? "kpi-trend positive" : "kpi-trend warning";
+
+        } catch (error) {
+          console.error("Error loading receivables:", error);
+        }
+      }
+
+      // ========== INVENTORY ==========
+      async function loadInventory() {
+        // Static data for now - would come from inventory system
+        const inventoryData = [
+          { product: "Roadbase", current: "8,000t", value: 563840, status: "at-target" },
+          { product: "Type E (500-700)", current: "4,510t", value: 377848, status: "below" },
+          { product: "20mm Minus", current: "12,118t", value: 1088923, status: "above" },
+          { product: "Crusher Dust", current: "2,000t", value: 69420, status: "at-target" },
+          { product: "Sand", current: "19,084t", value: 600000, status: "above" },
+          { product: "Other Rock", current: "10,000t", value: 800000, status: "adequate" },
+        ];
+
+        const totalValue = inventoryData.reduce((sum, item) => sum + item.value, 0);
+
+        document.getElementById("kpi-inventory").textContent = "$" + (totalValue / 1000000).toFixed(1) + "M";
+        document.getElementById("kpi-inventory-trend").innerHTML = `<span>✓</span> Stock levels healthy`;
+        document.getElementById("kpi-inventory-trend").className = "kpi-trend positive";
+
+        document.getElementById("inv-total-value").textContent = "$" + totalValue.toLocaleString();
+
+        const statusList = document.getElementById("inventoryStatusList");
+        statusList.innerHTML = inventoryData.slice(0, 4).map(item => `
+          <div class="inventory-status-item">
+            <span>${item.product}</span>
+            <span class="status-badge ${item.status}">${
+              item.status === "at-target" ? "At Target" :
+              item.status === "below" ? "Below" :
+              item.status === "above" ? "Above" : "OK"
+            }</span>
+          </div>
+        `).join("");
+      }
+
+      // ========== TOP CUSTOMERS ==========
+      async function loadTopCustomers() {
+        // Static data - would come from invoices analysis
+        const customers = [
+          { name: "Liberty Industrial Pty Ltd", value: 205723, orders: 2 },
+          { name: "RMG Project Construction", value: 73088, orders: 13 },
+          { name: "Sitzler", value: 65073, orders: 6 },
+        ];
+
+        const maxValue = customers[0]?.value || 1;
+
+        const customerList = document.getElementById("customerList");
+        customerList.innerHTML = customers.map((c, i) => `
+          <div class="customer-item">
+            <span class="customer-rank">${i + 1}</span>
+            <div class="customer-info">
+              <div class="customer-name">${c.name}</div>
+              <div class="customer-orders">${c.orders} orders</div>
+              <div class="customer-bar">
+                <div class="customer-bar-fill" style="width: ${(c.value / maxValue) * 100}%"></div>
+              </div>
+            </div>
+            <span class="customer-value">$${c.value.toLocaleString()}</span>
+          </div>
+        `).join("");
+      }
+
+      // ========== HEALTH STATUS ==========
+      function updateHealthStatus() {
+        const pl = window.dashboardData.pl;
+        const dot = document.getElementById("healthDot");
+        const status = document.getElementById("healthStatus");
+
+        if (pl.netProfit < 0) {
+          dot.className = "status-dot critical";
+          status.textContent = "Attention Required";
+        } else if (pl.netProfit < 10000) {
+          dot.className = "status-dot warning";
+          status.textContent = "Monitor";
+        } else {
+          dot.className = "status-dot";
+          status.textContent = "Healthy";
+        }
+      }
 
       // ========== SPARKLINE CHARTS ==========
       function initSparklines() {
-        // Month labels for sparklines (last 7 months)
         const monthLabels = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
         
         const sparklineConfig = {
@@ -1236,11 +1723,7 @@
               x: { 
                 display: true,
                 grid: { display: false },
-                ticks: { 
-                  font: { size: 9 },
-                  color: '#8A8886',
-                  maxRotation: 0
-                }
+                ticks: { font: { size: 9 }, color: '#8A8886', maxRotation: 0 }
               }, 
               y: { display: false } 
             },
@@ -1251,50 +1734,61 @@
           }
         };
 
-        // Cash sparkline - upward trend
-        new Chart(document.getElementById('sparkCash'), {
+        // Destroy existing charts if they exist
+        ['sparkCash', 'sparkRevenue', 'sparkProfit', 'sparkReceivables', 'sparkInventory'].forEach(id => {
+          const canvas = document.getElementById(id);
+          if (canvas && canvas.chart) {
+            canvas.chart.destroy();
+          }
+        });
+
+        // Cash sparkline
+        const cashChart = new Chart(document.getElementById('sparkCash'), {
           ...sparklineConfig,
           data: {
             labels: monthLabels,
             datasets: [{
-              data: [380000, 420000, 395000, 450000, 430000, 465000, 481818],
+              data: [380000, 420000, 395000, 450000, 430000, 465000, window.dashboardData.cash.totalCash || 481818],
               borderColor: '#107C10',
               fill: true,
               backgroundColor: 'rgba(16, 124, 16, 0.1)'
             }]
           }
         });
+        document.getElementById('sparkCash').chart = cashChart;
 
-        // Revenue sparkline - declining
-        new Chart(document.getElementById('sparkRevenue'), {
+        // Revenue sparkline
+        const revChart = new Chart(document.getElementById('sparkRevenue'), {
           ...sparklineConfig,
           data: {
             labels: monthLabels,
             datasets: [{
-              data: [150000, 180000, 120000, 95000, 80000, 60000, -85480],
+              data: [150000, 180000, 120000, 95000, 80000, 60000, window.dashboardData.pl.revenue || 0],
+              borderColor: window.dashboardData.pl.revenue >= 0 ? '#107C10' : '#D13438',
+              fill: true,
+              backgroundColor: window.dashboardData.pl.revenue >= 0 ? 'rgba(16, 124, 16, 0.1)' : 'rgba(209, 52, 56, 0.1)'
+            }]
+          }
+        });
+        document.getElementById('sparkRevenue').chart = revChart;
+
+        // Profit sparkline
+        const profitChart = new Chart(document.getElementById('sparkProfit'), {
+          ...sparklineConfig,
+          data: {
+            labels: monthLabels,
+            datasets: [{
+              data: [25000, 35000, 15000, -5000, -12000, -8000, window.dashboardData.pl.netProfit || 0],
               borderColor: '#D13438',
               fill: true,
               backgroundColor: 'rgba(209, 52, 56, 0.1)'
             }]
           }
         });
+        document.getElementById('sparkProfit').chart = profitChart;
 
-        // Profit sparkline - volatile
-        new Chart(document.getElementById('sparkProfit'), {
-          ...sparklineConfig,
-          data: {
-            labels: monthLabels,
-            datasets: [{
-              data: [25000, 35000, 15000, -5000, -12000, -8000, -6851],
-              borderColor: '#D13438',
-              fill: true,
-              backgroundColor: 'rgba(209, 52, 56, 0.1)'
-            }]
-          }
-        });
-
-        // Receivables sparkline - stable
-        new Chart(document.getElementById('sparkReceivables'), {
+        // Receivables sparkline
+        const recChart = new Chart(document.getElementById('sparkReceivables'), {
           ...sparklineConfig,
           data: {
             labels: monthLabels,
@@ -1306,9 +1800,10 @@
             }]
           }
         });
+        document.getElementById('sparkReceivables').chart = recChart;
 
-        // Inventory sparkline - stable high
-        new Chart(document.getElementById('sparkInventory'), {
+        // Inventory sparkline
+        const invChart = new Chart(document.getElementById('sparkInventory'), {
           ...sparklineConfig,
           data: {
             labels: monthLabels,
@@ -1320,31 +1815,38 @@
             }]
           }
         });
+        document.getElementById('sparkInventory').chart = invChart;
       }
 
       // ========== TREND CHART ==========
       function initTrendChart() {
         const ctx = document.getElementById('trendChart').getContext('2d');
-        new Chart(ctx, {
+        
+        // Destroy if exists
+        if (window.trendChartInstance) {
+          window.trendChartInstance.destroy();
+        }
+
+        window.trendChartInstance = new Chart(ctx, {
           type: 'bar',
           data: {
             labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
             datasets: [
               {
                 label: 'Revenue',
-                data: [180000, 120000, 95000, 80000, 60000, -85480],
+                data: [180000, 120000, 95000, 80000, 60000, window.dashboardData.pl.revenue || 0],
                 backgroundColor: '#0078D4',
                 borderRadius: 4
               },
               {
                 label: 'Expenses',
-                data: [145000, 105000, 100000, 92000, 68000, 78629],
+                data: [145000, 105000, 100000, 92000, 68000, Math.abs(window.dashboardData.pl.totalExpenses || 0)],
                 backgroundColor: '#D13438',
                 borderRadius: 4
               },
               {
                 label: 'Profit',
-                data: [35000, 15000, -5000, -12000, -8000, -6851],
+                data: [35000, 15000, -5000, -12000, -8000, window.dashboardData.pl.netProfit || 0],
                 backgroundColor: '#107C10',
                 borderRadius: 4
               }
@@ -1353,48 +1855,16 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
-              x: {
-                grid: { display: false },
-                ticks: { font: { size: 11 } }
-              },
-              y: {
+              x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+              y: { 
                 grid: { color: '#EDEBE9' },
                 ticks: { 
                   font: { size: 11 },
-                  callback: function(value) {
-                    return '$' + (value / 1000) + 'K';
-                  }
+                  callback: function(value) { return '$' + (value / 1000) + 'K'; }
                 }
               }
-            }
-          }
-        });
-      }
-
-      // ========== BUDGET CHART ==========
-      function initBudgetChart() {
-        const ctx = document.getElementById('budgetChart').getContext('2d');
-        new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: ['Spent', 'Remaining'],
-            datasets: [{
-              data: [78629, 0],
-              backgroundColor: ['#D13438', '#EDEBE9'],
-              borderWidth: 0
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: {
-              legend: { display: false },
-              tooltip: { enabled: true }
             }
           }
         });
@@ -1416,7 +1886,7 @@
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
           ratios: 'Financial Ratios',
-          orders: 'Open Orders'
+          aged: 'Aged Debtors Analysis'
         };
 
         title.textContent = titles[type] || 'Detail View';
@@ -1432,63 +1902,69 @@
       }
 
       function getDrawerContent(type) {
+        const cash = window.dashboardData.cash;
+        const balance = window.dashboardData.balance;
+        const receivables = window.dashboardData.receivables;
+
         const contents = {
           cash: `
             <div style="padding: 16px 0;">
               <h3 style="margin-bottom: 16px; font-size: 15px;">Bank Accounts</h3>
               <table class="data-table">
-                <thead>
-                  <tr><th>Account</th><th style="text-align:right">Balance</th></tr>
-                </thead>
+                <thead><tr><th>Account</th><th style="text-align:right">Balance</th></tr></thead>
                 <tbody>
-                  <tr><td>Commonwealth - 11041633</td><td style="text-align:right">$277,613.13</td></tr>
-                  <tr><td>Quarry Security Deposit</td><td style="text-align:right">$204,204.48</td></tr>
+                  ${(cash.accounts || []).map(acc => `
+                    <tr><td>${acc.name}</td><td style="text-align:right">$${(acc.balance || 0).toLocaleString()}</td></tr>
+                  `).join('') || '<tr><td colspan="2">No accounts found</td></tr>'}
                   <tr style="font-weight:600; background:#f5f5f5;">
-                    <td>Total Cash</td><td style="text-align:right">$481,817.61</td>
+                    <td>Total Cash</td><td style="text-align:right">$${(cash.totalCash || 0).toLocaleString()}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           `,
-          receivables: `
+          balance: `
             <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Aged Receivables Analysis</h3>
+              <h3 style="margin-bottom: 16px; font-size: 15px;">Balance Sheet Summary</h3>
               <table class="data-table">
-                <thead>
-                  <tr><th>Age</th><th style="text-align:right">Amount</th><th style="text-align:right">%</th></tr>
-                </thead>
                 <tbody>
-                  <tr><td>Current</td><td style="text-align:right">$126,543</td><td style="text-align:right">72%</td></tr>
-                  <tr><td>1-30 days</td><td style="text-align:right">$32,534</td><td style="text-align:right">19%</td></tr>
-                  <tr><td>31-60 days</td><td style="text-align:right">$11,438</td><td style="text-align:right">6%</td></tr>
-                  <tr><td>60+ days</td><td style="text-align:right">$5,239</td><td style="text-align:right">3%</td></tr>
+                  <tr><td>Total Assets</td><td style="text-align:right">$${(balance.totalAssets || 0).toLocaleString()}</td></tr>
+                  <tr><td>Total Liabilities</td><td style="text-align:right">$${(balance.totalLiabilities || 0).toLocaleString()}</td></tr>
                   <tr style="font-weight:600; background:#f5f5f5;">
-                    <td>Total</td><td style="text-align:right">$175,754</td><td></td>
+                    <td>Net Equity</td><td style="text-align:right">$${(balance.totalEquity || 0).toLocaleString()}</td>
                   </tr>
+                </tbody>
+              </table>
+            </div>
+          `,
+          aged: `
+            <div style="padding: 16px 0;">
+              <h3 style="margin-bottom: 16px; font-size: 15px;">Aged Receivables</h3>
+              <table class="data-table">
+                <thead><tr><th>Age</th><th style="text-align:right">Amount</th></tr></thead>
+                <tbody>
+                  <tr><td>Current (0-30 days)</td><td style="text-align:right">$${(receivables.aged30Days || 0).toLocaleString()}</td></tr>
+                  <tr><td>31-60 days</td><td style="text-align:right">$${(receivables.aged60Days || 0).toLocaleString()}</td></tr>
+                  <tr><td>61-90 days</td><td style="text-align:right">$${(receivables.aged90Days || 0).toLocaleString()}</td></tr>
+                  <tr><td>90+ days</td><td style="text-align:right">$${(receivables.agedOver120Days || 0).toLocaleString()}</td></tr>
                 </tbody>
               </table>
             </div>
           `,
           ratios: `
             <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Key Financial Ratios</h3>
+              <h3 style="margin-bottom: 16px; font-size: 15px;">Financial Ratios</h3>
               <table class="data-table">
-                <thead>
-                  <tr><th>Ratio</th><th style="text-align:right">Value</th><th>Status</th></tr>
-                </thead>
                 <tbody>
-                  <tr><td>Current Ratio</td><td style="text-align:right">7.03</td><td><span class="status-badge at-target">Healthy</span></td></tr>
-                  <tr><td>Debt to Equity</td><td style="text-align:right">0.17</td><td><span class="status-badge at-target">Low Risk</span></td></tr>
-                  <tr><td>Gross Margin %</td><td style="text-align:right">-1.7%</td><td><span class="status-badge below">Below</span></td></tr>
-                  <tr><td>Net Profit Margin</td><td style="text-align:right">-8.0%</td><td><span class="status-badge below">Loss</span></td></tr>
-                  <tr><td>Return on Assets</td><td style="text-align:right">-0.1%</td><td><span class="status-badge below">Below</span></td></tr>
+                  <tr><td>Current Ratio</td><td style="text-align:right">${balance.totalAssets && balance.totalLiabilities ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) : 'N/A'}</td></tr>
+                  <tr><td>Debt to Equity</td><td style="text-align:right">${balance.totalLiabilities && balance.totalEquity ? (balance.totalLiabilities / balance.totalEquity).toFixed(2) : 'N/A'}</td></tr>
                 </tbody>
               </table>
             </div>
           `
         };
 
-        return contents[type] || '<p>Loading detailed data...</p>';
+        return contents[type] || '<p>Loading...</p>';
       }
 
       // ========== CHAT FUNCTIONS ==========
@@ -1527,11 +2003,10 @@
         if (event.key === 'Enter') sendChat();
       }
 
-      // ========== DATA LOADING ==========
-      async function loadDashboard() {
-        console.log('Loading dashboard data...');
-        // Implementation would mirror your existing loadDashboard()
-      }
+      // ========== INITIALIZE ==========
+      document.addEventListener('DOMContentLoaded', () => {
+        loadDashboard();
+      });
     </script>
   </body>
 </html>
