@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RAC Mining - Executive Dashboard</title>
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       /* ========== CSS VARIABLES (Design System) ========== */
       :root {
@@ -32,8 +34,8 @@
         
         /* Typography */
         --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        --font-size-kpi: 42px;
-        --font-size-kpi-secondary: 28px;
+        --font-size-kpi: 36px;
+        --font-size-kpi-secondary: 24px;
         --font-size-label: 12px;
         --font-size-body: 14px;
         --font-size-heading: 18px;
@@ -46,7 +48,7 @@
         --spacing-xl: 32px;
         
         /* Layout */
-        --header-height: 64px;
+        --header-height: 56px;
         --drawer-width: 420px;
       }
 
@@ -83,7 +85,7 @@
       }
 
       .header h1 {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
         color: white;
       }
@@ -92,10 +94,10 @@
         display: flex;
         align-items: center;
         gap: var(--spacing-sm);
-        padding: 6px 12px;
+        padding: 5px 12px;
         background: rgba(255,255,255,0.1);
         border-radius: 20px;
-        font-size: 13px;
+        font-size: 12px;
         color: rgba(255,255,255,0.9);
       }
 
@@ -116,10 +118,10 @@
       }
 
       .period-selector {
-        padding: 8px 16px;
+        padding: 6px 14px;
         border: 1px solid rgba(255,255,255,0.3);
         border-radius: 6px;
-        font-size: 14px;
+        font-size: 13px;
         background: rgba(255,255,255,0.1);
         color: white;
         cursor: pointer;
@@ -131,12 +133,12 @@
       }
 
       .btn-refresh {
-        padding: 8px 20px;
+        padding: 6px 16px;
         background: var(--color-primary);
         color: white;
         border: none;
         border-radius: 6px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
         cursor: pointer;
         transition: background 0.2s;
@@ -147,17 +149,17 @@
       }
 
       .btn-chat {
-        padding: 8px 16px;
+        padding: 6px 14px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
         border-radius: 6px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
       }
 
       /* ========== MAIN LAYOUT ========== */
@@ -169,11 +171,11 @@
 
       .dashboard {
         flex: 1;
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-lg);
+        gap: var(--spacing-md);
       }
 
       /* ========== KPI ROW (Top) ========== */
@@ -185,13 +187,15 @@
 
       .kpi-card {
         background: var(--bg-card);
-        border-radius: 12px;
-        padding: var(--spacing-lg);
+        border-radius: 10px;
+        padding: var(--spacing-md);
         box-shadow: var(--shadow-card);
         cursor: pointer;
         transition: box-shadow 0.2s, transform 0.2s;
         position: relative;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
 
       .kpi-card:hover {
@@ -199,19 +203,10 @@
         transform: translateY(-2px);
       }
 
-      .kpi-card::after {
-        content: '→';
-        position: absolute;
-        top: var(--spacing-md);
-        right: var(--spacing-md);
-        color: var(--color-text-muted);
-        opacity: 0;
-        transition: opacity 0.2s;
-        font-size: 18px;
-      }
-
-      .kpi-card:hover::after {
-        opacity: 1;
+      .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
       }
 
       .kpi-label {
@@ -220,7 +215,17 @@
         color: var(--color-text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: var(--spacing-sm);
+      }
+
+      .kpi-arrow {
+        color: var(--color-text-muted);
+        opacity: 0;
+        transition: opacity 0.2s;
+        font-size: 14px;
+      }
+
+      .kpi-card:hover .kpi-arrow {
+        opacity: 1;
       }
 
       .kpi-value {
@@ -229,6 +234,7 @@
         color: var(--color-text-primary);
         line-height: 1.1;
         font-variant-numeric: tabular-nums;
+        margin: var(--spacing-xs) 0;
       }
 
       .kpi-value.smaller {
@@ -239,8 +245,7 @@
         display: flex;
         align-items: center;
         gap: var(--spacing-xs);
-        margin-top: var(--spacing-sm);
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
       }
 
@@ -249,10 +254,14 @@
       .kpi-trend.neutral { color: var(--color-text-muted); }
 
       .kpi-sparkline {
-        height: 40px;
-        margin-top: var(--spacing-md);
-        background: linear-gradient(to right, rgba(0,120,212,0.1), rgba(0,120,212,0.05));
-        border-radius: 4px;
+        flex: 1;
+        min-height: 40px;
+        margin-top: var(--spacing-sm);
+      }
+
+      .kpi-sparkline canvas {
+        width: 100% !important;
+        height: 100% !important;
       }
 
       /* Status indicator bar at bottom of card */
@@ -261,46 +270,107 @@
         bottom: 0;
         left: 0;
         right: 0;
-        height: 4px;
+        height: 3px;
       }
 
       .kpi-status-bar.healthy { background: var(--color-positive); }
       .kpi-status-bar.warning { background: var(--color-warning); }
       .kpi-status-bar.critical { background: var(--color-negative); }
 
-      /* ========== SUMMARY ROW (Middle) ========== */
+      /* ========== CHART ROW (Full Width) ========== */
+      .chart-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: var(--spacing-md);
+        min-height: 200px;
+      }
+
+      .chart-card {
+        background: var(--bg-card);
+        border-radius: 10px;
+        padding: var(--spacing-md);
+        box-shadow: var(--shadow-card);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .chart-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
+
+      .chart-subtitle {
+        font-size: 11px;
+        color: var(--color-text-muted);
+      }
+
+      .chart-legend {
+        display: flex;
+        gap: var(--spacing-md);
+        font-size: 11px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--color-text-secondary);
+      }
+
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+      }
+
+      .chart-container {
+        flex: 1;
+        position: relative;
+        min-height: 150px;
+      }
+
+      /* ========== SUMMARY ROW (Bottom) ========== */
       .summary-row {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         gap: var(--spacing-md);
         flex: 1;
-        min-height: 300px;
+        min-height: 0;
       }
 
       .summary-card {
         background: var(--bg-card);
-        border-radius: 12px;
-        padding: var(--spacing-lg);
+        border-radius: 10px;
+        padding: var(--spacing-md);
         box-shadow: var(--shadow-card);
         display: flex;
         flex-direction: column;
+        overflow: hidden;
       }
 
       .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: var(--spacing-md);
+        margin-bottom: var(--spacing-sm);
       }
 
       .card-title {
-        font-size: var(--font-size-heading);
+        font-size: 15px;
         font-weight: 600;
         color: var(--color-text-primary);
       }
 
       .card-subtitle {
-        font-size: var(--font-size-label);
+        font-size: 11px;
         color: var(--color-text-muted);
       }
 
@@ -308,14 +378,15 @@
         flex: 1;
         display: flex;
         flex-direction: column;
+        overflow-y: auto;
       }
 
       /* Budget Progress Card */
       .budget-item {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-md) 0;
+        gap: 6px;
+        padding: 10px 0;
         border-bottom: 1px solid var(--color-border);
       }
 
@@ -330,7 +401,7 @@
       }
 
       .budget-item-label {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
         color: var(--color-text-primary);
       }
@@ -338,8 +409,8 @@
       .budget-item-values {
         display: flex;
         align-items: center;
-        gap: var(--spacing-md);
-        font-size: 14px;
+        gap: var(--spacing-sm);
+        font-size: 12px;
       }
 
       .budget-actual {
@@ -352,9 +423,9 @@
       }
 
       .budget-variance {
-        padding: 4px 10px;
+        padding: 2px 8px;
         border-radius: 4px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
       }
 
@@ -369,15 +440,15 @@
       }
 
       .budget-bar {
-        height: 8px;
+        height: 6px;
         background: var(--color-border);
-        border-radius: 4px;
+        border-radius: 3px;
         overflow: hidden;
       }
 
       .budget-bar-fill {
         height: 100%;
-        border-radius: 4px;
+        border-radius: 3px;
         transition: width 0.5s ease;
       }
 
@@ -386,52 +457,46 @@
       .budget-bar-fill.at-target { background: var(--color-primary); }
 
       /* Inventory Summary Card */
-      .inventory-summary {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-md);
-      }
-
       .inventory-total {
         text-align: center;
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
         background: linear-gradient(135deg, #E3F2FD 0%, #F3E5F5 100%);
         border-radius: 8px;
         margin-bottom: var(--spacing-sm);
       }
 
       .inventory-total-value {
-        font-size: 36px;
+        font-size: 28px;
         font-weight: 700;
         color: var(--color-text-primary);
       }
 
       .inventory-total-label {
-        font-size: 13px;
+        font-size: 11px;
         color: var(--color-text-secondary);
-        margin-top: 4px;
+        margin-top: 2px;
       }
 
       .inventory-status-list {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-sm);
+        gap: 6px;
       }
 
       .inventory-status-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 12px;
+        padding: 8px 10px;
         background: var(--bg-page);
         border-radius: 6px;
-        font-size: 13px;
+        font-size: 12px;
       }
 
       .status-badge {
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 10px;
         font-weight: 600;
         text-transform: uppercase;
       }
@@ -445,58 +510,62 @@
       .customer-list {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-sm);
+        gap: 8px;
       }
 
       .customer-item {
         display: flex;
         align-items: center;
-        gap: var(--spacing-md);
-        padding: 12px;
+        gap: var(--spacing-sm);
+        padding: 10px;
         background: var(--bg-page);
         border-radius: 8px;
       }
 
       .customer-rank {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: var(--color-primary);
         color: white;
         border-radius: 50%;
-        font-size: 13px;
+        font-size: 11px;
         font-weight: 600;
       }
 
       .customer-info {
         flex: 1;
+        min-width: 0;
       }
 
       .customer-name {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
         color: var(--color-text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .customer-orders {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--color-text-muted);
       }
 
       .customer-value {
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 600;
         color: var(--color-text-primary);
       }
 
       .customer-bar {
         width: 100%;
-        height: 4px;
+        height: 3px;
         background: var(--color-border);
         border-radius: 2px;
-        margin-top: 8px;
+        margin-top: 6px;
       }
 
       .customer-bar-fill {
@@ -508,25 +577,23 @@
       /* ========== QUICK ACTIONS ROW ========== */
       .actions-row {
         display: flex;
-        gap: var(--spacing-md);
-        padding-top: var(--spacing-md);
-        border-top: 1px solid var(--color-border);
+        gap: var(--spacing-sm);
       }
 
       .action-btn {
         flex: 1;
-        padding: 14px 20px;
+        padding: 10px 14px;
         background: var(--bg-card);
         border: 1px solid var(--color-border);
-        border-radius: 8px;
-        font-size: 14px;
+        border-radius: 6px;
+        font-size: 12px;
         font-weight: 500;
         color: var(--color-text-primary);
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: var(--spacing-sm);
+        gap: 6px;
         transition: all 0.2s;
       }
 
@@ -537,7 +604,7 @@
       }
 
       .action-btn .icon {
-        font-size: 18px;
+        font-size: 14px;
       }
 
       /* ========== DRAWER (Drill-down Panel) ========== */
@@ -593,13 +660,13 @@
       }
 
       .drawer-close {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         border: none;
         background: var(--bg-page);
         border-radius: 50%;
         cursor: pointer;
-        font-size: 20px;
+        font-size: 18px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -618,7 +685,7 @@
 
       /* ========== AI CHAT PANEL ========== */
       .chat-panel {
-        width: 380px;
+        width: 360px;
         background: var(--bg-card);
         border-left: 1px solid var(--color-border);
         display: none;
@@ -636,7 +703,7 @@
       }
 
       .chat-header {
-        padding: var(--spacing-md) var(--spacing-lg);
+        padding: var(--spacing-md);
         border-bottom: 1px solid var(--color-border);
         display: flex;
         justify-content: space-between;
@@ -646,7 +713,7 @@
       }
 
       .chat-header h3 {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
       }
 
@@ -654,28 +721,28 @@
         background: rgba(255,255,255,0.2);
         border: none;
         color: white;
-        width: 28px;
-        height: 28px;
+        width: 26px;
+        height: 26px;
         border-radius: 50%;
         cursor: pointer;
-        font-size: 16px;
+        font-size: 14px;
       }
 
       .chat-messages {
         flex: 1;
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-md);
+        gap: var(--spacing-sm);
       }
 
       .chat-message {
         max-width: 85%;
-        padding: 12px 16px;
+        padding: 10px 14px;
         border-radius: 12px;
-        font-size: 14px;
-        line-height: 1.5;
+        font-size: 13px;
+        line-height: 1.4;
       }
 
       .chat-message.assistant {
@@ -693,19 +760,19 @@
       }
 
       .chat-suggestions {
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
         border-top: 1px solid var(--color-border);
         display: flex;
         flex-wrap: wrap;
-        gap: var(--spacing-sm);
+        gap: 6px;
       }
 
       .suggestion-chip {
-        padding: 8px 14px;
+        padding: 6px 12px;
         background: var(--bg-page);
         border: 1px solid var(--color-border);
-        border-radius: 20px;
-        font-size: 12px;
+        border-radius: 16px;
+        font-size: 11px;
         color: var(--color-text-secondary);
         cursor: pointer;
         transition: all 0.2s;
@@ -717,18 +784,18 @@
       }
 
       .chat-input-area {
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
         border-top: 1px solid var(--color-border);
         display: flex;
-        gap: var(--spacing-sm);
+        gap: 6px;
       }
 
       .chat-input {
         flex: 1;
-        padding: 12px 16px;
+        padding: 10px 14px;
         border: 1px solid var(--color-border);
-        border-radius: 24px;
-        font-size: 14px;
+        border-radius: 20px;
+        font-size: 13px;
         outline: none;
       }
 
@@ -737,21 +804,21 @@
       }
 
       .chat-send {
-        width: 44px;
-        height: 44px;
+        width: 38px;
+        height: 38px;
         background: var(--color-primary);
         border: none;
         border-radius: 50%;
         color: white;
         cursor: pointer;
-        font-size: 18px;
+        font-size: 16px;
       }
 
       /* ========== DATA TABLE (for drawers) ========== */
       .data-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 13px;
+        font-size: 12px;
       }
 
       .data-table thead {
@@ -760,57 +827,22 @@
 
       .data-table th {
         text-align: left;
-        padding: 12px 16px;
+        padding: 10px 12px;
         font-weight: 600;
         color: var(--color-text-secondary);
-        font-size: 11px;
+        font-size: 10px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
 
       .data-table td {
-        padding: 12px 16px;
+        padding: 10px 12px;
         border-bottom: 1px solid var(--color-border);
         color: var(--color-text-primary);
       }
 
       .data-table tbody tr:hover {
         background: var(--bg-page);
-      }
-
-      /* ========== HEALTH INDICATOR (Overall) ========== */
-      .health-indicator {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-md);
-        padding: var(--spacing-md) var(--spacing-lg);
-        background: #E6F4EA;
-        border-radius: 8px;
-        margin-bottom: var(--spacing-lg);
-      }
-
-      .health-indicator.warning {
-        background: #FFF8E1;
-      }
-
-      .health-indicator.critical {
-        background: #FDECE9;
-      }
-
-      .health-icon {
-        font-size: 24px;
-      }
-
-      .health-text {
-        font-size: 15px;
-        font-weight: 500;
-        color: var(--color-text-primary);
-      }
-
-      .health-details {
-        font-size: 13px;
-        color: var(--color-text-secondary);
-        margin-top: 2px;
       }
 
       /* ========== RESPONSIVE ========== */
@@ -820,7 +852,11 @@
         }
         
         .kpi-value {
-          font-size: 32px;
+          font-size: 28px;
+        }
+        
+        .chart-row {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -842,12 +878,8 @@
           <option value="Q3" selected>Q3 FY25/26 (Jan-Mar)</option>
           <option value="Q4">Q4 FY25/26 (Apr-Jun)</option>
         </select>
-        <button class="btn-refresh" onclick="loadDashboard()">
-          ↻ Refresh
-        </button>
-        <button class="btn-chat" onclick="toggleChat()">
-          💬 Ask AI
-        </button>
+        <button class="btn-refresh" onclick="loadDashboard()">↻ Refresh</button>
+        <button class="btn-chat" onclick="toggleChat()">💬 Ask AI</button>
       </div>
     </header>
 
@@ -856,68 +888,120 @@
       <!-- ========== DASHBOARD ========== -->
       <div class="dashboard">
         
-        <!-- Health Indicator Banner -->
-        <div class="health-indicator" id="healthBanner">
-          <span class="health-icon">✅</span>
-          <div>
-            <div class="health-text">Business Operating Normally</div>
-            <div class="health-details">All key metrics within acceptable ranges • Q3 FY25/26</div>
-          </div>
-        </div>
-
-        <!-- KPI Row - Primary Metrics -->
+        <!-- KPI Row - Primary Metrics with Sparklines -->
         <div class="kpi-row">
           <!-- Cash Position -->
           <div class="kpi-card" onclick="openDrawer('cash')">
-            <div class="kpi-label">Cash Position</div>
+            <div class="kpi-header">
+              <div class="kpi-label">Cash Position</div>
+              <span class="kpi-arrow">→</span>
+            </div>
             <div class="kpi-value" id="kpi-cash">$481,818</div>
             <div class="kpi-trend positive" id="kpi-cash-trend">
               <span>↑</span> 12% vs last month
             </div>
-            <div class="kpi-sparkline"></div>
+            <div class="kpi-sparkline">
+              <canvas id="sparkCash"></canvas>
+            </div>
             <div class="kpi-status-bar healthy"></div>
           </div>
 
           <!-- Revenue YTD -->
           <div class="kpi-card" onclick="openDrawer('revenue')">
-            <div class="kpi-label">Revenue YTD</div>
+            <div class="kpi-header">
+              <div class="kpi-label">Revenue YTD</div>
+              <span class="kpi-arrow">→</span>
+            </div>
             <div class="kpi-value" id="kpi-revenue">$776K</div>
             <div class="kpi-trend negative" id="kpi-revenue-trend">
               <span>↓</span> 18% vs budget
             </div>
-            <div class="kpi-sparkline"></div>
+            <div class="kpi-sparkline">
+              <canvas id="sparkRevenue"></canvas>
+            </div>
             <div class="kpi-status-bar warning"></div>
           </div>
 
           <!-- Net Profit -->
           <div class="kpi-card" onclick="openDrawer('profit')">
-            <div class="kpi-label">Net Profit</div>
+            <div class="kpi-header">
+              <div class="kpi-label">Net Profit</div>
+              <span class="kpi-arrow">→</span>
+            </div>
             <div class="kpi-value" id="kpi-profit">-$6,851</div>
             <div class="kpi-trend negative" id="kpi-profit-trend">
               <span>↓</span> Loss position
             </div>
-            <div class="kpi-sparkline"></div>
+            <div class="kpi-sparkline">
+              <canvas id="sparkProfit"></canvas>
+            </div>
             <div class="kpi-status-bar critical"></div>
           </div>
 
           <!-- Receivables -->
           <div class="kpi-card" onclick="openDrawer('receivables')">
-            <div class="kpi-label">Receivables</div>
+            <div class="kpi-header">
+              <div class="kpi-label">Receivables</div>
+              <span class="kpi-arrow">→</span>
+            </div>
             <div class="kpi-value smaller" id="kpi-receivables">$175,754</div>
             <div class="kpi-trend neutral" id="kpi-receivables-trend">
               72% current • 19% 30+ days
+            </div>
+            <div class="kpi-sparkline">
+              <canvas id="sparkReceivables"></canvas>
             </div>
             <div class="kpi-status-bar healthy"></div>
           </div>
 
           <!-- Inventory Value -->
           <div class="kpi-card" onclick="openDrawer('inventory')">
-            <div class="kpi-label">Inventory Value</div>
+            <div class="kpi-header">
+              <div class="kpi-label">Inventory Value</div>
+              <span class="kpi-arrow">→</span>
+            </div>
             <div class="kpi-value" id="kpi-inventory">$3.5M</div>
             <div class="kpi-trend positive" id="kpi-inventory-trend">
               <span>✓</span> Stock levels healthy
             </div>
+            <div class="kpi-sparkline">
+              <canvas id="sparkInventory"></canvas>
+            </div>
             <div class="kpi-status-bar healthy"></div>
+          </div>
+        </div>
+
+        <!-- Chart Row - Visual Impact -->
+        <div class="chart-row">
+          <!-- Revenue & Expenses Trend -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">Revenue & Expenses Trend</div>
+                <div class="chart-subtitle">Last 6 months performance</div>
+              </div>
+              <div class="chart-legend">
+                <span class="legend-item"><span class="legend-dot" style="background: #0078D4"></span> Revenue</span>
+                <span class="legend-item"><span class="legend-dot" style="background: #D13438"></span> Expenses</span>
+                <span class="legend-item"><span class="legend-dot" style="background: #107C10"></span> Profit</span>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Monthly Comparison -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">Budget vs Actual</div>
+                <div class="chart-subtitle">Current quarter</div>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="budgetChart"></canvas>
+            </div>
           </div>
         </div>
 
@@ -928,7 +1012,7 @@
           <div class="summary-card">
             <div class="card-header">
               <div>
-                <div class="card-title">Budget vs Actual</div>
+                <div class="card-title">Budget Progress</div>
                 <div class="card-subtitle">Q3 FY25/26 (Pro-rated)</div>
               </div>
             </div>
@@ -937,13 +1021,13 @@
                 <div class="budget-item-header">
                   <span class="budget-item-label">Revenue</span>
                   <div class="budget-item-values">
-                    <span class="budget-actual" id="budget-rev-actual">-$85,480</span>
-                    <span class="budget-target">of <span id="budget-rev-target">$113,022</span></span>
-                    <span class="budget-variance negative" id="budget-rev-var">-175.6%</span>
+                    <span class="budget-actual">-$85,480</span>
+                    <span class="budget-target">of $113K</span>
+                    <span class="budget-variance negative">-175.6%</span>
                   </div>
                 </div>
                 <div class="budget-bar">
-                  <div class="budget-bar-fill over" style="width: 0%" id="budget-rev-bar"></div>
+                  <div class="budget-bar-fill over" style="width: 0%"></div>
                 </div>
               </div>
 
@@ -951,13 +1035,13 @@
                 <div class="budget-item-header">
                   <span class="budget-item-label">Expenses</span>
                   <div class="budget-item-values">
-                    <span class="budget-actual" id="budget-exp-actual">-$78,629</span>
-                    <span class="budget-target">of <span id="budget-exp-target">$62,113</span></span>
-                    <span class="budget-variance negative" id="budget-exp-var">+26.6%</span>
+                    <span class="budget-actual">-$78,629</span>
+                    <span class="budget-target">of $62K</span>
+                    <span class="budget-variance negative">+26.6%</span>
                   </div>
                 </div>
                 <div class="budget-bar">
-                  <div class="budget-bar-fill over" style="width: 126%" id="budget-exp-bar"></div>
+                  <div class="budget-bar-fill over" style="width: 100%"></div>
                 </div>
               </div>
 
@@ -965,13 +1049,13 @@
                 <div class="budget-item-header">
                   <span class="budget-item-label">Gross Profit</span>
                   <div class="budget-item-values">
-                    <span class="budget-actual" id="budget-gp-actual">-$1,480</span>
-                    <span class="budget-target">of <span id="budget-gp-target">$50,909</span></span>
-                    <span class="budget-variance negative" id="budget-gp-var">-102.9%</span>
+                    <span class="budget-actual">-$1,480</span>
+                    <span class="budget-target">of $51K</span>
+                    <span class="budget-variance negative">-102.9%</span>
                   </div>
                 </div>
                 <div class="budget-bar">
-                  <div class="budget-bar-fill over" style="width: 0%" id="budget-gp-bar"></div>
+                  <div class="budget-bar-fill over" style="width: 0%"></div>
                 </div>
               </div>
             </div>
@@ -986,28 +1070,26 @@
               </div>
             </div>
             <div class="card-content">
-              <div class="inventory-summary">
-                <div class="inventory-total">
-                  <div class="inventory-total-value" id="inv-total-value">$3,500,031</div>
-                  <div class="inventory-total-label">Total Inventory Value</div>
+              <div class="inventory-total">
+                <div class="inventory-total-value">$3,500,031</div>
+                <div class="inventory-total-label">Total Inventory Value</div>
+              </div>
+              <div class="inventory-status-list">
+                <div class="inventory-status-item">
+                  <span>Roadbase</span>
+                  <span class="status-badge at-target">At Target</span>
                 </div>
-                <div class="inventory-status-list" id="inventoryStatusList">
-                  <div class="inventory-status-item">
-                    <span>Roadbase</span>
-                    <span class="status-badge at-target">At Target</span>
-                  </div>
-                  <div class="inventory-status-item">
-                    <span>Type E (500-700)</span>
-                    <span class="status-badge below">Below</span>
-                  </div>
-                  <div class="inventory-status-item">
-                    <span>20mm Minus</span>
-                    <span class="status-badge above">Above Target</span>
-                  </div>
-                  <div class="inventory-status-item">
-                    <span>Sand</span>
-                    <span class="status-badge above">Above Target</span>
-                  </div>
+                <div class="inventory-status-item">
+                  <span>Type E (500-700)</span>
+                  <span class="status-badge below">Below</span>
+                </div>
+                <div class="inventory-status-item">
+                  <span>20mm Minus</span>
+                  <span class="status-badge above">Above</span>
+                </div>
+                <div class="inventory-status-item">
+                  <span>Sand</span>
+                  <span class="status-badge above">Above</span>
                 </div>
               </div>
             </div>
@@ -1022,15 +1104,13 @@
               </div>
             </div>
             <div class="card-content">
-              <div class="customer-list" id="customerList">
+              <div class="customer-list">
                 <div class="customer-item">
                   <span class="customer-rank">1</span>
                   <div class="customer-info">
                     <div class="customer-name">Liberty Industrial Pty Ltd</div>
                     <div class="customer-orders">2 orders</div>
-                    <div class="customer-bar">
-                      <div class="customer-bar-fill" style="width: 100%"></div>
-                    </div>
+                    <div class="customer-bar"><div class="customer-bar-fill" style="width: 100%"></div></div>
                   </div>
                   <span class="customer-value">$205,723</span>
                 </div>
@@ -1039,9 +1119,7 @@
                   <div class="customer-info">
                     <div class="customer-name">RMG Project Construction</div>
                     <div class="customer-orders">13 orders</div>
-                    <div class="customer-bar">
-                      <div class="customer-bar-fill" style="width: 36%"></div>
-                    </div>
+                    <div class="customer-bar"><div class="customer-bar-fill" style="width: 36%"></div></div>
                   </div>
                   <span class="customer-value">$73,088</span>
                 </div>
@@ -1050,9 +1128,7 @@
                   <div class="customer-info">
                     <div class="customer-name">Sitzler</div>
                     <div class="customer-orders">6 orders</div>
-                    <div class="customer-bar">
-                      <div class="customer-bar-fill" style="width: 32%"></div>
-                    </div>
+                    <div class="customer-bar"><div class="customer-bar-fill" style="width: 32%"></div></div>
                   </div>
                   <span class="customer-value">$65,073</span>
                 </div>
@@ -1070,12 +1146,12 @@
             <span class="icon">📋</span> Balance Sheet
           </button>
           <button class="action-btn" onclick="openDrawer('ratios')">
-            <span class="icon">📈</span> Financial Ratios
+            <span class="icon">📈</span> Ratios
           </button>
           <button class="action-btn" onclick="openDrawer('orders')">
-            <span class="icon">📦</span> Open Orders
+            <span class="icon">📦</span> Orders
           </button>
-          <button class="action-btn" onclick="window.open('index.html', '_blank')">
+          <button class="action-btn" onclick="window.location.href='index.html'">
             <span class="icon">🔗</span> Full Dashboard
           </button>
         </div>
@@ -1092,14 +1168,14 @@
             Hi! I can help you understand your Mining financial data. Try asking me things like:
             <br><br>
             • "What's driving our revenue decline?"<br>
-            • "Show me our biggest expenses this quarter"<br>
-            • "How does this compare to last year?"
+            • "Show me our biggest expenses"<br>
+            • "Compare to last year"
           </div>
         </div>
         <div class="chat-suggestions">
-          <span class="suggestion-chip" onclick="sendSuggestion('What are our top 3 expenses?')">Top 3 expenses</span>
-          <span class="suggestion-chip" onclick="sendSuggestion('Why is profit negative?')">Why profit negative?</span>
-          <span class="suggestion-chip" onclick="sendSuggestion('Cash flow forecast')">Cash forecast</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('Top 3 expenses?')">Top expenses</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('Why profit negative?')">Profit analysis</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('Cash forecast')">Cash forecast</span>
         </div>
         <div class="chat-input-area">
           <input type="text" class="chat-input" id="chatInput" placeholder="Ask a question..." onkeypress="handleChatKeypress(event)">
@@ -1128,6 +1204,178 @@
       const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
       const MINING_ORG = "Mining";
 
+      // ========== CHART INITIALIZATION ==========
+      document.addEventListener('DOMContentLoaded', () => {
+        initSparklines();
+        initTrendChart();
+        initBudgetChart();
+      });
+
+      // ========== SPARKLINE CHARTS ==========
+      function initSparklines() {
+        const sparklineConfig = {
+          type: 'line',
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: { x: { display: false }, y: { display: false } },
+            elements: { 
+              point: { radius: 0 },
+              line: { borderWidth: 2, tension: 0.4 }
+            }
+          }
+        };
+
+        // Cash sparkline - upward trend
+        new Chart(document.getElementById('sparkCash'), {
+          ...sparklineConfig,
+          data: {
+            labels: ['', '', '', '', '', '', ''],
+            datasets: [{
+              data: [380000, 420000, 395000, 450000, 430000, 465000, 481818],
+              borderColor: '#107C10',
+              fill: true,
+              backgroundColor: 'rgba(16, 124, 16, 0.1)'
+            }]
+          }
+        });
+
+        // Revenue sparkline - declining
+        new Chart(document.getElementById('sparkRevenue'), {
+          ...sparklineConfig,
+          data: {
+            labels: ['', '', '', '', '', '', ''],
+            datasets: [{
+              data: [150000, 180000, 120000, 95000, 80000, 60000, -85480],
+              borderColor: '#D13438',
+              fill: true,
+              backgroundColor: 'rgba(209, 52, 56, 0.1)'
+            }]
+          }
+        });
+
+        // Profit sparkline - volatile
+        new Chart(document.getElementById('sparkProfit'), {
+          ...sparklineConfig,
+          data: {
+            labels: ['', '', '', '', '', '', ''],
+            datasets: [{
+              data: [25000, 35000, 15000, -5000, -12000, -8000, -6851],
+              borderColor: '#D13438',
+              fill: true,
+              backgroundColor: 'rgba(209, 52, 56, 0.1)'
+            }]
+          }
+        });
+
+        // Receivables sparkline - stable
+        new Chart(document.getElementById('sparkReceivables'), {
+          ...sparklineConfig,
+          data: {
+            labels: ['', '', '', '', '', '', ''],
+            datasets: [{
+              data: [165000, 172000, 168000, 180000, 175000, 178000, 175754],
+              borderColor: '#0078D4',
+              fill: true,
+              backgroundColor: 'rgba(0, 120, 212, 0.1)'
+            }]
+          }
+        });
+
+        // Inventory sparkline - stable high
+        new Chart(document.getElementById('sparkInventory'), {
+          ...sparklineConfig,
+          data: {
+            labels: ['', '', '', '', '', '', ''],
+            datasets: [{
+              data: [3200000, 3350000, 3400000, 3450000, 3480000, 3490000, 3500031],
+              borderColor: '#107C10',
+              fill: true,
+              backgroundColor: 'rgba(16, 124, 16, 0.1)'
+            }]
+          }
+        });
+      }
+
+      // ========== TREND CHART ==========
+      function initTrendChart() {
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
+            datasets: [
+              {
+                label: 'Revenue',
+                data: [180000, 120000, 95000, 80000, 60000, -85480],
+                backgroundColor: '#0078D4',
+                borderRadius: 4
+              },
+              {
+                label: 'Expenses',
+                data: [145000, 105000, 100000, 92000, 68000, 78629],
+                backgroundColor: '#D13438',
+                borderRadius: 4
+              },
+              {
+                label: 'Profit',
+                data: [35000, 15000, -5000, -12000, -8000, -6851],
+                backgroundColor: '#107C10',
+                borderRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { size: 11 } }
+              },
+              y: {
+                grid: { color: '#EDEBE9' },
+                ticks: { 
+                  font: { size: 11 },
+                  callback: function(value) {
+                    return '$' + (value / 1000) + 'K';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // ========== BUDGET CHART ==========
+      function initBudgetChart() {
+        const ctx = document.getElementById('budgetChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Spent', 'Remaining'],
+            datasets: [{
+              data: [78629, 0],
+              backgroundColor: ['#D13438', '#EDEBE9'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: true }
+            }
+          }
+        });
+      }
+
       // ========== DRAWER FUNCTIONS ==========
       function openDrawer(type) {
         const drawer = document.getElementById('drawer');
@@ -1135,7 +1383,6 @@
         const title = document.getElementById('drawerTitle');
         const content = document.getElementById('drawerContent');
 
-        // Set title and load content based on type
         const titles = {
           cash: 'Cash Position Details',
           revenue: 'Revenue Breakdown',
@@ -1161,12 +1408,10 @@
       }
 
       function getDrawerContent(type) {
-        // Return detailed content based on type
-        // This would normally load from API
         const contents = {
           cash: `
-            <div style="padding: 20px 0;">
-              <h3 style="margin-bottom: 20px;">Bank Accounts</h3>
+            <div style="padding: 16px 0;">
+              <h3 style="margin-bottom: 16px; font-size: 15px;">Bank Accounts</h3>
               <table class="data-table">
                 <thead>
                   <tr><th>Account</th><th style="text-align:right">Balance</th></tr>
@@ -1182,8 +1427,8 @@
             </div>
           `,
           receivables: `
-            <div style="padding: 20px 0;">
-              <h3 style="margin-bottom: 20px;">Aged Receivables Analysis</h3>
+            <div style="padding: 16px 0;">
+              <h3 style="margin-bottom: 16px; font-size: 15px;">Aged Receivables Analysis</h3>
               <table class="data-table">
                 <thead>
                   <tr><th>Age</th><th style="text-align:right">Amount</th><th style="text-align:right">%</th></tr>
@@ -1194,15 +1439,15 @@
                   <tr><td>31-60 days</td><td style="text-align:right">$11,438</td><td style="text-align:right">6%</td></tr>
                   <tr><td>60+ days</td><td style="text-align:right">$5,239</td><td style="text-align:right">3%</td></tr>
                   <tr style="font-weight:600; background:#f5f5f5;">
-                    <td>Total Outstanding</td><td style="text-align:right">$175,754</td><td></td>
+                    <td>Total</td><td style="text-align:right">$175,754</td><td></td>
                   </tr>
                 </tbody>
               </table>
             </div>
           `,
           ratios: `
-            <div style="padding: 20px 0;">
-              <h3 style="margin-bottom: 20px;">Key Financial Ratios</h3>
+            <div style="padding: 16px 0;">
+              <h3 style="margin-bottom: 16px; font-size: 15px;">Key Financial Ratios</h3>
               <table class="data-table">
                 <thead>
                   <tr><th>Ratio</th><th style="text-align:right">Value</th><th>Status</th></tr>
@@ -1210,9 +1455,9 @@
                 <tbody>
                   <tr><td>Current Ratio</td><td style="text-align:right">7.03</td><td><span class="status-badge at-target">Healthy</span></td></tr>
                   <tr><td>Debt to Equity</td><td style="text-align:right">0.17</td><td><span class="status-badge at-target">Low Risk</span></td></tr>
-                  <tr><td>Gross Margin %</td><td style="text-align:right">-1.7%</td><td><span class="status-badge below">Below Target</span></td></tr>
-                  <tr><td>Net Profit Margin %</td><td style="text-align:right">-8.0%</td><td><span class="status-badge below">Loss</span></td></tr>
-                  <tr><td>Return on Assets</td><td style="text-align:right">-0.1%</td><td><span class="status-badge below">Below Target</span></td></tr>
+                  <tr><td>Gross Margin %</td><td style="text-align:right">-1.7%</td><td><span class="status-badge below">Below</span></td></tr>
+                  <tr><td>Net Profit Margin</td><td style="text-align:right">-8.0%</td><td><span class="status-badge below">Loss</span></td></tr>
+                  <tr><td>Return on Assets</td><td style="text-align:right">-0.1%</td><td><span class="status-badge below">Below</span></td></tr>
                 </tbody>
               </table>
             </div>
@@ -1235,7 +1480,6 @@
         addChatMessage(message, 'user');
         input.value = '';
 
-        // Simulate AI response (would integrate with MCP)
         setTimeout(() => {
           addChatMessage("I'm analyzing your Mining financial data... This would connect to your MCP tools for real-time analysis.", 'assistant');
         }, 1000);
@@ -1261,16 +1505,9 @@
 
       // ========== DATA LOADING ==========
       async function loadDashboard() {
-        // This connects to your existing API
         console.log('Loading dashboard data...');
         // Implementation would mirror your existing loadDashboard()
       }
-
-      // ========== INITIALIZE ==========
-      document.addEventListener('DOMContentLoaded', () => {
-        // Auto-load on page ready
-        // loadDashboard();
-      });
     </script>
   </body>
 </html>
