@@ -11,3 +11,8 @@ ORDER BY org;
 SELECT id, run_date, job_type, orgs_processed, orgs_failed, duration_seconds, status, error_summary
 FROM snapshot_job_log
 ORDER BY run_date DESC;
+
+-- Check monthly snapshots
+SELECT period_month, org, revenue, net_profit, job_status
+FROM monthly_snapshots
+ORDER BY period_month, org;

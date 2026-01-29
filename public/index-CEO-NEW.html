@@ -1393,6 +1393,8 @@
       async function loadDashboard() {
         const period = document.getElementById("periodSelector").value;
         const quarterInfo = getQuarterDates(period);
+        // Load historical snapshot data
+        const historical = await loadHistoricalData();
 
         console.log("Loading dashboard for:", period, quarterInfo);
 
@@ -1410,6 +1412,7 @@
           loadAgedReceivables(),
           loadInventory(),
           loadTopCustomers(),
+          loadHistoricalData(),
         ]);
 
         // Load budget after P&L (needs P&L data)
@@ -1738,9 +1741,39 @@
         }
       }
 
+      // ========== LOAD HISTORICAL DATA FROM SNAPSHOTS ==========
+      async function loadHistoricalData() {
+        try {
+          const response = await fetch(`${API_BASE}/api/historical-metrics/Mining`);
+          const data = await response.json();
+          
+          console.log('Historical data:', data);
+          
+          // Store for charts
+          window.historicalData = data;
+          
+          return data;
+        } catch (error) {
+          console.error('Error loading historical data:', error);
+          return { daily: [], monthly: [] };
+        }
+      }
+
+      // ========== SPARKLINE CHARTS ==========
       // ========== SPARKLINE CHARTS ==========
       function initSparklines() {
-        const monthLabels = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
+        const monthly = window.historicalData?.monthly || [];
+        
+        // Build month labels and data from snapshots
+        const monthLabels = monthly.map(m => {
+          const [year, month] = m.period_month.split('-');
+          const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return monthNames[parseInt(month)];
+        });
+        
+        // If no data, use placeholders
+        const defaultLabels = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
+        const labels = monthLabels.length > 0 ? monthLabels : defaultLabels;
         
         const sparklineConfig = {
           type: 'line',
@@ -1781,13 +1814,31 @@
           }
         });
 
-        // Cash sparkline
+        // Get daily data for cash (or use current value repeated)
+        const dailyCash = window.historicalData?.daily || [];
+        const cashData = dailyCash.length > 0 
+          ? dailyCash.map(d => parseFloat(d.cash_position))
+          : [window.dashboardData.cash.totalCash || 485000];
+        
+        // Get monthly revenue and profit from snapshots
+        const revenueData = monthly.length > 0 
+          ? monthly.map(m => parseFloat(m.revenue))
+          : [230000, 211000, 499000, 159000, 151000, 465000, -85000];
+          
+        const profitData = monthly.length > 0 
+          ? monthly.map(m => parseFloat(m.net_profit))
+          : [10000, -44000, 223000, -243000, 155000, -96000, -6800];
+
+        // Cash sparkline (use daily if available, otherwise monthly trend)
+        const cashLabels = dailyCash.length > 0 
+          ? dailyCash.map(d => d.snapshot_date.split('-')[2]) // Day of month
+          : labels;
         const cashChart = new Chart(document.getElementById('sparkCash'), {
           ...sparklineConfig,
           data: {
-            labels: monthLabels,
+            labels: cashLabels.length > 1 ? cashLabels : labels,
             datasets: [{
-              data: [380000, 420000, 395000, 450000, 430000, 465000, window.dashboardData.cash.totalCash || 481818],
+              data: cashData.length > 1 ? cashData : Array(labels.length).fill(cashData[0]),
               borderColor: '#107C10',
               fill: true,
               backgroundColor: 'rgba(16, 124, 16, 0.1)'
@@ -1800,39 +1851,43 @@
         const revChart = new Chart(document.getElementById('sparkRevenue'), {
           ...sparklineConfig,
           data: {
-            labels: monthLabels,
+            labels: labels,
             datasets: [{
-              data: [150000, 180000, 120000, 95000, 80000, 60000, window.dashboardData.pl.revenue || 0],
-              borderColor: window.dashboardData.pl.revenue >= 0 ? '#107C10' : '#D13438',
+              data: revenueData,
+              borderColor: revenueData[revenueData.length - 1] >= 0 ? '#107C10' : '#D13438',
               fill: true,
-              backgroundColor: window.dashboardData.pl.revenue >= 0 ? 'rgba(16, 124, 16, 0.1)' : 'rgba(209, 52, 56, 0.1)'
+              backgroundColor: revenueData[revenueData.length - 1] >= 0 ? 'rgba(16, 124, 16, 0.1)' : 'rgba(209, 52, 56, 0.1)'
             }]
           }
         });
         document.getElementById('sparkRevenue').chart = revChart;
 
         // Profit sparkline
+        const latestProfit = profitData[profitData.length - 1] || 0;
         const profitChart = new Chart(document.getElementById('sparkProfit'), {
           ...sparklineConfig,
           data: {
-            labels: monthLabels,
+            labels: labels,
             datasets: [{
-              data: [25000, 35000, 15000, -5000, -12000, -8000, window.dashboardData.pl.netProfit || 0],
-              borderColor: '#D13438',
+              data: profitData,
+              borderColor: latestProfit >= 0 ? '#107C10' : '#D13438',
               fill: true,
-              backgroundColor: 'rgba(209, 52, 56, 0.1)'
+              backgroundColor: latestProfit >= 0 ? 'rgba(16, 124, 16, 0.1)' : 'rgba(209, 52, 56, 0.1)'
             }]
           }
         });
         document.getElementById('sparkProfit').chart = profitChart;
 
-        // Receivables sparkline
+        // Receivables sparkline (from daily snapshots)
+        const receivablesData = dailyCash.length > 0 
+          ? dailyCash.map(d => parseFloat(d.receivables_total))
+          : [175000, 172000, 168000, 180000, 175000, 178000, 175754];
         const recChart = new Chart(document.getElementById('sparkReceivables'), {
           ...sparklineConfig,
           data: {
-            labels: monthLabels,
+            labels: cashLabels.length > 1 ? cashLabels : labels,
             datasets: [{
-              data: [165000, 172000, 168000, 180000, 175000, 178000, 175754],
+              data: receivablesData.length > 1 ? receivablesData : Array(labels.length).fill(receivablesData[0]),
               borderColor: '#0078D4',
               fill: true,
               backgroundColor: 'rgba(0, 120, 212, 0.1)'
@@ -1841,11 +1896,11 @@
         });
         document.getElementById('sparkReceivables').chart = recChart;
 
-        // Inventory sparkline
+        // Inventory sparkline (static for now - no inventory in snapshots)
         const invChart = new Chart(document.getElementById('sparkInventory'), {
           ...sparklineConfig,
           data: {
-            labels: monthLabels,
+            labels: labels,
             datasets: [{
               data: [3200000, 3350000, 3400000, 3450000, 3480000, 3490000, 3500031],
               borderColor: '#107C10',
@@ -1858,8 +1913,31 @@
       }
 
       // ========== TREND CHART ==========
+      // ========== TREND CHART ==========
       function initTrendChart() {
         const ctx = document.getElementById('trendChart').getContext('2d');
+        const monthly = window.historicalData?.monthly || [];
+        
+        // Build labels and data from snapshots
+        const labels = monthly.length > 0 
+          ? monthly.map(m => {
+              const [year, month] = m.period_month.split('-');
+              const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              return monthNames[parseInt(month)];
+            })
+          : ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
+        
+        const revenueData = monthly.length > 0 
+          ? monthly.map(m => parseFloat(m.revenue))
+          : [180000, 120000, 95000, 80000, 60000, 0];
+          
+        const expenseData = monthly.length > 0 
+          ? monthly.map(m => parseFloat(m.revenue) - parseFloat(m.net_profit))
+          : [145000, 105000, 100000, 92000, 68000, 0];
+          
+        const profitData = monthly.length > 0 
+          ? monthly.map(m => parseFloat(m.net_profit))
+          : [35000, 15000, -5000, -12000, -8000, 0];
         
         // Destroy if exists
         if (window.trendChartInstance) {
@@ -1869,23 +1947,23 @@
         window.trendChartInstance = new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
+            labels: labels,
             datasets: [
               {
                 label: 'Revenue',
-                data: [180000, 120000, 95000, 80000, 60000, window.dashboardData.pl.revenue || 0],
+                data: revenueData,
                 backgroundColor: '#0078D4',
                 borderRadius: 4
               },
               {
                 label: 'Expenses',
-                data: [145000, 105000, 100000, 92000, 68000, Math.abs(window.dashboardData.pl.totalExpenses || 0)],
+                data: expenseData,
                 backgroundColor: '#D13438',
                 borderRadius: 4
               },
               {
                 label: 'Profit',
-                data: [35000, 15000, -5000, -12000, -8000, window.dashboardData.pl.netProfit || 0],
+                data: profitData,
                 backgroundColor: '#107C10',
                 borderRadius: 4
               }
@@ -2071,8 +2149,7 @@
             status.className = 'snapshot-status success';
             alert(`Snapshot complete!\n\nProcessed: ${result.orgsProcessed} orgs\nFailed: ${result.orgsFailed}\nDuration: ${result.durationSeconds}s`);
 
-POST /api/run-monthly-snapshot
-Body: {"months": ["2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01"]}
+
           } else {
             throw new Error(result.error || 'Unknown error');
           }
