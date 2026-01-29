@@ -5128,6 +5128,558 @@ app.post("/api/monthly-breakdown", async (req, res) => {
   }
 });
 
+// =====================================================
+// SNAPSHOT JOB ENDPOINTS
+// Add this code to server.js BEFORE the startServer() function
+// (Around line 4655)
+// =====================================================
+
+// All RAC organizations to snapshot
+const RAC_ORGANIZATIONS = [
+  'Mining',
+  'Aboriginal Corporation', 
+  'Enterprises',
+  'Property Management & Maintenance Services',
+  'Ngarrkuwuy Developments',
+  'Invest P/L ATF Miliditjpi Trust',
+  'Marrin Square Developments'
+];
+
+// Helper: Get tenant ID from organization name
+async function getTenantIdByOrgName(orgName) {
+  const connections = await tokenStorage.getAllXeroConnections();
+  const connection = connections.find(c =>
+    c.tenantName.toLowerCase().includes(orgName.toLowerCase())
+  );
+  return connection?.tenantId || null;
+}
+
+// ========== RUN DAILY SNAPSHOT ==========
+// POST /api/run-daily-snapshot
+// Triggered by: Scheduled cron at 4pm ACST OR manual button
+app.post('/api/run-daily-snapshot', async (req, res) => {
+  const startTime = Date.now();
+  const triggeredBy = req.body.triggeredBy || 'scheduled';
+  const today = new Date().toISOString().split('T')[0];
+  
+  console.log(`\n========================================`);
+  console.log(`📸 DAILY SNAPSHOT JOB STARTED`);
+  console.log(`Date: ${today}`);
+  console.log(`Triggered by: ${triggeredBy}`);
+  console.log(`Organizations: ${RAC_ORGANIZATIONS.length}`);
+  console.log(`========================================\n`);
+  
+  let orgsProcessed = 0;
+  let orgsFailed = 0;
+  const errors = [];
+  const results = [];
+  let jobLogId = null;
+
+  try {
+    // Log job start
+    const logResult = await pool.query(
+      `INSERT INTO snapshot_job_log (job_type, triggered_by, status) 
+       VALUES ('daily', $1, 'running') RETURNING id`,
+      [triggeredBy]
+    );
+    jobLogId = logResult.rows[0].id;
+
+    // Process each organization
+    for (const orgName of RAC_ORGANIZATIONS) {
+      console.log(`\n--- Processing: ${orgName} ---`);
+      
+      try {
+        // Get tenant ID for this org
+        const tenantId = await getTenantIdByOrgName(orgName);
+        if (!tenantId) {
+          throw new Error(`No tenant ID found for ${orgName}`);
+        }
+
+        // Fetch cash position using existing endpoint
+        let cashData = { totalCash: 0, bankAccounts: [] };
+        try {
+          const tokenData = await tokenStorage.getXeroToken(tenantId);
+          if (tokenData) {
+            await xero.setTokenSet(tokenData);
+            const cashResponse = await xero.accountingApi.getReportBankSummary(tenantId);
+            const bankSummaryRows = cashResponse.body.reports?.[0]?.rows || [];
+            
+            bankSummaryRows.forEach(row => {
+              if (row.rowType === 'Section' && row.rows) {
+                row.rows.forEach(bankRow => {
+                  if (bankRow.rowType === 'Row' && bankRow.cells && bankRow.cells.length >= 5) {
+                    const accountName = bankRow.cells[0]?.value || '';
+                    const closingBalance = parseFloat(bankRow.cells[4]?.value || 0);
+                    if (accountName && !accountName.toLowerCase().includes('total')) {
+                      cashData.totalCash += closingBalance;
+                    }
+                  }
+                });
+              }
+            });
+          }
+        } catch (cashError) {
+          console.log(`  ⚠️ Cash fetch failed: ${cashError.message}`);
+        }
+
+        // Fetch aged receivables
+        let receivablesData = { current: 0, days31to60: 0, days61to90: 0, over90days: 0 };
+        try {
+          const tokenData = await tokenStorage.getXeroToken(tenantId);
+          if (tokenData) {
+            await xero.setTokenSet(tokenData);
+            const arResponse = await xero.accountingApi.getReportAgedReceivablesByContact(
+              tenantId, null, today
+            );
+            const reportRows = arResponse.body.reports?.[0]?.rows || [];
+            
+            reportRows.forEach(row => {
+              if (row.rowType === 'Row' && row.cells && row.cells.length >= 6) {
+                const contactName = row.cells[0]?.value || '';
+                if (contactName && !contactName.toLowerCase().includes('total')) {
+                  receivablesData.current += parseFloat(row.cells[2]?.value || 0);
+                  receivablesData.days31to60 += parseFloat(row.cells[4]?.value || 0);
+                  receivablesData.days61to90 += parseFloat(row.cells[5]?.value || 0);
+                  receivablesData.over90days += parseFloat(row.cells[6]?.value || 0);
+                }
+              }
+            });
+          }
+        } catch (arError) {
+          console.log(`  ⚠️ Receivables fetch failed: ${arError.message}`);
+        }
+
+        // Fetch balance sheet (trial balance)
+        let balanceData = { totalAssets: 0, totalLiabilities: 0, totalEquity: 0 };
+        try {
+          const tokenData = await tokenStorage.getXeroToken(tenantId);
+          if (tokenData) {
+            await xero.setTokenSet(tokenData);
+            const bsResponse = await xero.accountingApi.getReportBalanceSheet(tenantId, today);
+            const bsRows = bsResponse.body.reports?.[0]?.rows || [];
+            
+            bsRows.forEach(section => {
+              if (section.rowType === 'Section' && section.rows && section.title) {
+                const sectionTitle = section.title.toLowerCase();
+                section.rows.forEach(row => {
+                  if (row.rowType === 'Row' && row.cells && row.cells.length >= 2) {
+                    const accountName = row.cells[0]?.value || '';
+                    const balance = parseFloat(row.cells[1]?.value || 0);
+                    if (!accountName.toLowerCase().includes('total') && balance !== 0) {
+                      if (sectionTitle.includes('bank') || sectionTitle.includes('asset')) {
+                        balanceData.totalAssets += balance;
+                      } else if (sectionTitle.includes('liabilit')) {
+                        balanceData.totalLiabilities += balance;
+                      } else if (sectionTitle.includes('equity')) {
+                        balanceData.totalEquity += balance;
+                      }
+                    }
+                  }
+                });
+              }
+            });
+          }
+        } catch (bsError) {
+          console.log(`  ⚠️ Balance sheet fetch failed: ${bsError.message}`);
+        }
+
+        // Calculate receivables total
+        const receivablesTotal = receivablesData.current + receivablesData.days31to60 + 
+                                 receivablesData.days61to90 + receivablesData.over90days;
+
+        // Insert or update daily metrics
+        await pool.query(`
+          INSERT INTO daily_metrics (
+            snapshot_date, org,
+            cash_position,
+            receivables_current, receivables_31_60, receivables_61_90, receivables_over_90, receivables_total,
+            total_assets, total_liabilities, total_equity,
+            job_status
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'success')
+          ON CONFLICT (snapshot_date, org) 
+          DO UPDATE SET
+            cash_position = EXCLUDED.cash_position,
+            receivables_current = EXCLUDED.receivables_current,
+            receivables_31_60 = EXCLUDED.receivables_31_60,
+            receivables_61_90 = EXCLUDED.receivables_61_90,
+            receivables_over_90 = EXCLUDED.receivables_over_90,
+            receivables_total = EXCLUDED.receivables_total,
+            total_assets = EXCLUDED.total_assets,
+            total_liabilities = EXCLUDED.total_liabilities,
+            total_equity = EXCLUDED.total_equity,
+            job_status = 'success',
+            error_message = NULL
+        `, [
+          today,
+          orgName,
+          cashData.totalCash,
+          receivablesData.current,
+          receivablesData.days31to60,
+          receivablesData.days61to90,
+          receivablesData.over90days,
+          receivablesTotal,
+          balanceData.totalAssets,
+          balanceData.totalLiabilities,
+          balanceData.totalEquity
+        ]);
+
+        console.log(`  ✅ Cash=$${cashData.totalCash.toLocaleString()}, AR=$${receivablesTotal.toLocaleString()}, Assets=$${balanceData.totalAssets.toLocaleString()}`);
+        
+        results.push({
+          org: orgName,
+          status: 'success',
+          cash: cashData.totalCash,
+          receivables: receivablesTotal,
+          assets: balanceData.totalAssets
+        });
+        
+        orgsProcessed++;
+
+      } catch (orgError) {
+        console.error(`  ❌ ${orgName}: ${orgError.message}`);
+        orgsFailed++;
+        errors.push(`${orgName}: ${orgError.message}`);
+        
+        results.push({
+          org: orgName,
+          status: 'failed',
+          error: orgError.message
+        });
+        
+        // Log the failure for this org
+        await pool.query(`
+          INSERT INTO daily_metrics (snapshot_date, org, job_status, error_message)
+          VALUES ($1, $2, 'failed', $3)
+          ON CONFLICT (snapshot_date, org) 
+          DO UPDATE SET job_status = 'failed', error_message = EXCLUDED.error_message
+        `, [today, orgName, orgError.message]);
+      }
+      
+      // Small delay between orgs to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Check if we should run monthly snapshot (1st of month)
+    const dayOfMonth = new Date().getDate();
+    if (dayOfMonth === 1) {
+      console.log(`\n--- Running Monthly Snapshot (1st of month) ---`);
+      await runMonthlySnapshotInternal(triggeredBy);
+    }
+
+    // Update job log
+    const duration = Math.round((Date.now() - startTime) / 1000);
+    await pool.query(`
+      UPDATE snapshot_job_log 
+      SET status = $1, orgs_processed = $2, orgs_failed = $3, 
+          duration_seconds = $4, error_summary = $5
+      WHERE id = $6
+    `, [
+      orgsFailed === 0 ? 'success' : 'partial',
+      orgsProcessed,
+      orgsFailed,
+      duration,
+      errors.length > 0 ? errors.join('; ') : null,
+      jobLogId
+    ]);
+
+    console.log(`\n========================================`);
+    console.log(`📸 DAILY SNAPSHOT JOB COMPLETE`);
+    console.log(`Duration: ${duration}s | Success: ${orgsProcessed} | Failed: ${orgsFailed}`);
+    console.log(`========================================\n`);
+
+    res.json({
+      success: true,
+      date: today,
+      orgsProcessed,
+      orgsFailed,
+      durationSeconds: duration,
+      results,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (error) {
+    console.error('❌ Snapshot job failed:', error);
+    
+    // Update job log on failure
+    if (jobLogId) {
+      await pool.query(`
+        UPDATE snapshot_job_log SET status = 'failed', error_summary = $1 WHERE id = $2
+      `, [error.message, jobLogId]);
+    }
+
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ========== INTERNAL MONTHLY SNAPSHOT ==========
+async function runMonthlySnapshotInternal(triggeredBy = 'scheduled') {
+  const today = new Date();
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const periodMonth = lastMonth.toISOString().slice(0, 7); // "2025-01"
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+  const lastDayStr = lastDayOfMonth.toISOString().split('T')[0];
+  
+  console.log(`Capturing P&L for: ${periodMonth} (ending ${lastDayStr})`);
+
+  for (const orgName of RAC_ORGANIZATIONS) {
+    try {
+      const tenantId = await getTenantIdByOrgName(orgName);
+      if (!tenantId) {
+        console.log(`  ⚠️ No tenant for ${orgName}`);
+        continue;
+      }
+
+      const tokenData = await tokenStorage.getXeroToken(tenantId);
+      if (!tokenData) {
+        console.log(`  ⚠️ No token for ${orgName}`);
+        continue;
+      }
+
+      await xero.setTokenSet(tokenData);
+
+      // Calculate date range for the month
+      const fromDateStr = `${periodMonth}-01`;
+      
+      const plResponse = await xero.accountingApi.getReportProfitAndLoss(
+        tenantId, fromDateStr, lastDayStr
+      );
+      
+      const plRows = plResponse.body.reports?.[0]?.rows || [];
+      
+      let revenue = 0;
+      let cogs = 0;
+      let opex = 0;
+      
+      plRows.forEach(section => {
+        if (section.rowType === 'Section' && section.rows && section.title) {
+          const sectionTitle = section.title.toLowerCase();
+          
+          section.rows.forEach(row => {
+            if (row.rowType === 'Row' && row.cells && row.cells.length >= 2) {
+              const accountName = row.cells[0]?.value || '';
+              const amount = parseFloat(row.cells[1]?.value || 0);
+              
+              if (accountName.toLowerCase().includes('total') || amount === 0) return;
+              
+              if (sectionTitle.includes('income') || sectionTitle.includes('revenue') || 
+                  sectionTitle.includes('trading')) {
+                revenue += amount;
+              } else if (sectionTitle.includes('expense') || sectionTitle.includes('cost') || 
+                         sectionTitle.includes('operating')) {
+                // Categorize COGS vs Opex
+                const nameLower = accountName.toLowerCase();
+                if (nameLower.includes('cost of') || nameLower.includes('cost -') || 
+                    nameLower.includes('haulage expense') || nameLower.includes('freight')) {
+                  cogs += amount;
+                } else {
+                  opex += amount;
+                }
+              }
+            }
+          });
+        }
+      });
+
+      const grossProfit = revenue - cogs;
+      const netProfit = revenue - cogs - opex;
+
+      await pool.query(`
+        INSERT INTO monthly_snapshots (
+          period_month, org, snapshot_date,
+          revenue, cogs, gross_profit, opex, net_profit,
+          job_status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'success')
+      `, [periodMonth, orgName, today.toISOString().split('T')[0], revenue, cogs, grossProfit, opex, netProfit]);
+
+      console.log(`  ✅ ${orgName}: Revenue=$${revenue.toLocaleString()}, Net=$${netProfit.toLocaleString()}`);
+
+    } catch (error) {
+      console.error(`  ❌ ${orgName}: ${error.message}`);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+}
+
+// ========== MANUAL MONTHLY SNAPSHOT (for backfill) ==========
+// POST /api/run-monthly-snapshot
+// Body: { months: ["2025-07", "2025-08", "2025-09"] }
+app.post('/api/run-monthly-snapshot', async (req, res) => {
+  const { months } = req.body;
+  
+  if (!months || !Array.isArray(months)) {
+    return res.status(400).json({ error: 'Provide months array, e.g. ["2025-07", "2025-08"]' });
+  }
+
+  console.log(`\n========================================`);
+  console.log(`📊 MANUAL MONTHLY SNAPSHOT`);
+  console.log(`Months to process: ${months.join(', ')}`);
+  console.log(`========================================\n`);
+
+  const results = [];
+
+  for (const periodMonth of months) {
+    const [year, month] = periodMonth.split('-').map(Number);
+    const lastDayOfMonth = new Date(year, month, 0);
+    const lastDayStr = lastDayOfMonth.toISOString().split('T')[0];
+    const fromDateStr = `${periodMonth}-01`;
+    
+    console.log(`\n--- Processing ${periodMonth} (${fromDateStr} to ${lastDayStr}) ---`);
+
+    for (const orgName of RAC_ORGANIZATIONS) {
+      try {
+        const tenantId = await getTenantIdByOrgName(orgName);
+        if (!tenantId) {
+          results.push({ month: periodMonth, org: orgName, status: 'skipped', error: 'No tenant ID' });
+          continue;
+        }
+
+        const tokenData = await tokenStorage.getXeroToken(tenantId);
+        if (!tokenData) {
+          results.push({ month: periodMonth, org: orgName, status: 'skipped', error: 'No token' });
+          continue;
+        }
+
+        await xero.setTokenSet(tokenData);
+
+        const plResponse = await xero.accountingApi.getReportProfitAndLoss(
+          tenantId, fromDateStr, lastDayStr
+        );
+        
+        const plRows = plResponse.body.reports?.[0]?.rows || [];
+        
+        let revenue = 0, cogs = 0, opex = 0;
+        
+        plRows.forEach(section => {
+          if (section.rowType === 'Section' && section.rows && section.title) {
+            const sectionTitle = section.title.toLowerCase();
+            section.rows.forEach(row => {
+              if (row.rowType === 'Row' && row.cells && row.cells.length >= 2) {
+                const accountName = row.cells[0]?.value || '';
+                const amount = parseFloat(row.cells[1]?.value || 0);
+                if (accountName.toLowerCase().includes('total') || amount === 0) return;
+                
+                if (sectionTitle.includes('income') || sectionTitle.includes('revenue')) {
+                  revenue += amount;
+                } else if (sectionTitle.includes('expense') || sectionTitle.includes('cost')) {
+                  const nameLower = accountName.toLowerCase();
+                  if (nameLower.includes('cost of') || nameLower.includes('haulage') || nameLower.includes('freight')) {
+                    cogs += amount;
+                  } else {
+                    opex += amount;
+                  }
+                }
+              }
+            });
+          }
+        });
+
+        const grossProfit = revenue - cogs;
+        const netProfit = revenue - cogs - opex;
+
+        await pool.query(`
+          INSERT INTO monthly_snapshots (
+            period_month, org, snapshot_date,
+            revenue, cogs, gross_profit, opex, net_profit, job_status
+          ) VALUES ($1, $2, CURRENT_DATE, $3, $4, $5, $6, $7, 'success')
+        `, [periodMonth, orgName, revenue, cogs, grossProfit, opex, netProfit]);
+
+        results.push({ month: periodMonth, org: orgName, status: 'success', revenue, netProfit });
+        console.log(`  ✅ ${orgName}: Revenue=$${revenue.toLocaleString()}`);
+
+      } catch (error) {
+        results.push({ month: periodMonth, org: orgName, status: 'failed', error: error.message });
+        console.error(`  ❌ ${orgName}: ${error.message}`);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+
+  console.log(`\n📊 Monthly snapshot complete. Processed ${results.length} records.`);
+  res.json({ success: true, results });
+});
+
+// ========== GET SNAPSHOT STATUS ==========
+// GET /api/snapshot-status
+app.get('/api/snapshot-status', async (req, res) => {
+  try {
+    // Get latest job run
+    const lastJob = await pool.query(`
+      SELECT * FROM snapshot_job_log ORDER BY run_date DESC LIMIT 1
+    `);
+
+    // Get latest daily snapshot date per org
+    const dailyStatus = await pool.query(`
+      SELECT org, MAX(snapshot_date) as latest_date, 
+             MAX(created_at) as last_updated
+      FROM daily_metrics 
+      WHERE job_status = 'success'
+      GROUP BY org
+      ORDER BY org
+    `);
+
+    // Get count of monthly snapshots
+    const monthlyCount = await pool.query(`
+      SELECT org, COUNT(DISTINCT period_month) as months_captured
+      FROM monthly_snapshots
+      WHERE job_status = 'success'
+      GROUP BY org
+    `);
+
+    res.json({
+      lastJob: lastJob.rows[0] || null,
+      dailySnapshots: dailyStatus.rows,
+      monthlySnapshots: monthlyCount.rows
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ========== GET HISTORICAL DATA FOR DASHBOARD ==========
+// GET /api/historical-metrics/:org
+app.get('/api/historical-metrics/:org', async (req, res) => {
+  const { org } = req.params;
+  const { days = 30 } = req.query;
+
+  try {
+    // Get daily metrics for sparklines
+    const daily = await pool.query(`
+      SELECT snapshot_date, cash_position, receivables_total, 
+             total_assets, total_liabilities, total_equity
+      FROM daily_metrics
+      WHERE org ILIKE $1 AND job_status = 'success'
+      ORDER BY snapshot_date DESC
+      LIMIT $2
+    `, [`%${org}%`, parseInt(days)]);
+
+    // Get monthly P&L for trend chart
+    const monthly = await pool.query(`
+      SELECT DISTINCT ON (period_month) 
+             period_month, revenue, cogs, gross_profit, opex, net_profit
+      FROM monthly_snapshots
+      WHERE org ILIKE $1 AND job_status = 'success'
+      ORDER BY period_month DESC, snapshot_date DESC
+      LIMIT 12
+    `, [`%${org}%`]);
+
+    res.json({
+      org,
+      daily: daily.rows.reverse(), // Oldest first for charts
+      monthly: monthly.rows.reverse()
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
+// END OF SNAPSHOT ENDPOINTS
+// =====================================================
+
 // Initialize database and start server
 async function startServer() {
   try {
