@@ -162,6 +162,43 @@
         gap: 6px;
       }
 
+.btn-snapshot {
+        padding: 6px 14px;
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+
+      .btn-snapshot:disabled {
+        background: #9CA3AF;
+        cursor: not-allowed;
+      }
+
+      .btn-snapshot.running {
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+
+      .snapshot-status {
+        font-size: 11px;
+        color: rgba(255,255,255,0.8);
+        margin-left: 4px;
+      }
+
+      .snapshot-status.success { color: #34D399; }
+      .snapshot-status.error { color: #F87171; }
+
+
+
+
       /* ========== MAIN LAYOUT ========== */
       .main-container {
         flex: 1;
@@ -996,6 +1033,8 @@
           <option value="Q4">Q4 FY25/26 (Apr-Jun)</option>
         </select>
         <button class="btn-refresh" onclick="loadDashboard()">↻ Refresh</button>
+        <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">📸 Snapshot</button>
+        <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-chat" onclick="toggleChat()">💬 Ask AI</button>
       </div>
     </header>
@@ -2001,6 +2040,50 @@
 
       function handleChatKeypress(event) {
         if (event.key === 'Enter') sendChat();
+      }
+
+// ========== SNAPSHOT FUNCTIONS ==========
+      async function runDailySnapshot() {
+        const btn = document.getElementById('snapshotBtn');
+        const status = document.getElementById('snapshotStatus');
+        
+        if (!confirm('Run daily snapshot now?\\n\\nThis will capture data for all 7 organizations.')) {
+          return;
+        }
+        
+        btn.disabled = true;
+        btn.classList.add('running');
+        btn.innerHTML = '⏳ Running...';
+        status.textContent = 'Processing...';
+        status.className = 'snapshot-status';
+        
+        try {
+          const response = await fetch(`${API_BASE}/api/run-daily-snapshot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ triggeredBy: 'manual' })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            status.textContent = `✓ ${result.orgsProcessed}/${result.orgsProcessed + result.orgsFailed} orgs (${result.durationSeconds}s)`;
+            status.className = 'snapshot-status success';
+            alert(`Snapshot complete!\\n\\nProcessed: ${result.orgsProcessed} orgs\\nFailed: ${result.orgsFailed}\\nDuration: ${result.durationSeconds}s`);
+          } else {
+            throw new Error(result.error || 'Unknown error');
+          }
+          
+        } catch (error) {
+          console.error('Snapshot failed:', error);
+          status.textContent = '✗ Failed';
+          status.className = 'snapshot-status error';
+          alert('Snapshot failed: ' + error.message);
+        } finally {
+          btn.disabled = false;
+          btn.classList.remove('running');
+          btn.innerHTML = '📸 Snapshot';
+        }
       }
 
       // ========== INITIALIZE ==========
