@@ -549,7 +549,7 @@
       }
 
       .budget-item-label {
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 500;
         color: var(--color-text-primary);
       }
@@ -562,7 +562,8 @@
       }
 
       .budget-actual {
-        font-weight: 600;
+        font-weight: 700;
+        font-size: 16px;
         color: var(--color-text-primary);
       }
 
@@ -653,6 +654,38 @@
       .status-badge.below { background: #FDECE9; color: var(--color-negative); }
       .status-badge.above { background: #E6F4EA; color: var(--color-positive); }
       .status-badge.adequate { background: #FFF8E1; color: #F57C00; }
+
+      /* Key Ratios Card */
+      .ratios-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-sm);
+      }
+
+      .ratio-item {
+        background: var(--bg-page);
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .ratio-label {
+        font-size: 11px;
+        color: var(--color-text-secondary);
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+
+      .ratio-value {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--color-text-primary);
+      }
+
+      .ratio-value.positive { color: var(--color-positive); }
+      .ratio-value.negative { color: var(--color-negative); }
+      .ratio-value.neutral { color: var(--color-primary); }
 
       /* Top Customers Card */
       .customer-list {
@@ -1242,21 +1275,32 @@
             </div>
           </div>
 
-          <!-- Inventory Summary -->
+          <!-- Key Financial Ratios -->
           <div class="summary-card">
             <div class="card-header">
               <div>
-                <div class="card-title">Inventory Status</div>
-                <div class="card-subtitle">Stock levels by product</div>
+                <div class="card-title">Key Ratios</div>
+                <div class="card-subtitle">Financial health indicators</div>
               </div>
             </div>
             <div class="card-content">
-              <div class="inventory-total">
-                <div class="inventory-total-value" id="inv-total-value">$0</div>
-                <div class="inventory-total-label">Total Inventory Value</div>
-              </div>
-              <div class="inventory-status-list" id="inventoryStatusList">
-                <div class="inventory-status-item loading">Loading inventory...</div>
+              <div class="ratios-grid">
+                <div class="ratio-item">
+                  <div class="ratio-label">Current Ratio</div>
+                  <div class="ratio-value neutral" id="ratio-current">-</div>
+                </div>
+                <div class="ratio-item">
+                  <div class="ratio-label">Gross Margin</div>
+                  <div class="ratio-value" id="ratio-gross-margin">-</div>
+                </div>
+                <div class="ratio-item">
+                  <div class="ratio-label">Net Margin</div>
+                  <div class="ratio-value" id="ratio-net-margin">-</div>
+                </div>
+                <div class="ratio-item">
+                  <div class="ratio-label">Debt/Equity</div>
+                  <div class="ratio-value neutral" id="ratio-debt-equity">-</div>
+                </div>
               </div>
             </div>
           </div>
@@ -1420,6 +1464,9 @@
 
         // Update health status
         updateHealthStatus();
+
+        // Calculate and display financial ratios
+        loadFinancialRatios();
 
         // Initialize charts
         initSparklines();
@@ -1721,6 +1768,52 @@
             <span class="customer-value">$${c.value.toLocaleString()}</span>
           </div>
         `).join("");
+      }
+
+      // ========== FINANCIAL RATIOS ==========
+      function loadFinancialRatios() {
+        const pl = window.dashboardData.pl;
+        const balance = window.dashboardData.balance;
+
+        // Current Ratio = Current Assets / Current Liabilities (simplified using totals)
+        const currentRatio = balance.totalLiabilities > 0 
+          ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
+          : '-';
+        
+        // Gross Margin = (Revenue - COGS) / Revenue × 100
+        const revenue = Math.abs(pl.revenue || 0);
+        const cogs = Math.abs(pl.cogs || 0);
+        const grossMargin = revenue > 0 
+          ? (((revenue - cogs) / revenue) * 100).toFixed(1) + '%'
+          : '-';
+        
+        // Net Profit Margin = Net Profit / Revenue × 100
+        const netProfit = pl.netProfit || 0;
+        const netMargin = revenue > 0 
+          ? ((netProfit / revenue) * 100).toFixed(1) + '%'
+          : '-';
+        
+        // Debt to Equity = Total Liabilities / Total Equity
+        const debtEquity = balance.totalEquity > 0 
+          ? (balance.totalLiabilities / balance.totalEquity).toFixed(2)
+          : '-';
+
+        // Update DOM
+        document.getElementById('ratio-current').textContent = currentRatio;
+        document.getElementById('ratio-current').className = 'ratio-value ' + 
+          (parseFloat(currentRatio) >= 1.5 ? 'positive' : parseFloat(currentRatio) >= 1 ? 'neutral' : 'negative');
+
+        document.getElementById('ratio-gross-margin').textContent = grossMargin;
+        document.getElementById('ratio-gross-margin').className = 'ratio-value ' + 
+          (parseFloat(grossMargin) > 0 ? 'positive' : 'negative');
+
+        document.getElementById('ratio-net-margin').textContent = netMargin;
+        document.getElementById('ratio-net-margin').className = 'ratio-value ' + 
+          (parseFloat(netMargin) > 0 ? 'positive' : 'negative');
+
+        document.getElementById('ratio-debt-equity').textContent = debtEquity;
+        document.getElementById('ratio-debt-equity').className = 'ratio-value ' + 
+          (parseFloat(debtEquity) < 0.5 ? 'positive' : parseFloat(debtEquity) < 1 ? 'neutral' : 'negative');
       }
 
       // ========== HEALTH STATUS ==========
