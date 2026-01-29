@@ -1728,6 +1728,9 @@
         document.getElementById("kpi-inventory-trend").innerHTML = `<span>✓</span> Stock levels healthy`;
         document.getElementById("kpi-inventory-trend").className = "kpi-trend positive";
 
+        // TODO: Restore when Inventory Status card returns (currently replaced by Key Ratios)
+        // Will connect to Quarry APP API for real inventory data
+        /*
         document.getElementById("inv-total-value").textContent = "$" + totalValue.toLocaleString();
 
         const statusList = document.getElementById("inventoryStatusList");
@@ -1741,6 +1744,7 @@
             }</span>
           </div>
         `).join("");
+        */
       }
 
       // ========== TOP CUSTOMERS ==========
