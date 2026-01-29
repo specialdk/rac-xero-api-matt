@@ -5141,7 +5141,7 @@ const RAC_ORGANIZATIONS = [
   'Enterprises',
   'Property Management & Maintenance Services',
   'Ngarrkuwuy Developments',
-  'Invest P/L ATF Miliditjpi Trust',
+  'Rirratjingu Invest',
   'Marrin Square Developments'
 ];
 
