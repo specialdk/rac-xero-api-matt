@@ -486,9 +486,9 @@
       }
 
       /* ========== SUMMARY ROW (Bottom) ========== */
-      .summary-row {
+     .summary-row {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: repeat(5, 1fr);
         gap: var(--spacing-md);
         flex: 1;
         min-height: 0;
@@ -1295,22 +1295,28 @@
               </div>
             </div>
             <div class="card-content">
-              <div class="ratios-grid">
-                <div class="ratio-item">
-                  <div class="ratio-label">Current Ratio</div>
-                  <div class="ratio-value neutral" id="ratio-current">-</div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Current Ratio</span>
+                  <span class="budget-actual" id="ratio-current">-</span>
                 </div>
-                <div class="ratio-item">
-                  <div class="ratio-label">Gross Margin</div>
-                  <div class="ratio-value" id="ratio-gross-margin">-</div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Gross Margin</span>
+                  <span class="budget-actual" id="ratio-gross-margin">-</span>
                 </div>
-                <div class="ratio-item">
-                  <div class="ratio-label">Net Margin</div>
-                  <div class="ratio-value" id="ratio-net-margin">-</div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Net Margin</span>
+                  <span class="budget-actual" id="ratio-net-margin">-</span>
                 </div>
-                <div class="ratio-item">
-                  <div class="ratio-label">Debt/Equity</div>
-                  <div class="ratio-value neutral" id="ratio-debt-equity">-</div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Debt/Equity</span>
+                  <span class="budget-actual" id="ratio-debt-equity">-</span>
                 </div>
               </div>
             </div>
@@ -1331,6 +1337,72 @@
             </div>
           </div>
         </div>
+
+        <!-- Balance Sheet Summary -->
+          <div class="summary-card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Balance Sheet</div>
+                <div class="card-subtitle">Current position</div>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Total Assets</span>
+                  <span class="budget-actual" id="bs-assets">$0</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Total Liabilities</span>
+                  <span class="budget-actual" id="bs-liabilities">$0</span>
+                </div>
+              </div>
+              <div class="budget-item" style="background: #E8F5E9; margin: 0 -16px; padding: 10px 16px;">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Net Equity</span>
+                  <span class="budget-actual" id="bs-equity">$0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aged Debtors Summary -->
+          <div class="summary-card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Aged Debtors</div>
+                <div class="card-subtitle" id="aged-subtitle">Outstanding receivables</div>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Current (0-30)</span>
+                  <span class="budget-actual" id="aged-current">$0</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">31-60 days</span>
+                  <span class="budget-actual" id="aged-31-60">$0</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">61-90 days</span>
+                  <span class="budget-actual" id="aged-61-90">$0</span>
+                </div>
+              </div>
+              <div class="budget-item" style="background: #FDECE9; margin: 0 -16px; padding: 10px 16px;">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">90+ days</span>
+                  <span class="budget-actual" id="aged-90plus">$0</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
         <!-- Quick Action Buttons -->
         <div class="actions-row">
@@ -1503,6 +1575,8 @@
 
         // Calculate and display financial ratios
         loadFinancialRatios();
+        // Update Balance Sheet and Aged Debtors cards
+        updateSummaryCards();
 
         // Initialize charts
         initSparklines();
@@ -1971,20 +2045,26 @@
 
         // Update DOM
         document.getElementById('ratio-current').textContent = currentRatio;
-        document.getElementById('ratio-current').className = 'ratio-value ' + 
-          (parseFloat(currentRatio) >= 1.5 ? 'positive' : parseFloat(currentRatio) >= 1 ? 'neutral' : 'negative');
-
         document.getElementById('ratio-gross-margin').textContent = grossMargin;
-        document.getElementById('ratio-gross-margin').className = 'ratio-value ' + 
-          (parseFloat(grossMargin) > 0 ? 'positive' : 'negative');
-
         document.getElementById('ratio-net-margin').textContent = netMargin;
-        document.getElementById('ratio-net-margin').className = 'ratio-value ' + 
-          (parseFloat(netMargin) > 0 ? 'positive' : 'negative');
-
         document.getElementById('ratio-debt-equity').textContent = debtEquity;
-        document.getElementById('ratio-debt-equity').className = 'ratio-value ' + 
-          (parseFloat(debtEquity) < 0.5 ? 'positive' : parseFloat(debtEquity) < 1 ? 'neutral' : 'negative');
+        
+        // ========== UPDATE BALANCE SHEET & AGED CARDS ==========
+      function updateSummaryCards() {
+        const balance = window.dashboardData.balance;
+        const receivables = window.dashboardData.receivables;
+
+        // Balance Sheet card
+        document.getElementById('bs-assets').textContent = '$' + (balance.totalAssets || 0).toLocaleString();
+        document.getElementById('bs-liabilities').textContent = '$' + (balance.totalLiabilities || 0).toLocaleString();
+        document.getElementById('bs-equity').textContent = '$' + (balance.totalEquity || 0).toLocaleString();
+
+        // Aged Debtors card
+        document.getElementById('aged-current').textContent = '$' + (receivables.aged30Days || 0).toLocaleString();
+        document.getElementById('aged-31-60').textContent = '$' + (receivables.aged60Days || 0).toLocaleString();
+        document.getElementById('aged-61-90').textContent = '$' + (receivables.aged90Days || 0).toLocaleString();
+        document.getElementById('aged-90plus').textContent = '$' + (receivables.agedOver120Days || 0).toLocaleString();
+        document.getElementById('aged-subtitle').textContent = (receivables.invoiceCount || 0) + ' invoices outstanding';
       }
 
       // ========== HEALTH STATUS ==========
