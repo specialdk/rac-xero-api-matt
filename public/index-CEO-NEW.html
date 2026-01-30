@@ -2084,14 +2084,20 @@
           ? dailyCash.map(d => parseFloat(d.cash_position))
           : [window.dashboardData.cash.totalCash || 485000];
         
-        // Get monthly revenue and profit from snapshots
+        // Get monthly revenue and profit from snapshots - use actual current value as endpoint
+        const actualRevenue = window.dashboardData.pl?.revenue || 0;
         const revenueData = monthly.length > 0 
           ? monthly.map(m => parseFloat(m.revenue))
-          : [230000, 211000, 499000, 159000, 151000, 465000, -85000];
+          : [230000, 211000, 499000, 159000, 151000, 465000, actualRevenue];
+        // Ensure last point matches actual data
+        revenueData[revenueData.length - 1] = actualRevenue;
           
+        const actualProfit = window.dashboardData.pl?.netProfit || 0;
         const profitData = monthly.length > 0 
           ? monthly.map(m => parseFloat(m.net_profit))
-          : [10000, -44000, 223000, -243000, 155000, -96000, -6800];
+          : [10000, -44000, 223000, -243000, 155000, -96000, actualProfit];
+        // Ensure last point matches actual data
+        profitData[profitData.length - 1] = actualProfit;
 
         // Cash sparkline (use daily if available, otherwise monthly trend)
         const cashLabels = dailyCash.length > 0 
@@ -2190,17 +2196,24 @@
             })
           : ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
         
+        const actualRevenue = window.dashboardData.pl?.revenue || 0;
+        const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
+        const actualProfit = window.dashboardData.pl?.netProfit || 0;
+
         const revenueData = monthly.length > 0 
           ? monthly.map(m => parseFloat(m.revenue))
-          : [180000, 120000, 95000, 80000, 60000, 0];
+          : [180000, 120000, 95000, 80000, 60000, actualRevenue];
+        revenueData[revenueData.length - 1] = actualRevenue;
           
         const expenseData = monthly.length > 0 
           ? monthly.map(m => parseFloat(m.revenue) - parseFloat(m.net_profit))
-          : [145000, 105000, 100000, 92000, 68000, 0];
+          : [145000, 105000, 100000, 92000, 68000, actualExpenses];
+        expenseData[expenseData.length - 1] = actualExpenses;
           
         const profitData = monthly.length > 0 
           ? monthly.map(m => parseFloat(m.net_profit))
-          : [35000, 15000, -5000, -12000, -8000, 0];
+          : [35000, 15000, -5000, -12000, -8000, actualProfit];
+        profitData[profitData.length - 1] = actualProfit;
         
         // Destroy if exists
         if (window.trendChartInstance) {
