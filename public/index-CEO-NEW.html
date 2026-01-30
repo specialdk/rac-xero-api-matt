@@ -1059,6 +1059,17 @@
         </div>
       </div>
       <div class="header-right">
+        <!-- Entity Filter -->
+        <select class="period-selector" id="entitySelector" onchange="loadDashboard()" style="min-width: 200px;">
+          <option value="ALL">📊 All RAC Entities (Consolidated)</option>
+          <option value="Mining" selected>⛏️ Rirratjingu Mining</option>
+          <option value="Aboriginal Corporation">🏛️ Aboriginal Corporation</option>
+          <option value="Enterprises">🏢 Enterprises</option>
+          <option value="Property">🏠 Property Management</option>
+          <option value="Ngarrkuwuy">🔨 Ngarrkuwuy Developments</option>
+          <option value="Invest">💰 Miliditjpi Trust</option>
+          <option value="Marrin">🏗️ Marrin Square</option>
+        </select>
         <select class="period-selector" id="periodSelector" onchange="loadDashboard()">
           <option value="Q1">Q1 FY25/26 (Jul-Sep)</option>
           <option value="Q2">Q2 FY25/26 (Oct-Dec)</option>
@@ -1386,7 +1397,11 @@
     <script>
       // ========== CONFIGURATION ==========
       const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
-      const MINING_ORG = "Mining";
+      
+      // Get selected entity from dropdown
+      function getSelectedEntity() {
+        return document.getElementById('entitySelector').value;
+      }
 
       // Store loaded data globally
       window.dashboardData = {
@@ -1435,12 +1450,33 @@
 
       // ========== MAIN DASHBOARD LOAD ==========
       async function loadDashboard() {
+        const entity = getSelectedEntity();
         const period = document.getElementById("periodSelector").value;
         const quarterInfo = getQuarterDates(period);
-        // Load historical snapshot data
-        const historical = await loadHistoricalData();
 
-        console.log("Loading dashboard for:", period, quarterInfo);
+        console.log("Loading dashboard for:", entity, period, quarterInfo);
+
+        // Update header title based on entity
+        const entityNames = {
+          'ALL': 'All RAC Entities (Consolidated)',
+          'Mining': 'RAC Mining',
+          'Aboriginal Corporation': 'RAC Aboriginal Corporation',
+          'Enterprises': 'RAC Enterprises',
+          'Property': 'Property Management',
+          'Ngarrkuwuy': 'Ngarrkuwuy Developments',
+          'Invest': 'Miliditjpi Trust',
+          'Marrin': 'Marrin Square'
+        };
+        document.querySelector('.header h1').textContent = '⛏️ ' + (entityNames[entity] || entity) + ' - Executive Dashboard';
+
+        // Handle consolidated view differently
+        if (entity === 'ALL') {
+          await loadConsolidatedDashboard(quarterInfo);
+          return;
+        }
+
+        // Load historical snapshot data
+        const historical = await loadHistoricalData(entity);
 
         // Update period displays
         document.getElementById("budget-period").textContent = 
@@ -1473,13 +1509,104 @@
         initTrendChart();
       }
 
+      // ========== CONSOLIDATED DASHBOARD (All Entities) ==========
+      async function loadConsolidatedDashboard(quarterInfo) {
+        const entities = ['Mining', 'Aboriginal Corporation', 'Enterprises', 'Property', 'Ngarrkuwuy', 'Invest', 'Marrin'];
+        
+        let totalCash = 0;
+        let totalRevenue = 0;
+        let totalExpenses = 0;
+        let totalReceivables = 0;
+        let allInvoices = [];
+        let successCount = 0;
+
+        document.getElementById("kpi-cash").textContent = "Loading...";
+        document.getElementById("kpi-revenue").textContent = "Loading...";
+        document.getElementById("kpi-receivables").textContent = "Loading...";
+
+        for (const entity of entities) {
+          try {
+            // Cash
+            const cashResp = await fetch(`${API_BASE}/api/cash-position`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationName: entity }),
+            });
+            const cashData = await cashResp.json();
+            if (cashData.totalCash) {
+              totalCash += cashData.totalCash;
+              successCount++;
+            }
+
+            // P&L
+            const plResp = await fetch(`${API_BASE}/api/profit-loss-summary`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: entity,
+                date: quarterInfo.endDate,
+                periodMonths: 3,
+              }),
+            });
+            const plData = await plResp.json();
+            totalRevenue += plData.summary?.totalRevenue || 0;
+            totalExpenses += plData.summary?.totalExpenses || 0;
+
+            // Invoices
+            const invResp = await fetch(`${API_BASE}/api/outstanding-invoices`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationName: entity }),
+            });
+            const invData = await invResp.json();
+            if (Array.isArray(invData)) {
+              allInvoices = allInvoices.concat(invData);
+              totalReceivables += invData.reduce((sum, inv) => sum + (inv.amountDue || 0), 0);
+            }
+          } catch (e) {
+            console.warn(`Error loading ${entity}:`, e);
+          }
+        }
+
+        // Update consolidated KPIs
+        document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
+        document.getElementById("kpi-cash-trend").innerHTML = `💰 ${successCount} entities`;
+        document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
+
+        const netProfit = totalRevenue - totalExpenses;
+        document.getElementById("kpi-revenue").textContent = "$" + totalRevenue.toLocaleString();
+        document.getElementById("kpi-revenue-trend").textContent = "📊 Consolidated";
+        
+        document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
+        document.getElementById("kpi-profit-trend").textContent = netProfit < 0 ? "⚠ Loss position" : "✓ Profitable";
+        document.getElementById("kpi-profit-trend").className = netProfit < 0 ? "kpi-trend negative" : "kpi-trend positive";
+
+        document.getElementById("kpi-receivables").textContent = "$" + totalReceivables.toLocaleString();
+        document.getElementById("kpi-receivables-trend").textContent = `${allInvoices.length} invoices across all entities`;
+
+        // Store for other functions
+        window.dashboardData.pl = { revenue: totalRevenue, netProfit: netProfit };
+
+        // Update P&L Summary card
+        document.getElementById("pl-revenue").textContent = "$" + totalRevenue.toLocaleString();
+        document.getElementById("pl-net").innerHTML = "<strong>$" + netProfit.toLocaleString() + "</strong>";
+
+        // Inventory stays the same
+        document.getElementById("kpi-inventory").textContent = "$3.5M";
+        document.getElementById("kpi-inventory-trend").innerHTML = "✓ Stock levels healthy";
+
+        updateHealthStatus();
+        initSparklines();
+        initTrendChart();
+      }
+
       // ========== CASH POSITION ==========
       async function loadCashPosition() {
         try {
           const response = await fetch(`${API_BASE}/api/cash-position`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ organizationName: MINING_ORG }),
+            body: JSON.stringify({ organizationName: getSelectedEntity() }),
           });
           const data = await response.json();
           
@@ -1503,7 +1630,7 @@
           const response = await fetch(`${API_BASE}/api/trial-balance`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ organizationName: MINING_ORG }),
+            body: JSON.stringify({ organizationName: getSelectedEntity() }),
           });
           const data = await response.json();
           
@@ -1526,7 +1653,7 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              organizationName: MINING_ORG,
+              organizationName: getSelectedEntity(),
               date: quarterInfo.endDate,
               periodMonths: periodMonths,
             }),
@@ -1595,7 +1722,7 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              organizationName: MINING_ORG,
+              organizationName: getSelectedEntity(),
               quarter: quarterInfo.quarterCode,
             }),
           });
@@ -1682,7 +1809,6 @@
         return { revenue, expenses };
       }
 
-      // ========== AGED RECEIVABLES ==========
       // ========== AGED RECEIVABLES (via Outstanding Invoices) ==========
       async function loadAgedReceivables() {
         try {
@@ -1690,7 +1816,7 @@
           const response = await fetch(`${API_BASE}/api/outstanding-invoices`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ organizationName: MINING_ORG }),
+            body: JSON.stringify({ organizationName: getSelectedEntity() }),
           });
           const invoices = await response.json();
 
@@ -1880,9 +2006,10 @@
       }
 
       // ========== LOAD HISTORICAL DATA FROM SNAPSHOTS ==========
-      async function loadHistoricalData() {
+      async function loadHistoricalData(entity) {
         try {
-          const response = await fetch(`${API_BASE}/api/historical-metrics/Mining`);
+          const org = entity || getSelectedEntity();
+          const response = await fetch(`${API_BASE}/api/historical-metrics/${org}`);
           const data = await response.json();
           
           console.log('Historical data:', data);
@@ -1897,7 +2024,6 @@
         }
       }
 
-      // ========== SPARKLINE CHARTS ==========
       // ========== SPARKLINE CHARTS ==========
       function initSparklines() {
         const monthly = window.historicalData?.monthly || [];
