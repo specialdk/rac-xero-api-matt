@@ -677,9 +677,9 @@
         letter-spacing: 0.3px;
       }
 
-      .ratio-value {
-        font-size: 22px;
-        font-weight: 700;
+   .ratio-value {
+        font-size: var(--font-size-kpi);
+        font-weight: 600;
         color: var(--color-text-primary);
       }
 
@@ -1268,7 +1268,7 @@
               <div class="budget-item" style="background: #FFFBEB; margin: 0 -16px; padding: 10px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label"><strong>Gross Profit</strong></span>
-                  <span class="budget-actual" id="pl-gross"><strong>$0</strong></span>
+                  <span class="budget-actual" id="pl-gross">$0</span>
                 </div>
               </div>
               <div class="budget-item">
@@ -1280,7 +1280,7 @@
               <div class="budget-item">
                 <div class="budget-item-header">
                   <span class="budget-item-label"><strong>Net Profit</strong></span>
-                  <span class="budget-actual" id="pl-net"><strong>$0</strong></span>
+               <span class="budget-actual" id="pl-net">$0</span>
                 </div>
               </div>
             </div>
@@ -1706,9 +1706,9 @@
           // Update P&L summary card
           document.getElementById("pl-revenue").textContent = "$" + revenue.toLocaleString();
           document.getElementById("pl-cogs").textContent = "$" + cogs.toLocaleString();
-          document.getElementById("pl-gross").innerHTML = "<strong>$" + gross.toLocaleString() + "</strong>";
+          document.getElementById("pl-gross").textContent = "$" + gross.toLocaleString();
           document.getElementById("pl-opex").textContent = "$" + opex.toLocaleString();
-          document.getElementById("pl-net").innerHTML = "<strong>$" + netProfit.toLocaleString() + "</strong>";
+          document.getElementById("pl-net").textContent = "$" + netProfit.toLocaleString();
 
         } catch (error) {
           console.error("Error loading P&L:", error);
