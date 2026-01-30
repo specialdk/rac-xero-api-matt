@@ -2177,7 +2177,6 @@
       }
 
       // ========== TREND CHART ==========
-      // ========== TREND CHART ==========
       function initTrendChart() {
         const ctx = document.getElementById('trendChart').getContext('2d');
         const monthly = window.historicalData?.monthly || [];
@@ -2236,20 +2235,33 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { 
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return context.dataset.label + ': $' + context.raw.toLocaleString();
+                  }
+                }
+              }
+            },
             scales: {
               x: { grid: { display: false }, ticks: { font: { size: 11 } } },
               y: { 
                 grid: { color: '#EDEBE9' },
+                border: { display: false },
                 ticks: { 
-                  font: { size: 11 },
-                  callback: function(value) { return '$' + (value / 1000) + 'K'; }
+                  font: { size: 10, weight: '500' },
+                  color: '#605E5C',
+                  padding: 8,
+                  callback: function(value) { 
+                    if (value === 0) return '$0';
+                    return '$' + (value / 1000).toFixed(0) + 'K'; 
+                  }
                 }
               }
             }
           }
-        });
-      }
 
       // ========== DRAWER FUNCTIONS ==========
       function openDrawer(type) {
