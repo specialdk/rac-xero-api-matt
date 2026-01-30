@@ -1683,30 +1683,71 @@
       }
 
       // ========== AGED RECEIVABLES ==========
+      // ========== AGED RECEIVABLES (via Outstanding Invoices) ==========
       async function loadAgedReceivables() {
         try {
-          const response = await fetch(`${API_BASE}/api/aged-receivables`, {
+          // Use outstanding-invoices endpoint instead of broken aged-receivables report
+          const response = await fetch(`${API_BASE}/api/outstanding-invoices`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ organizationName: MINING_ORG }),
           });
-          const data = await response.json();
+          const invoices = await response.json();
 
-          const total = (data.aged30Days || 0) + (data.aged60Days || 0) + 
-                       (data.aged90Days || 0) + (data.agedOver120Days || 0);
+          if (!Array.isArray(invoices)) {
+            console.error("Invalid invoices response:", invoices);
+            document.getElementById("kpi-receivables").textContent = "$0";
+            return;
+          }
+
+          // Calculate aging from invoice due dates
+          const today = new Date();
+          let current = 0, days31_60 = 0, days61_90 = 0, over90 = 0;
+
+          invoices.forEach(inv => {
+            const dueDate = new Date(inv.dueDate);
+            const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+            const amount = inv.amountDue || 0;
+
+            if (daysOverdue <= 30) {
+              current += amount;
+            } else if (daysOverdue <= 60) {
+              days31_60 += amount;
+            } else if (daysOverdue <= 90) {
+              days61_90 += amount;
+            } else {
+              over90 += amount;
+            }
+          });
+
+          const total = current + days31_60 + days61_90 + over90;
           
-          window.dashboardData.receivables = data;
+          // Store with same field names for drawer compatibility
+          window.dashboardData.receivables = {
+            aged30Days: current,
+            aged60Days: days31_60,
+            aged90Days: days61_90,
+            agedOver120Days: over90,
+            total: total,
+            invoiceCount: invoices.length
+          };
 
           document.getElementById("kpi-receivables").textContent = "$" + total.toLocaleString();
           
-          const currentPct = total > 0 ? Math.round((data.aged30Days || 0) / total * 100) : 0;
+          const currentPct = total > 0 ? Math.round(current / total * 100) : 0;
+          const overduePct = 100 - currentPct;
           document.getElementById("kpi-receivables-trend").textContent = 
-            `${currentPct}% current • ${100 - currentPct}% overdue`;
+            `${currentPct}% current • ${overduePct}% overdue`;
           document.getElementById("kpi-receivables-trend").className = 
-            currentPct >= 70 ? "kpi-trend positive" : "kpi-trend warning";
+            currentPct >= 70 ? "kpi-trend positive" : (currentPct >= 50 ? "kpi-trend neutral" : "kpi-trend negative");
+
+          // Update status bar color
+          const statusBar = document.getElementById("kpi-receivables-status");
+          statusBar.className = "kpi-status-bar " + (currentPct >= 70 ? "healthy" : (currentPct >= 50 ? "warning" : "critical"));
 
         } catch (error) {
           console.error("Error loading receivables:", error);
+          document.getElementById("kpi-receivables").textContent = "Error";
         }
       }
 
