@@ -1,6 +1,6 @@
 select * from daily_metrics;
 select * from monthly_snapshots;
-select * from snapshot_job_log;'
+select * from snapshot_job_log;
 
 -- See all records captured today
 SELECT snapshot_date, org, cash_position, receivables_total, total_assets, job_status

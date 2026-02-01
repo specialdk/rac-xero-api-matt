@@ -4653,6 +4653,61 @@ app.post("/api/monthly-breakdown", async (req, res) => {
   }
 });
 
+// ============================================================================
+// HISTORICAL METRICS ENDPOINT (serves snapshot data to CEO dashboard)
+// ============================================================================
+
+app.get("/api/historical-metrics/:organizationName", async (req, res) => {
+  try {
+    const orgName = decodeURIComponent(req.params.organizationName);
+    console.log(`📊 Loading historical metrics for: ${orgName}`);
+
+    // Query daily snapshots (cash, receivables) - last 90 days
+    const dailyResult = await pool.query(
+      `SELECT snapshot_date, cash_position, receivables_total, 
+              total_assets, total_liabilities, total_equity
+       FROM daily_metrics 
+       WHERE org = $1 AND job_status = 'success'
+       ORDER BY snapshot_date ASC`,
+      [orgName]
+    );
+
+    // Query monthly P&L snapshots (revenue, expenses, profit)
+    const monthlyResult = await pool.query(
+      `SELECT period_month, revenue, cogs, gross_profit, opex, net_profit
+       FROM monthly_snapshots 
+       WHERE org = $1 AND job_status = 'success'
+       ORDER BY period_month ASC`,
+      [orgName]
+    );
+
+    console.log(`✅ Historical metrics for ${orgName}: ${dailyResult.rows.length} daily, ${monthlyResult.rows.length} monthly`);
+
+    res.json({
+      organizationName: orgName,
+      daily: dailyResult.rows,
+      monthly: monthlyResult.rows,
+      dataPoints: {
+        dailyCount: dailyResult.rows.length,
+        monthlyCount: monthlyResult.rows.length,
+        dateRange: {
+          dailyFrom: dailyResult.rows[0]?.snapshot_date || null,
+          dailyTo: dailyResult.rows[dailyResult.rows.length - 1]?.snapshot_date || null,
+          monthlyFrom: monthlyResult.rows[0]?.period_month || null,
+          monthlyTo: monthlyResult.rows[monthlyResult.rows.length - 1]?.period_month || null,
+        }
+      },
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("❌ Error loading historical metrics:", error);
+    res.status(500).json({ 
+      error: "Failed to load historical metrics", 
+      details: error.message 
+    });
+  }
+});
+
 // Initialize database and start server
 async function startServer() {
   try {
