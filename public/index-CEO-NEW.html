@@ -2421,7 +2421,7 @@
 
         // Cash sparkline (use daily if available, otherwise monthly trend)
         const cashLabels = dailyCash.length > 0 
-          ? dailyCash.map(d => d.snapshot_date.split('-')[2]) // Day of month
+          ? dailyCash.map(d => { const ds = d.snapshot_date.split('T')[0]; const mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return mn[parseInt(ds.split('-')[1]) - 1]; })
           : labels;
         const cashChart = new Chart(document.getElementById('sparkCash'), {
           ...sparklineConfig,
