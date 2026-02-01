@@ -4708,6 +4708,173 @@ app.get("/api/historical-metrics/:organizationName", async (req, res) => {
   }
 });
 
+// ============================================================================
+// BACKFILL MONTHLY BALANCES (one-off to populate historical month-end data)
+// ============================================================================
+
+// Helper: Convert full tenant name to short org name (matches existing snapshot data)
+function getOrgShortName(tenantName) {
+  const name = tenantName.toLowerCase();
+  if (name.includes('mining')) return 'Mining';
+  if (name.includes('aboriginal corporation')) return 'Aboriginal Corporation';
+  if (name.includes('enterprises')) return 'Enterprises';
+  if (name.includes('property management')) return 'Property Management & Maintenance Services';
+  if (name.includes('ngarrkuwuy')) return 'Ngarrkuwuy Developments';
+  if (name.includes('invest')) return 'Rirratjingu Invest';
+  if (name.includes('marrin')) return 'Marrin Square Developments';
+  return tenantName;
+}
+
+app.post("/api/backfill-monthly-balances", async (req, res) => {
+  try {
+    console.log("🔄 Starting monthly balance backfill...");
+    
+    const monthEndDates = [
+      '2025-07-31', '2025-08-31', '2025-09-30',
+      '2025-10-31', '2025-11-30', '2025-12-31',
+      '2026-01-31'
+    ];
+    
+    // Get all connected orgs
+    const connections = await tokenStorage.getAllXeroConnections();
+    const activeConnections = connections.filter(c => c.connected);
+    
+    if (activeConnections.length === 0) {
+      return res.status(400).json({ error: "No active Xero connections. Please re-authenticate first." });
+    }
+    
+    console.log(`📋 Found ${activeConnections.length} active connections`);
+    console.log(`📅 Backfilling ${monthEndDates.length} month-end dates`);
+    
+    const results = [];
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const conn of activeConnections) {
+      const orgShortName = getOrgShortName(conn.tenantName);
+      
+      for (const dateStr of monthEndDates) {
+        try {
+          // Check if this row already exists
+          const existing = await pool.query(
+            `SELECT id FROM daily_metrics WHERE org = $1 AND snapshot_date = $2`,
+            [orgShortName, dateStr]
+          );
+          
+          if (existing.rows.length > 0) {
+            console.log(`⏭️ Skipping ${orgShortName} @ ${dateStr} - already exists`);
+            results.push({ org: orgShortName, date: dateStr, status: 'skipped' });
+            continue;
+          }
+          
+          // Get token and set it
+          const tokenData = await tokenStorage.getXeroToken(conn.tenantId);
+          if (!tokenData) {
+            throw new Error('Token not available');
+          }
+          await xero.setTokenSet(tokenData);
+          
+          // Call Xero Balance Sheet API directly for this date
+          const bsResponse = await xero.accountingApi.getReportBalanceSheet(
+            conn.tenantId,
+            dateStr
+          );
+          
+          const bsRows = bsResponse.body.reports?.[0]?.rows || [];
+          
+          let cashPosition = 0;
+          let receivablesTotal = 0;
+          let totalAssets = 0;
+          let totalLiabilities = 0;
+          let totalEquity = 0;
+          
+          bsRows.forEach(section => {
+            if (section.rowType !== 'Section' || !section.rows || !section.title) return;
+            const sectionTitle = section.title.toLowerCase();
+            
+            section.rows.forEach(row => {
+              if (row.rowType !== 'Row' || !row.cells || row.cells.length < 2) return;
+              const accountName = row.cells[0]?.value || '';
+              const balance = parseFloat(row.cells[1]?.value || 0);
+              
+              if (accountName.toLowerCase().includes('total') || balance === 0) return;
+              
+              // Classify
+              if (sectionTitle.includes('bank')) {
+                cashPosition += balance;
+                totalAssets += balance;
+              } else if (sectionTitle.includes('asset')) {
+                if (accountName === 'Trade Debtors' || accountName.toLowerCase().includes('receivable')) {
+                  receivablesTotal += balance;
+                }
+                totalAssets += balance;
+              } else if (sectionTitle.includes('liabilit')) {
+                totalLiabilities += balance;
+              } else if (sectionTitle.includes('equity')) {
+                totalEquity += balance;
+              }
+            });
+          });
+          
+          // Insert into daily_metrics
+          await pool.query(
+            `INSERT INTO daily_metrics 
+             (snapshot_date, org, cash_position, 
+              receivables_current, receivables_31_60, receivables_61_90, receivables_over_90, receivables_total,
+              total_assets, total_liabilities, total_equity, 
+              job_status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'success', NOW())`,
+            [dateStr, orgShortName, cashPosition, 
+             receivablesTotal, 0, 0, 0, receivablesTotal,
+             totalAssets, totalLiabilities, totalEquity]
+          );
+          
+          successCount++;
+          results.push({
+            org: orgShortName,
+            date: dateStr,
+            status: 'success',
+            cash: Math.round(cashPosition * 100) / 100,
+            receivables: Math.round(receivablesTotal * 100) / 100,
+            assets: Math.round(totalAssets * 100) / 100
+          });
+          
+          console.log(`✅ ${orgShortName} @ ${dateStr}: Cash=$${cashPosition.toLocaleString()}, Recv=$${receivablesTotal.toLocaleString()}, Assets=$${totalAssets.toLocaleString()}`);
+          
+          // Rate limit: 500ms between Xero API calls (60/min limit)
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (err) {
+          failCount++;
+          results.push({ org: orgShortName, date: dateStr, status: 'failed', error: err.message });
+          console.error(`❌ ${orgShortName} @ ${dateStr}: ${err.message}`);
+          // Wait a bit longer on failure in case of rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    
+    console.log(`🏁 Backfill complete: ${successCount} success, ${failCount} failed out of ${results.length} total`);
+    
+    res.json({
+      message: 'Monthly balance backfill complete',
+      summary: { 
+        total: results.length, 
+        success: successCount, 
+        failed: failCount,
+        skipped: results.filter(r => r.status === 'skipped').length
+      },
+      results
+    });
+    
+  } catch (error) {
+    console.error("❌ Backfill error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 // Initialize database and start server
 async function startServer() {
   try {
