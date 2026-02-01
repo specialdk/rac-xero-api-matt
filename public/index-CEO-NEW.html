@@ -148,7 +148,7 @@
         background: var(--color-primary-dark);
       }
 
-      .btn-chat {
+  .btn-chat {
         padding: 6px 14px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -161,6 +161,27 @@
         align-items: center;
         gap: 6px;
       }
+
+      .btn-dashboard {
+        padding: 6px 14px;
+        background: rgba(255,255,255,0.15);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-dashboard:hover {
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+      }
+
+.btn-snapshot {
+
+
 
 .btn-snapshot {
         padding: 6px 14px;
@@ -736,7 +757,7 @@
       }
 
       .customer-value {
-        font-size: 14px;
+        font-size: 26px;
         font-weight: 600;
         color: var(--color-text-primary);
       }
@@ -753,39 +774,6 @@
         height: 100%;
         background: var(--color-primary);
         border-radius: 2px;
-      }
-
-      /* ========== QUICK ACTIONS ROW ========== */
-      .actions-row {
-        display: flex;
-        gap: var(--spacing-sm);
-      }
-
-      .action-btn {
-        flex: 1;
-        padding: 10px 14px;
-        background: var(--bg-card);
-        border: 1px solid var(--color-border);
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--color-text-primary);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        transition: all 0.2s;
-      }
-
-      .action-btn:hover {
-        background: var(--bg-page);
-        border-color: var(--color-primary);
-        color: var(--color-primary);
-      }
-
-      .action-btn .icon {
-        font-size: 14px;
       }
 
       /* ========== DRAWER (Drill-down Panel) ========== */
@@ -1080,6 +1068,7 @@
         <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">📸 Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-chat" onclick="toggleChat()">💬 Ask AI</button>
+        <button class="btn-dashboard" onclick="window.location.href='index.html'">📊 Full Dashboard</button>
       </div>
     </header>
 
@@ -1372,8 +1361,8 @@
           <div class="summary-card">
             <div class="card-header">
               <div>
-                <div class="card-title">Aged Debtors</div>
-                <div class="card-subtitle" id="aged-subtitle">Outstanding receivables</div>
+                <div class="card-title">Top Customers</div>
+                <div class="card-subtitle" id="customers-period">Current Period</div>
               </div>
             </div>
             <div class="card-content">
@@ -1405,26 +1394,7 @@
           </div>
         </div>
 
-        <!-- Quick Action Buttons -->
-        <div class="actions-row">
-          <button class="action-btn" onclick="openDrawer('pl')">
-            <span class="icon">📊</span> Full P&L
-          </button>
-          <button class="action-btn" onclick="openDrawer('balance')">
-            <span class="icon">📋</span> Balance Sheet
-          </button>
-          <button class="action-btn" onclick="openDrawer('ratios')">
-            <span class="icon">📈</span> Ratios
-          </button>
-          <button class="action-btn" onclick="openDrawer('aged')">
-            <span class="icon">📅</span> Aged Debtors
-          </button>
-          <button class="action-btn" onclick="window.location.href='index.html'">
-            <span class="icon">🔗</span> Full Dashboard
-          </button>
-        </div>
-      </div>
-
+     
       <!-- ========== AI CHAT PANEL ========== -->
       <div class="chat-panel" id="chatPanel">
         <div class="chat-header">
@@ -1564,7 +1534,7 @@
           loadProfitLoss(quarterInfo),
           loadAgedReceivables(),
           loadInventory(),
-          loadTopCustomers(),
+          loadTopCustomers(quarterInfo),
           loadHistoricalData(),
         ]);
 
@@ -1990,8 +1960,13 @@
       }
 
       // ========== TOP CUSTOMERS ==========
-      async function loadTopCustomers() {
-        // Static data - would come from invoices analysis
+      async function loadTopCustomers(quarterInfo) {
+        // Update subtitle to show current period
+        const period = document.getElementById("periodSelector").value;
+        document.getElementById("customers-period").textContent = `${period} FY25/26`;
+        
+        // Static data - would come from invoices analysis filtered by period
+        // TODO: Replace with API call using quarterInfo.startDate and quarterInfo.endDate
         const customers = [
           { name: "Liberty Industrial Pty Ltd", value: 205723, orders: 2 },
           { name: "RMG Project Construction", value: 73088, orders: 13 },
@@ -2006,7 +1981,7 @@
             <span class="customer-rank">${i + 1}</span>
             <div class="customer-info">
               <div class="customer-name">${c.name}</div>
-              <div class="customer-orders">${c.orders} orders</div>
+              <div class="customer-orders">${c.orders} invoices</div>
               <div class="customer-bar">
                 <div class="customer-bar-fill" style="width: ${(c.value / maxValue) * 100}%"></div>
               </div>
