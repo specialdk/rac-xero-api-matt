@@ -4800,7 +4800,7 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
               if (accountName.toLowerCase().includes('total') || balance === 0) return;
               
               // Classify
-              if (sectionTitle.includes('bank')) {
+              if (sectionTitle === 'bank' || sectionTitle === 'bank accounts') {
                 cashPosition += balance;
                 totalAssets += balance;
               } else if (sectionTitle.includes('asset')) {
