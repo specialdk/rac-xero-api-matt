@@ -1814,10 +1814,12 @@
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                organizationName: entity,
-                date: quarterInfo.endDate,
-                periodMonths: 3,
-              }),
+              organizationName: entity,
+              date: quarterInfo.endDate,
+              periodMonths: quarterInfo.isComplete ? 3 : 
+                (new Date(quarterInfo.endDate).getFullYear() - new Date(quarterInfo.startDate).getFullYear()) * 12 + 
+                (new Date(quarterInfo.endDate).getMonth() - new Date(quarterInfo.startDate).getMonth()) + 1,
+            }),
             });
             const plData = await plResp.json();
             totalRevenue += plData.summary?.totalRevenue || 0;
