@@ -1995,12 +1995,15 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               organizationName: getSelectedEntity(),
-              quarter: quarterInfo.quarterCode,
+              date: quarterInfo.startDate,
+              periods: 3,
             }),
           });
           const data = await response.json();
+          console.log("Budget API response:", JSON.stringify(data).substring(0, 500));
           
           const budget = parseBudgetFromReport(data.report);
+          console.log("Parsed budget:", budget);
           const proRatedRevenue = Math.round(budget.revenue * quarterInfo.proRateFactor);
           const proRatedExpenses = Math.round(budget.expenses * quarterInfo.proRateFactor);
           const proRatedGrossProfit = proRatedRevenue - (proRatedExpenses * 0.55); // Approximate COGS
@@ -2056,27 +2059,34 @@
         let revenue = 0;
         let expenses = 0;
 
-        if (report?.Reports?.[0]?.Rows) {
-          report.Reports[0].Rows.forEach(row => {
-            if (row.RowType === "Section" && row.Rows) {
-              row.Rows.forEach(subRow => {
-                if (subRow.RowType === "SummaryRow" && subRow.Cells) {
-                  const label = subRow.Cells[0]?.Value?.toLowerCase() || "";
-                  const month1 = parseFloat(subRow.Cells[1]?.Value) || 0;
-                  const month2 = parseFloat(subRow.Cells[2]?.Value) || 0;
-                  const month3 = parseFloat(subRow.Cells[3]?.Value) || 0;
-                  const total = month1 + month2 + month3;
+        // Railway API returns: { rows: [...] } with camelCase properties
+        const rows = report?.rows || report?.Reports?.[0]?.Rows || [];
+        
+        for (const section of rows) {
+          const rowType = section.rowType || section.RowType;
+          if (rowType === "Section") {
+            const title = section.title || section.Title || "";
+            const subRows = section.rows || section.Rows || [];
+            
+            for (const r of subRows) {
+              const subType = r.rowType || r.RowType;
+              if (subType === "SummaryRow") {
+                const cells = r.cells || r.Cells || [];
+                const label = (cells[0]?.value || cells[0]?.Value || "").toLowerCase();
+                const m1 = parseFloat(cells[1]?.value || cells[1]?.Value) || 0;
+                const m2 = parseFloat(cells[2]?.value || cells[2]?.Value) || 0;
+                const m3 = parseFloat(cells[3]?.value || cells[3]?.Value) || 0;
+                const total = m1 + m2 + m3;
 
-                  if (label.includes("total income") || label.includes("total revenue")) {
-                    if (total > revenue) revenue = total;
-                  }
-                  if (label.includes("total operating expenses") || label.includes("total expenses")) {
-                    if (total > expenses) expenses = total;
-                  }
+                if (label.includes("total income") || label.includes("total revenue")) {
+                  if (total > revenue) revenue = total;
                 }
-              });
+                if (label.includes("total operating expenses") || label.includes("total expenses")) {
+                  if (total > expenses) expenses = total;
+                }
+              }
             }
-          });
+          }
         }
         return { revenue, expenses };
       }
