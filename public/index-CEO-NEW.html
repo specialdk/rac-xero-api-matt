@@ -1653,14 +1653,14 @@
         const label = document.getElementById('entityPickerLabel');
         
         const entityDisplay = {
-          'ALL': 'ðŸ“Š All Entities',
-          'Mining': 'â›ï¸ Mining',
-          'Aboriginal Corporation': 'ðŸ›ï¸ Aboriginal Corp',
-          'Enterprises': 'ðŸ¢ Enterprises',
-          'Property': 'ðŸ  Property Mgmt',
-          'Ngarrkuwuy': 'ðŸ”¨ Ngarrkuwuy',
-          'Invest': 'ðŸ’° Miliditjpi Trust',
-          'Marrin': 'ðŸ—ï¸ Marrin Square'
+          'ALL': '\u{1F4CA} All Entities',
+          'Mining': '\u26CF\uFE0F Mining',
+          'Aboriginal Corporation': '\u{1F3DB}\uFE0F Aboriginal Corp',
+          'Enterprises': '\u{1F3E2} Enterprises',
+          'Property': '\u{1F3E0} Property Mgmt',
+          'Ngarrkuwuy': '\u{1F528} Ngarrkuwuy',
+          'Invest': '\u{1F4B0} Miliditjpi Trust',
+          'Marrin': '\u{1F3D7}\uFE0F Marrin Square'
         };
 
         label.textContent = entityDisplay[entity] || entity;
@@ -1732,9 +1732,9 @@
         };
 
         if (entity === 'ALL') {
-          document.querySelector('.header h1').textContent = 'ðŸ“Š All RAC Entities - Executive Dashboard';
+          document.querySelector('.header h1').textContent = '\u{1F4CA} All RAC Entities - Executive Dashboard';
         } else {
-          document.querySelector('.header h1').textContent = 'â›ï¸ ' + (entityNames[entity] || entity) + ' - Executive Dashboard';
+          document.querySelector('.header h1').textContent = '\u26CF\uFE0F ' + (entityNames[entity] || entity) + ' - Executive Dashboard';
         }
 
         // Handle consolidated view when ALL selected
