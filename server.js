@@ -3042,6 +3042,10 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
 // Catches all Xero section types; defaults non-revenue to expense (conservative)
 function categorizeSection(sectionTitle) {
   const title = sectionTitle.toLowerCase();
+  // COGS check FIRST (before revenue, because "Cost of Sales" contains "sales")
+  if (title.includes("cost of sales") || title.includes("direct cost")) {
+    return "expense";
+  }
   // Revenue sections
   if (
     title.includes("income") ||
