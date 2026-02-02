@@ -1887,7 +1887,7 @@
 
           document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
           document.getElementById("kpi-cash-trend").innerHTML = 
-            `<span>&#x1F4B0;</span> ${data.accounts?.length || 0} accounts`;
+            `<span>&#x1F4B0;</span> ${data.bankAccounts?.length || 0} accounts`;
           document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
           
         } catch (error) {
