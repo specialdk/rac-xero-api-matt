@@ -3057,7 +3057,9 @@ function categorizeSection(sectionTitle) {
     title.includes("income") ||
     title.includes("revenue") ||
     title.includes("trading") ||
-    title.includes("sales")
+    title.includes("sales") ||
+    title.includes("royalties") ||
+    title.includes("investment performance")
   ) {
     return "revenue";
   }
