@@ -1133,7 +1133,7 @@
     <!-- ========== HEADER ========== -->
     <header class="header">
       <div class="header-left">
-        <h1>â›ï¸ RAC Mining - Executive Dashboard</h1>
+        <h1>&#x26CF;&#xFE0F; RAC Mining - Executive Dashboard</h1>
         <div class="header-status">
           <span class="status-dot" id="healthDot"></span>
           <span id="healthStatus">Loading...</span>
@@ -1143,49 +1143,49 @@
         <!-- Entity Multi-Select -->
         <div class="entity-picker" id="entityPicker">
           <button class="entity-picker-btn" onclick="toggleEntityPicker(event)">
-            <span id="entityPickerLabel">â›ï¸ Rirratjingu Mining</span>
-            <span class="arrow">â–¼</span>
+            <span id="entityPickerLabel">&#x26CF;&#xFE0F; Rirratjingu Mining</span>
+            <span class="arrow">&#x25BC;</span>
           </button>
           <div class="entity-picker-dropdown" id="entityDropdown">
             <label class="entity-option" data-value="ALL">
               <input type="radio" name="entity" value="ALL">
-              <span class="entity-emoji">ðŸ“Š</span>
+              <span class="entity-emoji">&#x1F4CA;</span>
               <span>All Entities (Consolidated)</span>
             </label>
             <div class="entity-option-divider"></div>
             <label class="entity-option selected" data-value="Mining">
               <input type="radio" name="entity" value="Mining" checked>
-              <span class="entity-emoji">â›ï¸</span>
+              <span class="entity-emoji">&#x26CF;&#xFE0F;</span>
               <span>Rirratjingu Mining</span>
             </label>
             <label class="entity-option" data-value="Aboriginal Corporation">
               <input type="radio" name="entity" value="Aboriginal Corporation">
-              <span class="entity-emoji">ðŸ›ï¸</span>
+              <span class="entity-emoji">&#x1F3DB;&#xFE0F;</span>
               <span>Aboriginal Corporation</span>
             </label>
             <label class="entity-option" data-value="Enterprises">
               <input type="radio" name="entity" value="Enterprises">
-              <span class="entity-emoji">ðŸ¢</span>
+              <span class="entity-emoji">&#x1F3E2;</span>
               <span>Enterprises</span>
             </label>
             <label class="entity-option" data-value="Property">
               <input type="radio" name="entity" value="Property">
-              <span class="entity-emoji">ðŸ </span>
+              <span class="entity-emoji">&#x1F3E0;</span>
               <span>Property Management</span>
             </label>
             <label class="entity-option" data-value="Ngarrkuwuy">
               <input type="radio" name="entity" value="Ngarrkuwuy">
-              <span class="entity-emoji">ðŸ”¨</span>
+              <span class="entity-emoji">&#x1F528;</span>
               <span>Ngarrkuwuy Developments</span>
             </label>
             <label class="entity-option" data-value="Invest">
               <input type="radio" name="entity" value="Invest">
-              <span class="entity-emoji">ðŸ’°</span>
+              <span class="entity-emoji">&#x1F4B0;</span>
               <span>Miliditjpi Trust</span>
             </label>
             <label class="entity-option" data-value="Marrin">
               <input type="radio" name="entity" value="Marrin">
-              <span class="entity-emoji">ðŸ—ï¸</span>
+              <span class="entity-emoji">&#x1F3D7;&#xFE0F;</span>
               <span>Marrin Square</span>
             </label>
           </div>
@@ -1196,11 +1196,11 @@
           <option value="Q3" selected>Q3 FY25/26 (Jan-Mar)</option>
           <option value="Q4">Q4 FY25/26 (Apr-Jun)</option>
         </select>
-        <button class="btn-refresh" onclick="loadDashboard()">â†» Refresh</button>
-        <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">ðŸ“¸ Snapshot</button>
+        <button class="btn-refresh" onclick="loadDashboard()">&#x21BB; Refresh</button>
+        <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
-        <button class="btn-chat" onclick="toggleChat()">ðŸ’¬ Ask AI</button>
-        <button class="btn-dashboard" onclick="window.location.href='index.html'">ðŸ“Š Full Dashboard</button>
+        <button class="btn-chat" onclick="toggleChat()">&#x1F4AC; Ask AI</button>
+        <button class="btn-dashboard" onclick="window.location.href='index.html'">&#x1F4CA; Full Dashboard</button>
       </div>
     </header>
 
@@ -1215,7 +1215,7 @@
           <div class="kpi-card" onclick="openDrawer('cash')">
             <div class="kpi-header">
               <div class="kpi-label">Cash Position</div>
-              <span class="kpi-arrow">â†’</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-cash">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-cash-trend">--</div>
@@ -1229,7 +1229,7 @@
           <div class="kpi-card" onclick="openDrawer('revenue')">
             <div class="kpi-header">
               <div class="kpi-label">Revenue (Period)</div>
-              <span class="kpi-arrow">â†’</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-revenue">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-revenue-trend">--</div>
@@ -1243,7 +1243,7 @@
           <div class="kpi-card" onclick="openDrawer('profit')">
             <div class="kpi-header">
               <div class="kpi-label">Net Profit</div>
-              <span class="kpi-arrow">â†’</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-profit">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-profit-trend">--</div>
@@ -1257,7 +1257,7 @@
           <div class="kpi-card" onclick="openDrawer('receivables')">
             <div class="kpi-header">
               <div class="kpi-label">Receivables</div>
-              <span class="kpi-arrow">â†’</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value smaller" id="kpi-receivables">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-receivables-trend">--</div>
@@ -1271,7 +1271,7 @@
           <div class="kpi-card" onclick="openDrawer('inventory')">
             <div class="kpi-header">
               <div class="kpi-label">Inventory Value</div>
-              <span class="kpi-arrow">â†’</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-inventory">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-inventory-trend">--</div>
@@ -1551,16 +1551,16 @@
       <!-- ========== AI CHAT PANEL ========== -->
       <div class="chat-panel" id="chatPanel">
         <div class="chat-header">
-          <h3>ðŸ’¬ Ask about your finances</h3>
-          <button class="chat-close" onclick="toggleChat()">Ã—</button>
+          <h3>&#x1F4AC; Ask about your finances</h3>
+          <button class="chat-close" onclick="toggleChat()">&times;</button>
         </div>
         <div class="chat-messages" id="chatMessages">
           <div class="chat-message assistant">
             Hi! I can help you understand your Mining financial data. Try asking me things like:
             <br><br>
-            â€¢ "What's driving our revenue decline?"<br>
-            â€¢ "Show me our biggest expenses"<br>
-            â€¢ "Compare to last year"
+            &bull; "What's driving our revenue decline?"<br>
+            &bull; "Show me our biggest expenses"<br>
+            &bull; "Compare to last year"
           </div>
         </div>
         <div class="chat-suggestions">
@@ -1570,7 +1570,7 @@
         </div>
         <div class="chat-input-area">
           <input type="text" class="chat-input" id="chatInput" placeholder="Ask a question..." onkeypress="handleChatKeypress(event)">
-          <button class="chat-send" onclick="sendChat()">âž¤</button>
+          <button class="chat-send" onclick="sendChat()">&#x27A4;</button>
         </div>
       </div>
     </div>
@@ -1582,7 +1582,7 @@
     <div class="drawer" id="drawer">
       <div class="drawer-header">
         <span class="drawer-title" id="drawerTitle">Detail View</span>
-        <button class="drawer-close" onclick="closeDrawer()">Ã—</button>
+        <button class="drawer-close" onclick="closeDrawer()">&times;</button>
       </div>
       <div class="drawer-content" id="drawerContent">
         <!-- Dynamic content loaded here -->
@@ -1842,15 +1842,15 @@
 
         // Update consolidated KPIs
         document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
-        document.getElementById("kpi-cash-trend").innerHTML = `ðŸ’° ${successCount} entities`;
+        document.getElementById("kpi-cash-trend").innerHTML = `&#x1F4B0; ${successCount} entities`;
         document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
 
         const netProfit = totalRevenue - totalExpenses;
         document.getElementById("kpi-revenue").textContent = "$" + totalRevenue.toLocaleString();
-        document.getElementById("kpi-revenue-trend").textContent = "ðŸ“Š Consolidated";
+        document.getElementById("kpi-revenue-trend").textContent = "\u{1F4CA} Consolidated";
         
         document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
-        document.getElementById("kpi-profit-trend").textContent = netProfit < 0 ? "âš  Loss position" : "âœ“ Profitable";
+        document.getElementById("kpi-profit-trend").textContent = netProfit < 0 ? "\u26A0 Loss position" : "\u2714 Profitable";
         document.getElementById("kpi-profit-trend").className = netProfit < 0 ? "kpi-trend negative" : "kpi-trend positive";
 
         document.getElementById("kpi-receivables").textContent = "$" + totalReceivables.toLocaleString();
@@ -1865,7 +1865,7 @@
 
         // Inventory stays the same
         document.getElementById("kpi-inventory").textContent = "$3.5M";
-        document.getElementById("kpi-inventory-trend").innerHTML = "âœ“ Stock levels healthy";
+        document.getElementById("kpi-inventory-trend").innerHTML = "\u2714 Stock levels healthy";
 
         updateHealthStatus();
         initSparklines();
@@ -1887,7 +1887,7 @@
 
           document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
           document.getElementById("kpi-cash-trend").innerHTML = 
-            `<span>ðŸ’°</span> ${data.accounts?.length || 0} accounts`;
+            `<span>&#x1F4B0;</span> ${data.accounts?.length || 0} accounts`;
           document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
           
         } catch (error) {
@@ -1961,7 +1961,7 @@
           // Update KPI cards
           document.getElementById("kpi-revenue").textContent = "$" + revenue.toLocaleString();
           document.getElementById("kpi-revenue-trend").innerHTML = 
-            revenue >= 0 ? `<span>â†‘</span> Period revenue` : `<span>â†“</span> Negative revenue`;
+            revenue >= 0 ? `<span>\u2191</span> Period revenue` : `<span>\u2193</span> Negative revenue`;
           document.getElementById("kpi-revenue-trend").className = 
             revenue >= 0 ? "kpi-trend positive" : "kpi-trend negative";
           document.getElementById("kpi-revenue-status").className = 
@@ -1969,7 +1969,7 @@
 
           document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
           document.getElementById("kpi-profit-trend").innerHTML = 
-            netProfit >= 0 ? `<span>â†‘</span> Profitable` : `<span>â†“</span> Loss position`;
+            netProfit >= 0 ? `<span>\u2191</span> Profitable` : `<span>\u2193</span> Loss position`;
           document.getElementById("kpi-profit-trend").className = 
             netProfit >= 0 ? "kpi-trend positive" : "kpi-trend negative";
           document.getElementById("kpi-profit-status").className = 
@@ -2135,7 +2135,7 @@
           const currentPct = total > 0 ? Math.round(current / total * 100) : 0;
           const overduePct = 100 - currentPct;
           document.getElementById("kpi-receivables-trend").textContent = 
-            `${currentPct}% current â€¢ ${overduePct}% overdue`;
+            `${currentPct}% current \u2022 ${overduePct}% overdue`;
           document.getElementById("kpi-receivables-trend").className = 
             currentPct >= 70 ? "kpi-trend positive" : (currentPct >= 50 ? "kpi-trend neutral" : "kpi-trend negative");
 
@@ -2164,7 +2164,7 @@
         const totalValue = inventoryData.reduce((sum, item) => sum + item.value, 0);
 
         document.getElementById("kpi-inventory").textContent = "$" + (totalValue / 1000000).toFixed(1) + "M";
-        document.getElementById("kpi-inventory-trend").innerHTML = `<span>âœ“</span> Stock levels healthy`;
+        document.getElementById("kpi-inventory-trend").innerHTML = `<span>\u2714</span> Stock levels healthy`;
         document.getElementById("kpi-inventory-trend").className = "kpi-trend positive";
 
         // TODO: Restore when Inventory Status card returns (currently replaced by Key Ratios)
@@ -2838,7 +2838,7 @@
         
         btn.disabled = true;
         btn.classList.add('running');
-        btn.innerHTML = 'â³ Running...';
+        btn.innerHTML = '\u23F3 Running...';
         status.textContent = 'Processing...';
         status.className = 'snapshot-status';
         
@@ -2852,7 +2852,7 @@
           const result = await response.json();
           
           if (result.success) {
-            status.textContent = `âœ“ ${result.orgsProcessed}/${result.orgsProcessed + result.orgsFailed} orgs (${result.durationSeconds}s)`;
+            status.textContent = `\u2714 ${result.orgsProcessed}/${result.orgsProcessed + result.orgsFailed} orgs (${result.durationSeconds}s)`;
             status.className = 'snapshot-status success';
             alert(`Snapshot complete!\n\nProcessed: ${result.orgsProcessed} orgs\nFailed: ${result.orgsFailed}\nDuration: ${result.durationSeconds}s`);
 
@@ -2863,13 +2863,13 @@
           
         } catch (error) {
           console.error('Snapshot failed:', error);
-          status.textContent = 'âœ— Failed';
+          status.textContent = '\u2717 Failed';
           status.className = 'snapshot-status error';
           alert('Snapshot failed: ' + error.message);
         } finally {
           btn.disabled = false;
           btn.classList.remove('running');
-          btn.innerHTML = 'ðŸ“¸ Snapshot';
+          btn.innerHTML = '&#x1F4F8; Snapshot';
         }
       }
 
