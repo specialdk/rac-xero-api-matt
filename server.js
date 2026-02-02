@@ -3038,7 +3038,43 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
   }
 });
 
-// Helper function to parse P&L data - reduced logs and improved
+// Shared P&L section categorizer — ONE place to maintain
+// Catches all Xero section types; defaults non-revenue to expense (conservative)
+function categorizeSection(sectionTitle) {
+  const title = sectionTitle.toLowerCase();
+  // Revenue sections
+  if (
+    title.includes("income") ||
+    title.includes("revenue") ||
+    title.includes("trading") ||
+    title.includes("sales")
+  ) {
+    return "revenue";
+  }
+  // Summary rows to skip
+  if (
+    title.includes("net profit") ||
+    title.includes("gross profit") ||
+    title.includes("net loss")
+  ) {
+    return "skip";
+  }
+  // Everything else is expense (conservative catch-all)
+  // This covers: expense, cost, administration, operating, salaries,
+  // depreciation, overheads, staff costs, property maintenance, etc.
+  return "expense";
+}
+
+// Sum all data columns from a Xero P&L row (handles multi-month reports)
+function sumPLRowCells(cells) {
+  let total = 0;
+  for (let i = 1; i < cells.length; i++) {
+    total += parseFloat(cells[i]?.value || 0);
+  }
+  return total;
+}
+
+// Helper function to parse P&L data - FIXED: multi-column + catch-all sections
 function parsePLData(plRows) {
   const plData = {
     totalRevenue: 0,
@@ -3049,32 +3085,23 @@ function parsePLData(plRows) {
 
   plRows.forEach((section) => {
     if (section.rowType === "Section" && section.rows && section.title) {
-      const sectionTitle = section.title.toLowerCase();
+      const category = categorizeSection(section.title);
+      if (category === "skip") return;
 
       section.rows.forEach((row) => {
         if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
           const accountName = row.cells[0]?.value || "";
-          const amount = parseFloat(row.cells[1]?.value || 0);
+          if (accountName.toLowerCase().includes("total")) return;
 
-          if (accountName.toLowerCase().includes("total") || amount === 0) {
-            return;
-          }
+          const amount = sumPLRowCells(row.cells);
+          if (amount === 0) return;
 
-          if (
-            sectionTitle.includes("income") ||
-            sectionTitle.includes("revenue") ||
-            sectionTitle.includes("trading")
-          ) {
+          if (category === "revenue") {
             plData.revenueAccounts.push({ name: accountName, amount });
-            plData.totalRevenue += amount; // Remove Math.abs()
-          } else if (
-            sectionTitle.includes("expense") ||
-            sectionTitle.includes("cost") ||
-            sectionTitle.includes("administration") ||
-            sectionTitle.includes("operating")
-          ) {
+            plData.totalRevenue += amount;
+          } else {
             plData.expenseAccounts.push({ name: accountName, amount });
-            plData.totalExpenses += amount; // Remove Math.abs()
+            plData.totalExpenses += amount;
           }
         }
       });
@@ -3264,19 +3291,16 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
 
       plRows.forEach((section) => {
         if (section.rowType === "Section" && section.rows && section.title) {
-          const sectionTitle = section.title.toLowerCase();
+          const category = categorizeSection(section.title);
+          if (category === "skip") return;
 
           section.rows.forEach((row) => {
             if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
               const accountName = row.cells[0]?.value || "";
-              const currentAmount = parseFloat(row.cells[1]?.value || 0);
+              if (accountName.toLowerCase().includes("total")) return;
 
-              if (
-                accountName.toLowerCase().includes("total") ||
-                currentAmount === 0
-              ) {
-                return;
-              }
+              const currentAmount = sumPLRowCells(row.cells);
+              if (currentAmount === 0) return;
 
               processedAccounts++;
               const accountInfo = {
@@ -3287,22 +3311,11 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
                 section: section.title,
               };
 
-              if (
-                sectionTitle.includes("income") ||
-                sectionTitle.includes("revenue") ||
-                sectionTitle.includes("trading") ||
-                sectionTitle.includes("sales") ||
-                sectionTitle.includes("property maintenance")
-              ) {
+              if (category === "revenue") {
                 accountInfo.credit = Math.abs(currentAmount);
                 trialBalance.revenue.push(accountInfo);
                 trialBalance.totals.totalRevenue += Math.abs(currentAmount);
-              } else if (
-                sectionTitle.includes("expense") ||
-                sectionTitle.includes("cost") ||
-                sectionTitle.includes("administration") ||
-                sectionTitle.includes("operating")
-              ) {
+              } else {
                 accountInfo.debit = Math.abs(currentAmount);
                 trialBalance.expenses.push(accountInfo);
                 trialBalance.totals.totalExpenses += Math.abs(currentAmount);
@@ -3755,35 +3768,24 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
 
     plRows.forEach((section) => {
       if (section.rowType === "Section" && section.rows && section.title) {
-        const sectionTitle = section.title.toLowerCase();
+        const category = categorizeSection(section.title);
+        if (category === "skip") return;
 
         section.rows.forEach((row) => {
           if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
             const accountName = row.cells[0]?.value || "";
-            const amount = parseFloat(row.cells[1]?.value || 0);
+            if (accountName.toLowerCase().includes("total")) return;
 
-            if (accountName.toLowerCase().includes("total") || amount === 0) {
-              return;
-            }
+            const amount = sumPLRowCells(row.cells);
+            if (amount === 0) return;
 
-            if (
-              sectionTitle.includes("income") ||
-              sectionTitle.includes("revenue") ||
-              sectionTitle.includes("property maintenance") ||
-              sectionTitle.includes("trading")
-            ) {
+            if (category === "revenue") {
               plSummary.revenueAccounts.push({
                 name: accountName,
                 amount: amount,
               });
               plSummary.totalRevenue += amount;
-            } else if (
-              sectionTitle.includes("expense") ||
-              sectionTitle.includes("cost") ||
-              sectionTitle.includes("administration") ||
-              sectionTitle.includes("operating") ||
-              sectionTitle.includes("salaries")
-            ) {
+            } else {
               plSummary.expenseAccounts.push({
                 name: accountName,
                 amount: amount,
