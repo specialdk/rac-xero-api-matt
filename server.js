@@ -4688,7 +4688,16 @@ app.post("/api/monthly-breakdown", async (req, res) => {
 app.get("/api/historical-metrics/:organizationName", async (req, res) => {
   try {
     const orgName = decodeURIComponent(req.params.organizationName);
-    console.log(`ðŸ“Š Loading historical metrics for: ${orgName}`);
+    console.log(`Loading historical metrics for: ${orgName}`);
+
+    // Map short dashboard names to stored DB names
+    const orgNameMap = {
+      'Property': 'Property Management & Maintenance Services',
+      'Ngarrkuwuy': 'Ngarrkuwuy Developments',
+      'Invest': 'Rirratjingu Invest',
+      'Marrin': 'Marrin Square Developments'
+    };
+    const dbOrgName = orgNameMap[orgName] || orgName;
 
     // Query daily snapshots (cash, receivables) - last 90 days
     const dailyResult = await pool.query(
@@ -4697,7 +4706,7 @@ app.get("/api/historical-metrics/:organizationName", async (req, res) => {
        FROM daily_metrics 
        WHERE org = $1 AND job_status = 'success'
        ORDER BY snapshot_date ASC`,
-      [orgName]
+      [dbOrgName]
     );
 
     // Query monthly P&L snapshots (revenue, expenses, profit)
@@ -4706,10 +4715,10 @@ app.get("/api/historical-metrics/:organizationName", async (req, res) => {
        FROM monthly_snapshots 
        WHERE org = $1 AND job_status = 'success'
        ORDER BY period_month ASC`,
-      [orgName]
+      [dbOrgName]
     );
 
-    console.log(`âœ… Historical metrics for ${orgName}: ${dailyResult.rows.length} daily, ${monthlyResult.rows.length} monthly`);
+    console.log(`Historical metrics for ${orgName}: ${dailyResult.rows.length} daily, ${monthlyResult.rows.length} monthly`);
 
     res.json({
       organizationName: orgName,
