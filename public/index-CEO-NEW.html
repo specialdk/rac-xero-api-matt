@@ -1653,14 +1653,14 @@
         const label = document.getElementById('entityPickerLabel');
         
         const entityDisplay = {
-          'ALL': '📊 All Entities',
-          'Mining': '⛏️ Mining',
-          'Aboriginal Corporation': '🏛️ Aboriginal Corp',
-          'Enterprises': '🏢 Enterprises',
-          'Property': '🏠 Property Mgmt',
-          'Ngarrkuwuy': '🔨 Ngarrkuwuy',
-          'Invest': '💰 Miliditjpi Trust',
-          'Marrin': '🏗️ Marrin Square'
+          'ALL': 'ðŸ“Š All Entities',
+          'Mining': 'â›ï¸ Mining',
+          'Aboriginal Corporation': 'ðŸ›ï¸ Aboriginal Corp',
+          'Enterprises': 'ðŸ¢ Enterprises',
+          'Property': 'ðŸ  Property Mgmt',
+          'Ngarrkuwuy': 'ðŸ”¨ Ngarrkuwuy',
+          'Invest': 'ðŸ’° Miliditjpi Trust',
+          'Marrin': 'ðŸ—ï¸ Marrin Square'
         };
 
         label.textContent = entityDisplay[entity] || entity;
@@ -1732,9 +1732,9 @@
         };
 
         if (entity === 'ALL') {
-          document.querySelector('.header h1').textContent = '📊 All RAC Entities - Executive Dashboard';
+          document.querySelector('.header h1').textContent = 'ðŸ“Š All RAC Entities - Executive Dashboard';
         } else {
-          document.querySelector('.header h1').textContent = '⛏️ ' + (entityNames[entity] || entity) + ' - Executive Dashboard';
+          document.querySelector('.header h1').textContent = 'â›ï¸ ' + (entityNames[entity] || entity) + ' - Executive Dashboard';
         }
 
         // Handle consolidated view when ALL selected
@@ -1935,25 +1935,11 @@
           console.log("P&L Response:", data);
 
           const revenue = data.summary?.totalRevenue || 0;
-          const totalExpenses = data.summary?.totalExpenses || 0;
+          const cogs = data.summary?.totalCOGS || 0;
+          const gross = data.summary?.grossProfit || (revenue - cogs);
+          const opex = data.summary?.totalExpenses || 0;
           const netProfit = data.summary?.netProfit || 0;
-
-          // Categorize COGS vs Opex
-          const expenseAccounts = data.summary?.expenseAccounts || [];
-          let cogs = 0;
-          let opex = 0;
-
-          expenseAccounts.forEach((account) => {
-            const name = account.name.toLowerCase();
-            if (name.includes("cost of") || name.includes("cost -") || 
-                name.includes("haulage expense") || name.includes("freight")) {
-              cogs += account.amount;
-            } else {
-              opex += account.amount;
-            }
-          });
-
-          const gross = revenue - cogs;
+          const totalExpenses = cogs + opex; // For budget comparison
 
           // Store for budget comparison
           window.dashboardData.pl = { revenue, totalExpenses, cogs, opex, gross, netProfit };
@@ -2238,14 +2224,14 @@
           ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
           : '-';
         
-        // Gross Margin = (Revenue - COGS) / Revenue Ã— 100
+        // Gross Margin = (Revenue - COGS) / Revenue Ãƒâ€” 100
         const revenue = Math.abs(pl.revenue || 0);
         const cogs = Math.abs(pl.cogs || 0);
         const grossMargin = revenue > 0 
           ? (((revenue - cogs) / revenue) * 100).toFixed(1) + '%'
           : '-';
         
-        // Net Profit Margin = Net Profit / Revenue Ã— 100
+        // Net Profit Margin = Net Profit / Revenue Ãƒâ€” 100
         const netProfit = pl.netProfit || 0;
         const netMargin = revenue > 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'

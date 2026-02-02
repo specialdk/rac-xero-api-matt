@@ -247,7 +247,7 @@
         background: rgba(0, 120, 212, 0.3);
       }
 
-      .entity-option input[type="checkbox"] {
+      .entity-option input[type="radio"] {
         width: 16px;
         height: 16px;
         accent-color: var(--color-primary);
@@ -1133,7 +1133,7 @@
     <!-- ========== HEADER ========== -->
     <header class="header">
       <div class="header-left">
-        <h1>⛏️ RAC Mining - Executive Dashboard</h1>
+        <h1>&#x26CF;&#xFE0F; RAC Mining - Executive Dashboard</h1>
         <div class="header-status">
           <span class="status-dot" id="healthDot"></span>
           <span id="healthStatus">Loading...</span>
@@ -1143,49 +1143,49 @@
         <!-- Entity Multi-Select -->
         <div class="entity-picker" id="entityPicker">
           <button class="entity-picker-btn" onclick="toggleEntityPicker(event)">
-            <span id="entityPickerLabel">⛏️ Rirratjingu Mining</span>
-            <span class="arrow">▼</span>
+            <span id="entityPickerLabel">&#x26CF;&#xFE0F; Rirratjingu Mining</span>
+            <span class="arrow">&#x25BC;</span>
           </button>
           <div class="entity-picker-dropdown" id="entityDropdown">
-            <label class="entity-option" onclick="toggleSelectAll(event)">
-              <input type="checkbox" id="chk-all">
-              <span class="entity-emoji">📊</span>
-              <span>Select All (Consolidated)</span>
+            <label class="entity-option" data-value="ALL">
+              <input type="radio" name="entity" value="ALL">
+              <span class="entity-emoji">&#x1F4CA;</span>
+              <span>All Entities (Consolidated)</span>
             </label>
             <div class="entity-option-divider"></div>
             <label class="entity-option selected" data-value="Mining">
-              <input type="checkbox" value="Mining" checked>
-              <span class="entity-emoji">⛏️</span>
+              <input type="radio" name="entity" value="Mining" checked>
+              <span class="entity-emoji">&#x26CF;&#xFE0F;</span>
               <span>Rirratjingu Mining</span>
             </label>
             <label class="entity-option" data-value="Aboriginal Corporation">
-              <input type="checkbox" value="Aboriginal Corporation">
-              <span class="entity-emoji">🏛️</span>
+              <input type="radio" name="entity" value="Aboriginal Corporation">
+              <span class="entity-emoji">&#x1F3DB;&#xFE0F;</span>
               <span>Aboriginal Corporation</span>
             </label>
             <label class="entity-option" data-value="Enterprises">
-              <input type="checkbox" value="Enterprises">
-              <span class="entity-emoji">🏢</span>
+              <input type="radio" name="entity" value="Enterprises">
+              <span class="entity-emoji">&#x1F3E2;</span>
               <span>Enterprises</span>
             </label>
             <label class="entity-option" data-value="Property">
-              <input type="checkbox" value="Property">
-              <span class="entity-emoji">🏠</span>
+              <input type="radio" name="entity" value="Property">
+              <span class="entity-emoji">&#x1F3E0;</span>
               <span>Property Management</span>
             </label>
             <label class="entity-option" data-value="Ngarrkuwuy">
-              <input type="checkbox" value="Ngarrkuwuy">
-              <span class="entity-emoji">🔨</span>
+              <input type="radio" name="entity" value="Ngarrkuwuy">
+              <span class="entity-emoji">&#x1F528;</span>
               <span>Ngarrkuwuy Developments</span>
             </label>
             <label class="entity-option" data-value="Invest">
-              <input type="checkbox" value="Invest">
-              <span class="entity-emoji">💰</span>
+              <input type="radio" name="entity" value="Invest">
+              <span class="entity-emoji">&#x1F4B0;</span>
               <span>Miliditjpi Trust</span>
             </label>
             <label class="entity-option" data-value="Marrin">
-              <input type="checkbox" value="Marrin">
-              <span class="entity-emoji">🏗️</span>
+              <input type="radio" name="entity" value="Marrin">
+              <span class="entity-emoji">&#x1F3D7;&#xFE0F;</span>
               <span>Marrin Square</span>
             </label>
           </div>
@@ -1196,11 +1196,11 @@
           <option value="Q3" selected>Q3 FY25/26 (Jan-Mar)</option>
           <option value="Q4">Q4 FY25/26 (Apr-Jun)</option>
         </select>
-        <button class="btn-refresh" onclick="loadDashboard()">↻ Refresh</button>
-        <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">📸 Snapshot</button>
+        <button class="btn-refresh" onclick="loadDashboard()">&#x21BB; Refresh</button>
+        <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
-        <button class="btn-chat" onclick="toggleChat()">💬 Ask AI</button>
-        <button class="btn-dashboard" onclick="window.location.href='index.html'">📊 Full Dashboard</button>
+        <button class="btn-chat" onclick="toggleChat()">&#x1F4AC; Ask AI</button>
+        <button class="btn-dashboard" onclick="window.location.href='index.html'">&#x1F4CA; Full Dashboard</button>
       </div>
     </header>
 
@@ -1215,7 +1215,7 @@
           <div class="kpi-card" onclick="openDrawer('cash')">
             <div class="kpi-header">
               <div class="kpi-label">Cash Position</div>
-              <span class="kpi-arrow">→</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-cash">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-cash-trend">--</div>
@@ -1229,7 +1229,7 @@
           <div class="kpi-card" onclick="openDrawer('revenue')">
             <div class="kpi-header">
               <div class="kpi-label">Revenue (Period)</div>
-              <span class="kpi-arrow">→</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-revenue">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-revenue-trend">--</div>
@@ -1243,7 +1243,7 @@
           <div class="kpi-card" onclick="openDrawer('profit')">
             <div class="kpi-header">
               <div class="kpi-label">Net Profit</div>
-              <span class="kpi-arrow">→</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-profit">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-profit-trend">--</div>
@@ -1257,7 +1257,7 @@
           <div class="kpi-card" onclick="openDrawer('receivables')">
             <div class="kpi-header">
               <div class="kpi-label">Receivables</div>
-              <span class="kpi-arrow">→</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value smaller" id="kpi-receivables">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-receivables-trend">--</div>
@@ -1271,7 +1271,7 @@
           <div class="kpi-card" onclick="openDrawer('inventory')">
             <div class="kpi-header">
               <div class="kpi-label">Inventory Value</div>
-              <span class="kpi-arrow">→</span>
+              <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-inventory">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-inventory-trend">--</div>
@@ -1289,12 +1289,33 @@
             <div class="chart-header">
               <div>
                 <div class="chart-title">Revenue & Expenses Trend</div>
-                <div class="chart-subtitle">Last 6 months performance</div>
+                <div class="chart-subtitle">Monthly performance with YTD totals</div>
               </div>
-              <div class="chart-legend">
-                <span class="legend-item"><span class="legend-dot" style="background: #0078D4"></span> Revenue</span>
-                <span class="legend-item"><span class="legend-dot" style="background: #D13438"></span> Expenses</span>
-                <span class="legend-item"><span class="legend-dot" style="background: #107C10"></span> Profit</span>
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="chart-legend">
+                  <span class="legend-item"><span class="legend-dot" style="background: #0078D4"></span> Revenue</span>
+                  <span class="legend-item"><span class="legend-dot" style="background: #D13438"></span> Expenses</span>
+                  <span class="legend-item"><span class="legend-dot" style="background: #107C10"></span> Profit</span>
+                </div>
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--color-text-secondary); cursor: pointer;">
+                  <input type="checkbox" id="ytdToggle" onchange="initTrendChart()" style="accent-color: var(--color-primary);">
+                  YTD Lines
+                </label>
+              </div>
+            </div>
+            <!-- YTD Summary Bar -->
+            <div id="ytdSummaryBar" style="display: flex; gap: 24px; padding: 6px 0 8px; border-bottom: 1px solid var(--color-border); margin-bottom: 4px;">
+              <div style="font-size: 12px;">
+                <span style="color: var(--color-text-muted);">YTD Revenue:</span>
+                <span id="ytd-revenue" style="font-weight: 600; color: #0078D4; margin-left: 4px;">$0</span>
+              </div>
+              <div style="font-size: 12px;">
+                <span style="color: var(--color-text-muted);">YTD Expenses:</span>
+                <span id="ytd-expenses" style="font-weight: 600; color: #D13438; margin-left: 4px;">$0</span>
+              </div>
+              <div style="font-size: 12px;">
+                <span style="color: var(--color-text-muted);">YTD Profit:</span>
+                <span id="ytd-profit" style="font-weight: 600; margin-left: 4px;">$0</span>
               </div>
             </div>
             <div class="chart-container">
@@ -1530,16 +1551,16 @@
       <!-- ========== AI CHAT PANEL ========== -->
       <div class="chat-panel" id="chatPanel">
         <div class="chat-header">
-          <h3>💬 Ask about your finances</h3>
-          <button class="chat-close" onclick="toggleChat()">×</button>
+          <h3>&#x1F4AC; Ask about your finances</h3>
+          <button class="chat-close" onclick="toggleChat()">&times;</button>
         </div>
         <div class="chat-messages" id="chatMessages">
           <div class="chat-message assistant">
             Hi! I can help you understand your Mining financial data. Try asking me things like:
             <br><br>
-            • "What's driving our revenue decline?"<br>
-            • "Show me our biggest expenses"<br>
-            • "Compare to last year"
+            &bull; "What's driving our revenue decline?"<br>
+            &bull; "Show me our biggest expenses"<br>
+            &bull; "Compare to last year"
           </div>
         </div>
         <div class="chat-suggestions">
@@ -1549,7 +1570,7 @@
         </div>
         <div class="chat-input-area">
           <input type="text" class="chat-input" id="chatInput" placeholder="Ask a question..." onkeypress="handleChatKeypress(event)">
-          <button class="chat-send" onclick="sendChat()">➤</button>
+          <button class="chat-send" onclick="sendChat()">&#x27A4;</button>
         </div>
       </div>
     </div>
@@ -1561,7 +1582,7 @@
     <div class="drawer" id="drawer">
       <div class="drawer-header">
         <span class="drawer-title" id="drawerTitle">Detail View</span>
-        <button class="drawer-close" onclick="closeDrawer()">×</button>
+        <button class="drawer-close" onclick="closeDrawer()">&times;</button>
       </div>
       <div class="drawer-content" id="drawerContent">
         <!-- Dynamic content loaded here -->
@@ -1573,18 +1594,21 @@
       // ========== CONFIGURATION ==========
       const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
       
-      // ========== ENTITY PICKER ==========
-      function getSelectedEntities() {
-        const checkboxes = document.querySelectorAll('#entityDropdown .entity-option[data-value] input:checked');
-        return Array.from(checkboxes).map(cb => cb.value);
+      // ========== ENTITY PICKER (Radio Buttons) ==========
+      function getSelectedEntity() {
+        const selected = document.querySelector('#entityDropdown input[type="radio"]:checked');
+        if (!selected) return 'Mining';
+        if (selected.value === 'ALL') return 'ALL';
+        return selected.value;
       }
 
-      // Backward compatible - returns single entity or 'ALL'
-      function getSelectedEntity() {
-        const selected = getSelectedEntities();
-        if (selected.length === 0) return 'Mining';
-        if (selected.length === 1) return selected[0];
-        return 'CUSTOM';  // Multiple selected
+      // Backward compatible - returns array for consolidated view
+      function getSelectedEntities() {
+        const entity = getSelectedEntity();
+        if (entity === 'ALL') {
+          return ['Mining', 'Aboriginal Corporation', 'Enterprises', 'Property', 'Ngarrkuwuy', 'Invest', 'Marrin'];
+        }
+        return [entity];
       }
 
       function toggleEntityPicker(event) {
@@ -1592,20 +1616,7 @@
         document.getElementById('entityPicker').classList.toggle('open');
       }
 
-      function toggleSelectAll(event) {
-        event.stopPropagation();
-        const allCheckbox = document.getElementById('chk-all');
-        // Toggle it (the label click already toggled, so read current state)
-        const entityCheckboxes = document.querySelectorAll('#entityDropdown .entity-option[data-value] input');
-        entityCheckboxes.forEach(cb => {
-          cb.checked = allCheckbox.checked;
-          cb.closest('.entity-option').classList.toggle('selected', cb.checked);
-        });
-        updateEntityPickerLabel();
-        loadDashboard();
-      }
-
-      // Handle individual checkbox clicks
+      // Handle radio button selection
       document.addEventListener('click', function(e) {
         const picker = document.getElementById('entityPicker');
         
@@ -1615,37 +1626,34 @@
           return;
         }
 
-        // Handle entity option clicks (but not Select All - that has its own handler)
+        // Handle entity option clicks
         const option = e.target.closest('.entity-option[data-value]');
         if (option) {
           e.stopPropagation();
-          const cb = option.querySelector('input');
-          cb.checked = !cb.checked;
-          option.classList.toggle('selected', cb.checked);
+          const radio = option.querySelector('input[type="radio"]');
+          radio.checked = true;
           
-          // Update "Select All" state
-          const allBoxes = document.querySelectorAll('#entityDropdown .entity-option[data-value] input');
-          const allChecked = Array.from(allBoxes).every(b => b.checked);
-          document.getElementById('chk-all').checked = allChecked;
-          
-          // Ensure at least one is selected
-          const selected = getSelectedEntities();
-          if (selected.length === 0) {
-            cb.checked = true;
-            option.classList.add('selected');
-            return;
-          }
+          // Update selected styling
+          document.querySelectorAll('#entityDropdown .entity-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+          option.classList.add('selected');
           
           updateEntityPickerLabel();
+          
+          // Close dropdown after selection
+          picker.classList.remove('open');
+          
           loadDashboard();
         }
       });
 
       function updateEntityPickerLabel() {
-        const selected = getSelectedEntities();
+        const entity = getSelectedEntity();
         const label = document.getElementById('entityPickerLabel');
         
         const entityDisplay = {
+          'ALL': '📊 All Entities',
           'Mining': '⛏️ Mining',
           'Aboriginal Corporation': '🏛️ Aboriginal Corp',
           'Enterprises': '🏢 Enterprises',
@@ -1655,14 +1663,7 @@
           'Marrin': '🏗️ Marrin Square'
         };
 
-        if (selected.length === 7) {
-          label.innerHTML = '📊 All Entities <span class="entity-count-badge">7</span>';
-        } else if (selected.length === 1) {
-          label.textContent = entityDisplay[selected[0]] || selected[0];
-        } else {
-          const firstName = entityDisplay[selected[0]]?.split(' ').slice(1).join(' ') || selected[0];
-          label.innerHTML = `${entityDisplay[selected[0]]?.charAt(0) || '📊'} ${firstName} <span class="entity-count-badge">+${selected.length - 1}</span>`;
-        }
+        label.textContent = entityDisplay[entity] || entity;
       }
 
       // Store loaded data globally
@@ -1730,16 +1731,14 @@
           'Marrin': 'Marrin Square'
         };
 
-        if (selectedEntities.length === 7) {
+        if (entity === 'ALL') {
           document.querySelector('.header h1').textContent = '📊 All RAC Entities - Executive Dashboard';
-        } else if (selectedEntities.length > 1) {
-          document.querySelector('.header h1').textContent = '📊 ' + selectedEntities.length + ' Entities (Consolidated) - Executive Dashboard';
         } else {
-          document.querySelector('.header h1').textContent = '⛏️ ' + (entityNames[selectedEntities[0]] || selectedEntities[0]) + ' - Executive Dashboard';
+          document.querySelector('.header h1').textContent = '⛏️ ' + (entityNames[entity] || entity) + ' - Executive Dashboard';
         }
 
-        // Handle consolidated view when multiple entities selected
-        if (selectedEntities.length > 1) {
+        // Handle consolidated view when ALL selected
+        if (entity === 'ALL') {
           await loadConsolidatedDashboard(quarterInfo, selectedEntities);
           return;
         }
@@ -1843,15 +1842,15 @@
 
         // Update consolidated KPIs
         document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
-        document.getElementById("kpi-cash-trend").innerHTML = `💰 ${successCount} entities`;
+        document.getElementById("kpi-cash-trend").innerHTML = `&#x1F4B0; ${successCount} entities`;
         document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
 
         const netProfit = totalRevenue - totalExpenses;
         document.getElementById("kpi-revenue").textContent = "$" + totalRevenue.toLocaleString();
-        document.getElementById("kpi-revenue-trend").textContent = "📊 Consolidated";
+        document.getElementById("kpi-revenue-trend").textContent = "\u{1F4CA} Consolidated";
         
         document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
-        document.getElementById("kpi-profit-trend").textContent = netProfit < 0 ? "⚠ Loss position" : "✓ Profitable";
+        document.getElementById("kpi-profit-trend").textContent = netProfit < 0 ? "\u26A0 Loss position" : "\u2714 Profitable";
         document.getElementById("kpi-profit-trend").className = netProfit < 0 ? "kpi-trend negative" : "kpi-trend positive";
 
         document.getElementById("kpi-receivables").textContent = "$" + totalReceivables.toLocaleString();
@@ -1866,7 +1865,7 @@
 
         // Inventory stays the same
         document.getElementById("kpi-inventory").textContent = "$3.5M";
-        document.getElementById("kpi-inventory-trend").innerHTML = "✓ Stock levels healthy";
+        document.getElementById("kpi-inventory-trend").innerHTML = "\u2714 Stock levels healthy";
 
         updateHealthStatus();
         initSparklines();
@@ -1888,7 +1887,7 @@
 
           document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
           document.getElementById("kpi-cash-trend").innerHTML = 
-            `<span>💰</span> ${data.accounts?.length || 0} accounts`;
+            `<span>&#x1F4B0;</span> ${data.accounts?.length || 0} accounts`;
           document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
           
         } catch (error) {
@@ -1962,7 +1961,7 @@
           // Update KPI cards
           document.getElementById("kpi-revenue").textContent = "$" + revenue.toLocaleString();
           document.getElementById("kpi-revenue-trend").innerHTML = 
-            revenue >= 0 ? `<span>↑</span> Period revenue` : `<span>↓</span> Negative revenue`;
+            revenue >= 0 ? `<span>\u2191</span> Period revenue` : `<span>\u2193</span> Negative revenue`;
           document.getElementById("kpi-revenue-trend").className = 
             revenue >= 0 ? "kpi-trend positive" : "kpi-trend negative";
           document.getElementById("kpi-revenue-status").className = 
@@ -1970,7 +1969,7 @@
 
           document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
           document.getElementById("kpi-profit-trend").innerHTML = 
-            netProfit >= 0 ? `<span>↑</span> Profitable` : `<span>↓</span> Loss position`;
+            netProfit >= 0 ? `<span>\u2191</span> Profitable` : `<span>\u2193</span> Loss position`;
           document.getElementById("kpi-profit-trend").className = 
             netProfit >= 0 ? "kpi-trend positive" : "kpi-trend negative";
           document.getElementById("kpi-profit-status").className = 
@@ -1996,12 +1995,15 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               organizationName: getSelectedEntity(),
-              quarter: quarterInfo.quarterCode,
+              date: quarterInfo.startDate,
+              periods: 3,
             }),
           });
           const data = await response.json();
+          console.log("Budget API response:", JSON.stringify(data).substring(0, 500));
           
           const budget = parseBudgetFromReport(data.report);
+          console.log("Parsed budget:", budget);
           const proRatedRevenue = Math.round(budget.revenue * quarterInfo.proRateFactor);
           const proRatedExpenses = Math.round(budget.expenses * quarterInfo.proRateFactor);
           const proRatedGrossProfit = proRatedRevenue - (proRatedExpenses * 0.55); // Approximate COGS
@@ -2057,27 +2059,34 @@
         let revenue = 0;
         let expenses = 0;
 
-        if (report?.Reports?.[0]?.Rows) {
-          report.Reports[0].Rows.forEach(row => {
-            if (row.RowType === "Section" && row.Rows) {
-              row.Rows.forEach(subRow => {
-                if (subRow.RowType === "SummaryRow" && subRow.Cells) {
-                  const label = subRow.Cells[0]?.Value?.toLowerCase() || "";
-                  const month1 = parseFloat(subRow.Cells[1]?.Value) || 0;
-                  const month2 = parseFloat(subRow.Cells[2]?.Value) || 0;
-                  const month3 = parseFloat(subRow.Cells[3]?.Value) || 0;
-                  const total = month1 + month2 + month3;
+        // Railway API returns: { rows: [...] } with camelCase properties
+        const rows = report?.rows || report?.Reports?.[0]?.Rows || [];
+        
+        for (const section of rows) {
+          const rowType = section.rowType || section.RowType;
+          if (rowType === "Section") {
+            const title = section.title || section.Title || "";
+            const subRows = section.rows || section.Rows || [];
+            
+            for (const r of subRows) {
+              const subType = r.rowType || r.RowType;
+              if (subType === "SummaryRow") {
+                const cells = r.cells || r.Cells || [];
+                const label = (cells[0]?.value || cells[0]?.Value || "").toLowerCase();
+                const m1 = parseFloat(cells[1]?.value || cells[1]?.Value) || 0;
+                const m2 = parseFloat(cells[2]?.value || cells[2]?.Value) || 0;
+                const m3 = parseFloat(cells[3]?.value || cells[3]?.Value) || 0;
+                const total = m1 + m2 + m3;
 
-                  if (label.includes("total income") || label.includes("total revenue")) {
-                    if (total > revenue) revenue = total;
-                  }
-                  if (label.includes("total operating expenses") || label.includes("total expenses")) {
-                    if (total > expenses) expenses = total;
-                  }
+                if (label.includes("total income") || label.includes("total revenue")) {
+                  if (total > revenue) revenue = total;
                 }
-              });
+                if (label.includes("total operating expenses") || label.includes("total expenses")) {
+                  if (total > expenses) expenses = total;
+                }
+              }
             }
-          });
+          }
         }
         return { revenue, expenses };
       }
@@ -2136,7 +2145,7 @@
           const currentPct = total > 0 ? Math.round(current / total * 100) : 0;
           const overduePct = 100 - currentPct;
           document.getElementById("kpi-receivables-trend").textContent = 
-            `${currentPct}% current • ${overduePct}% overdue`;
+            `${currentPct}% current \u2022 ${overduePct}% overdue`;
           document.getElementById("kpi-receivables-trend").className = 
             currentPct >= 70 ? "kpi-trend positive" : (currentPct >= 50 ? "kpi-trend neutral" : "kpi-trend negative");
 
@@ -2165,7 +2174,7 @@
         const totalValue = inventoryData.reduce((sum, item) => sum + item.value, 0);
 
         document.getElementById("kpi-inventory").textContent = "$" + (totalValue / 1000000).toFixed(1) + "M";
-        document.getElementById("kpi-inventory-trend").innerHTML = `<span>✓</span> Stock levels healthy`;
+        document.getElementById("kpi-inventory-trend").innerHTML = `<span>\u2714</span> Stock levels healthy`;
         document.getElementById("kpi-inventory-trend").className = "kpi-trend positive";
 
         // TODO: Restore when Inventory Status card returns (currently replaced by Key Ratios)
@@ -2229,14 +2238,14 @@
           ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
           : '-';
         
-        // Gross Margin = (Revenue - COGS) / Revenue × 100
+        // Gross Margin = (Revenue - COGS) / Revenue Ã— 100
         const revenue = Math.abs(pl.revenue || 0);
         const cogs = Math.abs(pl.cogs || 0);
         const grossMargin = revenue > 0 
           ? (((revenue - cogs) / revenue) * 100).toFixed(1) + '%'
           : '-';
         
-        // Net Profit Margin = Net Profit / Revenue × 100
+        // Net Profit Margin = Net Profit / Revenue Ã— 100
         const netProfit = pl.netProfit || 0;
         const netMargin = revenue > 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'
@@ -2506,6 +2515,7 @@
       function initTrendChart() {
         const ctx = document.getElementById('trendChart').getContext('2d');
         const monthly = window.historicalData?.monthly || [];
+        const showYTD = document.getElementById('ytdToggle')?.checked || false;
         
         // Build labels and data from snapshots
         const labels = monthly.length > 0 
@@ -2534,36 +2544,147 @@
           ? monthly.map(m => parseFloat(m.net_profit))
           : [35000, 15000, -5000, -12000, -8000, actualProfit];
         profitData[profitData.length - 1] = actualProfit;
+
+        // Calculate YTD cumulative totals
+        const ytdRevenue = [], ytdExpenses = [], ytdProfit = [];
+        let cumRev = 0, cumExp = 0, cumProf = 0;
+        for (let i = 0; i < revenueData.length; i++) {
+          cumRev += revenueData[i];
+          cumExp += expenseData[i];
+          cumProf += profitData[i];
+          ytdRevenue.push(cumRev);
+          ytdExpenses.push(cumExp);
+          ytdProfit.push(cumProf);
+        }
+
+        // Update YTD summary bar
+        const totalYtdRev = ytdRevenue[ytdRevenue.length - 1] || 0;
+        const totalYtdExp = ytdExpenses[ytdExpenses.length - 1] || 0;
+        const totalYtdProf = ytdProfit[ytdProfit.length - 1] || 0;
+        
+        document.getElementById('ytd-revenue').textContent = '$' + totalYtdRev.toLocaleString();
+        document.getElementById('ytd-expenses').textContent = '$' + totalYtdExp.toLocaleString();
+        
+        const ytdProfEl = document.getElementById('ytd-profit');
+        ytdProfEl.textContent = (totalYtdProf < 0 ? '-$' : '$') + Math.abs(totalYtdProf).toLocaleString();
+        ytdProfEl.style.color = totalYtdProf >= 0 ? '#107C10' : '#D13438';
         
         // Destroy if exists
         if (window.trendChartInstance) {
           window.trendChartInstance.destroy();
         }
 
+        // Build datasets - bars always, YTD lines when toggled
+        const datasets = [
+          {
+            label: 'Revenue',
+            data: revenueData,
+            backgroundColor: '#0078D4',
+            borderRadius: 4,
+            order: 2
+          },
+          {
+            label: 'Expenses',
+            data: expenseData,
+            backgroundColor: '#D13438',
+            borderRadius: 4,
+            order: 2
+          },
+          {
+            label: 'Profit',
+            data: profitData,
+            backgroundColor: '#107C10',
+            borderRadius: 4,
+            order: 2
+          }
+        ];
+
+        if (showYTD) {
+          datasets.push({
+            label: 'YTD Revenue',
+            data: ytdRevenue,
+            type: 'line',
+            borderColor: '#0078D4',
+            borderWidth: 2,
+            borderDash: [6, 3],
+            pointRadius: 3,
+            pointBackgroundColor: '#0078D4',
+            fill: false,
+            tension: 0.3,
+            yAxisID: 'y1',
+            order: 1
+          });
+          datasets.push({
+            label: 'YTD Expenses',
+            data: ytdExpenses,
+            type: 'line',
+            borderColor: '#D13438',
+            borderWidth: 2,
+            borderDash: [6, 3],
+            pointRadius: 3,
+            pointBackgroundColor: '#D13438',
+            fill: false,
+            tension: 0.3,
+            yAxisID: 'y1',
+            order: 1
+          });
+          datasets.push({
+            label: 'YTD Profit',
+            data: ytdProfit,
+            type: 'line',
+            borderColor: '#107C10',
+            borderWidth: 2,
+            borderDash: [6, 3],
+            pointRadius: 3,
+            pointBackgroundColor: '#107C10',
+            fill: false,
+            tension: 0.3,
+            yAxisID: 'y1',
+            order: 1
+          });
+        }
+
+        const scales = {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { 
+            grid: { color: '#EDEBE9' },
+            border: { display: false },
+            ticks: { 
+              font: { size: 10, weight: '500' },
+              color: '#605E5C',
+              padding: 8,
+              callback: function(value) { 
+                if (value === 0) return '$0';
+                if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+                return '$' + (value / 1000).toFixed(0) + 'K'; 
+              }
+            }
+          }
+        };
+
+        // Add second Y axis for YTD cumulative values
+        if (showYTD) {
+          scales.y1 = {
+            position: 'right',
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              font: { size: 10 },
+              color: '#8A8886',
+              callback: function(value) {
+                if (value === 0) return '$0';
+                if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+                return '$' + (value / 1000).toFixed(0) + 'K';
+              }
+            }
+          };
+        }
+
         window.trendChartInstance = new Chart(ctx, {
           type: 'bar',
           data: {
             labels: labels,
-            datasets: [
-              {
-                label: 'Revenue',
-                data: revenueData,
-                backgroundColor: '#0078D4',
-                borderRadius: 4
-              },
-              {
-                label: 'Expenses',
-                data: expenseData,
-                backgroundColor: '#D13438',
-                borderRadius: 4
-              },
-              {
-                label: 'Profit',
-                data: profitData,
-                backgroundColor: '#107C10',
-                borderRadius: 4
-              }
-            ]
+            datasets: datasets
           },
           options: {
             responsive: true,
@@ -2578,22 +2699,7 @@
                 }
               }
             },
-            scales: {
-              x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-              y: { 
-                grid: { color: '#EDEBE9' },
-                border: { display: false },
-                ticks: { 
-                  font: { size: 10, weight: '500' },
-                  color: '#605E5C',
-                  padding: 8,
-                  callback: function(value) { 
-                    if (value === 0) return '$0';
-                    return '$' + (value / 1000).toFixed(0) + 'K'; 
-                  }
-                }
-              }
-            }
+            scales: scales
           }
         });
       }
@@ -2742,7 +2848,7 @@
         
         btn.disabled = true;
         btn.classList.add('running');
-        btn.innerHTML = '⏳ Running...';
+        btn.innerHTML = '\u23F3 Running...';
         status.textContent = 'Processing...';
         status.className = 'snapshot-status';
         
@@ -2756,7 +2862,7 @@
           const result = await response.json();
           
           if (result.success) {
-            status.textContent = `✓ ${result.orgsProcessed}/${result.orgsProcessed + result.orgsFailed} orgs (${result.durationSeconds}s)`;
+            status.textContent = `\u2714 ${result.orgsProcessed}/${result.orgsProcessed + result.orgsFailed} orgs (${result.durationSeconds}s)`;
             status.className = 'snapshot-status success';
             alert(`Snapshot complete!\n\nProcessed: ${result.orgsProcessed} orgs\nFailed: ${result.orgsFailed}\nDuration: ${result.durationSeconds}s`);
 
@@ -2767,13 +2873,13 @@
           
         } catch (error) {
           console.error('Snapshot failed:', error);
-          status.textContent = '✗ Failed';
+          status.textContent = '\u2717 Failed';
           status.className = 'snapshot-status error';
           alert('Snapshot failed: ' + error.message);
         } finally {
           btn.disabled = false;
           btn.classList.remove('running');
-          btn.innerHTML = '📸 Snapshot';
+          btn.innerHTML = '&#x1F4F8; Snapshot';
         }
       }
 
