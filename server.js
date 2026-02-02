@@ -3042,6 +3042,12 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
 // Catches all Xero section types; defaults non-revenue to expense (conservative)
 function categorizeSection(sectionTitle) {
   const title = sectionTitle.toLowerCase();
+  console.log(`📋 P&L Section: "${sectionTitle}" → categorized as: ${
+    title.includes("cost of sales") || title.includes("direct cost") ? "expense (COGS)" :
+    title.includes("income") || title.includes("revenue") || title.includes("trading") || title.includes("sales") ? "revenue" :
+    title.includes("net profit") || title.includes("gross profit") || title.includes("net loss") ? "skip" : "expense (catch-all)"
+  }`);
+
   // COGS check FIRST (before revenue, because "Cost of Sales" contains "sales")
   if (title.includes("cost of sales") || title.includes("direct cost")) {
     return "expense";
