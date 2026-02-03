@@ -2129,7 +2129,8 @@
             aged90Days: days61_90,
             agedOver120Days: over90,
             total: total,
-            invoiceCount: invoices.length
+            invoiceCount: invoices.length,
+            invoices: invoices
           };
 
           document.getElementById("kpi-receivables").textContent = "$" + total.toLocaleString();
@@ -2791,24 +2792,58 @@
           `,
           receivables: `
             <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Receivables Summary</h3>
-              <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 16px;">
+              <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
                 $${(receivables.total || 0).toLocaleString()}
               </div>
+              <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                ${receivables.invoiceCount || 0} invoices • ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
+              </div>
+              
+              <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top Customers</h3>
               <table class="data-table">
-                <thead><tr><th>Age</th><th style="text-align:right">Amount</th></tr></thead>
+                <thead><tr><th>Customer</th><th style="text-align:center">Inv</th><th style="text-align:right">Amount</th></tr></thead>
                 <tbody>
-                  <tr><td>Current (0-30 days)</td><td style="text-align:right">$${(receivables.aged30Days || 0).toLocaleString()}</td></tr>
-                  <tr><td>31-60 days</td><td style="text-align:right">$${(receivables.aged60Days || 0).toLocaleString()}</td></tr>
-                  <tr><td>61-90 days</td><td style="text-align:right">$${(receivables.aged90Days || 0).toLocaleString()}</td></tr>
-                  <tr><td>90+ days</td><td style="text-align:right">$${(receivables.agedOver120Days || 0).toLocaleString()}</td></tr>
-                  <tr style="font-weight:600; background:#f5f5f5;">
-                    <td>Total Receivables</td><td style="text-align:right">$${(receivables.total || 0).toLocaleString()}</td>
-                  </tr>
+                  ${(() => {
+                    const invoices = receivables.invoices || [];
+                    const byCustomer = {};
+                    invoices.forEach(inv => {
+                      const name = inv.contact || 'Unknown';
+                      if (!byCustomer[name]) byCustomer[name] = { amount: 0, count: 0 };
+                      byCustomer[name].amount += inv.amountDue || 0;
+                      byCustomer[name].count++;
+                    });
+                    return Object.entries(byCustomer)
+                      .sort((a, b) => b[1].amount - a[1].amount)
+                      .slice(0, 10)
+                      .map(([name, data]) => `
+                        <tr>
+                          <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</td>
+                          <td style="text-align:center; color: var(--color-text-muted);">${data.count}</td>
+                          <td style="text-align:right; font-weight: 500;">$${data.amount.toLocaleString()}</td>
+                        </tr>
+                      `).join('');
+                  })()}
                 </tbody>
               </table>
-              <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 12px; color: var(--color-text-muted);">
-                ${receivables.invoiceCount || 0} outstanding invoices
+              
+              <h3 style="margin: 20px 0 12px; font-size: 14px; font-weight: 600;">Aging Summary</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div style="padding: 10px; background: #E6F4EA; border-radius: 6px;">
+                  <div style="font-size: 11px; color: var(--color-text-muted);">Current (0-30)</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-positive);">$${(receivables.aged30Days || 0).toLocaleString()}</div>
+                </div>
+                <div style="padding: 10px; background: #FFF4E5; border-radius: 6px;">
+                  <div style="font-size: 11px; color: var(--color-text-muted);">31-60 days</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">$${(receivables.aged60Days || 0).toLocaleString()}</div>
+                </div>
+                <div style="padding: 10px; background: #FFF4E5; border-radius: 6px;">
+                  <div style="font-size: 11px; color: var(--color-text-muted);">61-90 days</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">$${(receivables.aged90Days || 0).toLocaleString()}</div>
+                </div>
+                <div style="padding: 10px; background: #FDECE9; border-radius: 6px;">
+                  <div style="font-size: 11px; color: var(--color-text-muted);">90+ days</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-negative);">$${(receivables.agedOver120Days || 0).toLocaleString()}</div>
+                </div>
               </div>
             </div>
           `
