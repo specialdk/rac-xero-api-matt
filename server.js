@@ -4893,6 +4893,30 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
       }
     }
     
+    // One-time fix: Delete a specific daily_metrics row
+app.post("/api/delete-metrics-row", async (req, res) => {
+  try {
+    const { org, date } = req.body;
+    if (!org || !date) {
+      return res.status(400).json({ error: "org and date required" });
+    }
+    
+    const result = await pool.query(
+      `DELETE FROM daily_metrics WHERE org = $1 AND snapshot_date = $2`,
+      [org, date]
+    );
+    
+    res.json({ 
+      success: true, 
+      deleted: result.rowCount,
+      message: `Deleted ${result.rowCount} row(s) for ${org} @ ${date}`
+    });
+  } catch (error) {
+    console.error("Delete error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
     console.log(`ðŸ Backfill complete: ${successCount} success, ${failCount} failed out of ${results.length} total`);
     
     res.json({
