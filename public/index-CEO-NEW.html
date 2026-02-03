@@ -327,6 +327,16 @@
         display: flex;
         flex-direction: column;
         gap: var(--spacing-md);
+        margin-right: 420px;
+        transition: margin-right 0.3s ease;
+      }
+
+      body.chat-hidden .dashboard {
+        margin-right: 0;
+      }
+
+      body.chat-expanded .dashboard {
+        margin-right: 600px;
       }
 
       /* ========== KPI ROW (Top) ========== */
@@ -3146,6 +3156,7 @@
       function toggleChat() {
         const panel = document.getElementById('chatPanel');
         panel.classList.toggle('hidden');
+        document.body.classList.toggle('chat-hidden');
         if (!panel.classList.contains('hidden')) {
           updateChatContext();
           document.getElementById('chatInput').focus();
@@ -3153,7 +3164,9 @@
       }
 
       function toggleChatExpand() {
-        document.getElementById('chatPanel').classList.toggle('expanded');
+        const panel = document.getElementById('chatPanel');
+        panel.classList.toggle('expanded');
+        document.body.classList.toggle('chat-expanded');
       }
 
       function updateChatContext() {
