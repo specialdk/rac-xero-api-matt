@@ -3229,10 +3229,6 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
         totalEquity: 0,
         totalRevenue: 0,
         totalExpenses: 0,
-        currentAssets: 0,
-        nonCurrentAssets: 0,
-        currentLiabilities: 0,
-        nonCurrentLiabilities: 0,
       },
     };
 
@@ -3275,36 +3271,12 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
                 currentBalance < 0 ? Math.abs(currentBalance) : 0;
               trialBalance.assets.push(accountInfo);
               trialBalance.totals.totalAssets += currentBalance;
-              
-              // Track current vs non-current assets
-              if (sectionTitle.includes("bank")) {
-                trialBalance.totals.currentAssets += currentBalance;
-              } else if (sectionTitle.includes("current asset")) {
-                trialBalance.totals.currentAssets += currentBalance;
-              } else if (sectionTitle.includes("fixed asset")) {
-                trialBalance.totals.nonCurrentAssets += currentBalance;
-              } else if (sectionTitle.includes("non-current") || sectionTitle.includes("non current")) {
-                trialBalance.totals.nonCurrentAssets += currentBalance;
-              } else if (sectionTitle.includes("investment")) {
-                trialBalance.totals.nonCurrentAssets += currentBalance;
-              } else {
-                trialBalance.totals.currentAssets += currentBalance;
-              }
             } else if (sectionTitle.includes("liabilit")) {
               accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
               accountInfo.debit =
                 currentBalance < 0 ? Math.abs(currentBalance) : 0;
               trialBalance.liabilities.push(accountInfo);
               trialBalance.totals.totalLiabilities += currentBalance;
-              
-              // Track current vs non-current liabilities
-              if (sectionTitle.includes("current liabilit") && !sectionTitle.includes("non")) {
-                trialBalance.totals.currentLiabilities += currentBalance;
-              } else if (sectionTitle.includes("non-current") || sectionTitle.includes("non current")) {
-                trialBalance.totals.nonCurrentLiabilities += currentBalance;
-              } else {
-                trialBalance.totals.currentLiabilities += currentBalance;
-              }
             } else if (sectionTitle.includes("equity")) {
               accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
               accountInfo.debit =
@@ -4961,6 +4933,128 @@ app.post("/api/delete-metrics-row", async (req, res) => {
   } catch (error) {
     console.error("Delete error:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ========== AI CHAT ENDPOINT ==========
+app.post("/api/ai-chat", async (req, res) => {
+  try {
+    const { message, context, history } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    // Check for Anthropic API key
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicApiKey) {
+      console.log("AI Chat: No API key configured, using local analysis");
+      return res.json({ 
+        response: "AI analysis is not configured. Please add ANTHROPIC_API_KEY to your environment variables.",
+        source: "fallback"
+      });
+    }
+
+    // Build system prompt with financial context
+    const entityName = context?.entity || "Unknown Entity";
+    const period = context?.period || "Current Period";
+    const metrics = context?.metrics || {};
+
+    const systemPrompt = `You are an expert financial analyst assistant for RAC (Rirratjingu Aboriginal Corporation), an Australian mining company. You have access to real-time financial data from their Xero accounting system.
+
+CURRENT CONTEXT:
+- Entity: ${entityName}
+- Period: ${period}
+- Fiscal Year: FY25/26 (July 2025 - June 2026)
+
+CURRENT FINANCIAL METRICS:
+- Revenue: $${(metrics.revenue || 0).toLocaleString()}
+- Cost of Goods Sold: $${(metrics.cogs || 0).toLocaleString()}
+- Gross Profit: $${(metrics.grossProfit || 0).toLocaleString()}
+- Operating Expenses: $${(metrics.opex || 0).toLocaleString()}
+- Net Profit: $${(metrics.netProfit || 0).toLocaleString()}
+
+BALANCE SHEET:
+- Total Assets: $${(metrics.totalAssets || 0).toLocaleString()}
+- Current Assets: $${(metrics.currentAssets || 0).toLocaleString()}
+- Total Liabilities: $${(metrics.totalLiabilities || 0).toLocaleString()}
+- Current Liabilities: $${(metrics.currentLiabilities || 0).toLocaleString()}
+- Total Equity: $${(metrics.totalEquity || 0).toLocaleString()}
+
+LIQUIDITY:
+- Cash Position: $${(metrics.cashPosition || 0).toLocaleString()}
+- Total Receivables: $${(metrics.receivablesTotal || 0).toLocaleString()}
+- Overdue Receivables: $${(metrics.receivablesOverdue || 0).toLocaleString()}
+
+INSTRUCTIONS:
+1. Provide clear, actionable financial insights based on the data
+2. Use specific numbers from the metrics when answering
+3. If profit is negative, explain potential causes and suggest areas to investigate
+4. Keep responses concise but thorough (2-4 paragraphs max)
+5. Use bullet points for lists
+6. Highlight important figures in bold using <strong> tags
+7. If asked about data you don't have, acknowledge the limitation
+8. Be professional but conversational in tone`;
+
+    // Build messages array
+    const messages = [];
+    
+    // Add conversation history if provided
+    if (history && Array.isArray(history)) {
+      history.forEach(msg => {
+        if (msg.role === 'user' || msg.role === 'assistant') {
+          messages.push({
+            role: msg.role,
+            content: msg.content
+          });
+        }
+      });
+    }
+    
+    // Add current message
+    messages.push({
+      role: "user",
+      content: message
+    });
+
+    // Call Anthropic API
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": anthropicApiKey,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: messages
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Anthropic API error:", response.status, errorText);
+      throw new Error(`Anthropic API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const aiResponse = data.content?.[0]?.text || "I couldn't generate a response.";
+
+    res.json({ 
+      response: aiResponse,
+      source: "anthropic",
+      model: "claude-sonnet-4-20250514"
+    });
+
+  } catch (error) {
+    console.error("AI Chat error:", error);
+    res.status(500).json({ 
+      error: "AI service error",
+      message: error.message,
+      response: "I'm having trouble connecting to the AI service. Please try again in a moment."
+    });
   }
 });
 
