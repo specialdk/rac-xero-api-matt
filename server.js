@@ -588,8 +588,10 @@ app.get("/api/outstanding-invoices/:tenantId", async (req, res) => {
     const invoices = response.body.invoices || [];
 
     const outstandingInvoices = invoices.filter(
-      (inv) => inv.status === "AUTHORISED" && parseFloat(inv.amountDue) > 0
-    );
+     (inv) => inv.status === "AUTHORISED" && 
+              inv.type === "ACCREC" && 
+              parseFloat(inv.amountDue) > 0
+   );
 
     res.json(
       outstandingInvoices.map((inv) => ({
