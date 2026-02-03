@@ -1543,6 +1543,12 @@
                   <span class="budget-actual" id="aged-90plus">$0</span>
                 </div>
               </div>
+              <div class="budget-item" style="border-top: 2px solid var(--color-border); margin-top: 8px; padding-top: 8px;">
+                <div class="budget-item-header">
+                  <span class="budget-item-label" style="font-weight: 600;">Total</span>
+                  <span class="budget-actual" id="aged-total" style="font-weight: 600;">$0</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2264,6 +2270,7 @@
         document.getElementById('aged-31-60').textContent = '$' + (receivables.aged60Days || 0).toLocaleString();
         document.getElementById('aged-61-90').textContent = '$' + (receivables.aged90Days || 0).toLocaleString();
         document.getElementById('aged-90plus').textContent = '$' + (receivables.agedOver120Days || 0).toLocaleString();
+        document.getElementById('aged-total').textContent = '$' + (receivables.total || 0).toLocaleString();
         document.getElementById('aged-subtitle').textContent = (receivables.invoiceCount || 0) + ' invoices outstanding';
       }
 
@@ -2780,6 +2787,29 @@
                   <tr><td>Debt to Equity</td><td style="text-align:right">${balance.totalLiabilities && balance.totalEquity ? (balance.totalLiabilities / balance.totalEquity).toFixed(2) : 'N/A'}</td></tr>
                 </tbody>
               </table>
+            </div>
+          `,
+          receivables: `
+            <div style="padding: 16px 0;">
+              <h3 style="margin-bottom: 16px; font-size: 15px;">Receivables Summary</h3>
+              <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 16px;">
+                $${(receivables.total || 0).toLocaleString()}
+              </div>
+              <table class="data-table">
+                <thead><tr><th>Age</th><th style="text-align:right">Amount</th></tr></thead>
+                <tbody>
+                  <tr><td>Current (0-30 days)</td><td style="text-align:right">$${(receivables.aged30Days || 0).toLocaleString()}</td></tr>
+                  <tr><td>31-60 days</td><td style="text-align:right">$${(receivables.aged60Days || 0).toLocaleString()}</td></tr>
+                  <tr><td>61-90 days</td><td style="text-align:right">$${(receivables.aged90Days || 0).toLocaleString()}</td></tr>
+                  <tr><td>90+ days</td><td style="text-align:right">$${(receivables.agedOver120Days || 0).toLocaleString()}</td></tr>
+                  <tr style="font-weight:600; background:#f5f5f5;">
+                    <td>Total Receivables</td><td style="text-align:right">$${(receivables.total || 0).toLocaleString()}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 12px; color: var(--color-text-muted);">
+                ${receivables.invoiceCount || 0} outstanding invoices
+              </div>
             </div>
           `
         };
