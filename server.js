@@ -4843,7 +4843,7 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
                 cashPosition += balance;
                 totalAssets += balance;
               } else if (sectionTitle.includes('asset')) {
-                if (accountName === 'Trade Debtors' || accountName.toLowerCase().includes('receivable')) {
+               if (accountName === 'Trade Debtors') {
                   receivablesTotal += balance;
                 }
                 totalAssets += balance;
