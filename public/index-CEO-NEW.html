@@ -1461,6 +1461,18 @@
                   <span class="budget-actual" id="ratio-debt-equity">-</span>
                 </div>
               </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Return on Equity</span>
+                  <span class="budget-actual" id="ratio-roe">-</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Working Capital</span>
+                  <span class="budget-actual" id="ratio-working-capital">-</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1491,14 +1503,38 @@
             <div class="card-content">
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label">Total Assets</span>
+                  <span class="budget-item-label">Assets</span>
                   <span class="budget-actual" id="bs-assets">$0</span>
                 </div>
               </div>
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label">Total Liabilities</span>
+                  <span class="budget-item-label">  Current Assets</span>
+                  <span class="budget-actual" id="bs-current-assets">$0</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">  Non-Current Assets</span>
+                  <span class="budget-actual" id="bs-noncurrent-assets">$0</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Liabilities</span>
                   <span class="budget-actual" id="bs-liabilities">$0</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">  Current Liabilities</span>
+                  <span class="budget-actual" id="bs-current-liabilities">$0</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">  Non-Current Liabilities</span>
+                  <span class="budget-actual" id="bs-noncurrent-liabilities">$0</span>
                 </div>
               </div>
               <div class="budget-item" style="background: #E8F5E9; margin: 0 -16px; padding: 10px 16px;">
@@ -2226,19 +2262,21 @@
         const pl = window.dashboardData.pl;
         const balance = window.dashboardData.balance;
 
-        // Current Ratio = Current Assets / Current Liabilities (simplified using totals)
-        const currentRatio = balance.totalLiabilities > 0 
-          ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
+        // Current Ratio = Current Assets / Current Liabilities (PROPER formula)
+        const currentAssets = (balance.currentAssets || 0);
+        const currentLiabilities = (balance.currentLiabilities || 0);
+        const currentRatio = currentLiabilities > 0 
+          ? (currentAssets / currentLiabilities).toFixed(2) 
           : '-';
         
-        // Gross Margin = (Revenue - COGS) / Revenue Ãƒâ€” 100
+        // Gross Margin = (Revenue - COGS) / Revenue * 100
         const revenue = Math.abs(pl.revenue || 0);
         const cogs = Math.abs(pl.cogs || 0);
         const grossMargin = revenue > 0 
           ? (((revenue - cogs) / revenue) * 100).toFixed(1) + '%'
           : '-';
         
-        // Net Profit Margin = Net Profit / Revenue Ãƒâ€” 100
+        // Net Profit Margin = Net Profit / Revenue * 100
         const netProfit = pl.netProfit || 0;
         const netMargin = revenue > 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'
@@ -2248,12 +2286,23 @@
         const debtEquity = balance.totalEquity > 0 
           ? (balance.totalLiabilities / balance.totalEquity).toFixed(2)
           : '-';
+        
+        // Return on Equity (ROE) = Net Profit / Total Equity * 100
+        const roe = balance.totalEquity > 0 
+          ? ((netProfit / balance.totalEquity) * 100).toFixed(1) + '%'
+          : '-';
+        
+        // Working Capital = Current Assets - Current Liabilities
+        const workingCapital = currentAssets - currentLiabilities;
+        const workingCapitalFormatted = '$' + workingCapital.toLocaleString();
 
         // Update DOM
         document.getElementById('ratio-current').textContent = currentRatio;
         document.getElementById('ratio-gross-margin').textContent = grossMargin;
         document.getElementById('ratio-net-margin').textContent = netMargin;
         document.getElementById('ratio-debt-equity').textContent = debtEquity;
+        document.getElementById('ratio-roe').textContent = roe;
+        document.getElementById('ratio-working-capital').textContent = workingCapitalFormatted;
       }
         
         // ========== UPDATE BALANCE SHEET & AGED CARDS ==========
@@ -2261,11 +2310,18 @@
         const balance = window.dashboardData.balance;
         const receivables = window.dashboardData.receivables;
 
-        // Balance Sheet card
+        // Balance Sheet card - Totals
         document.getElementById('bs-assets').textContent = '$' + (balance.totalAssets || 0).toLocaleString();
         document.getElementById('bs-liabilities').textContent = '$' + (balance.totalLiabilities || 0).toLocaleString();
         document.getElementById('bs-equity').textContent = '$' + (balance.totalEquity || 0).toLocaleString();
+        
+        // Balance Sheet card - Current/Non-current breakdown
+        document.getElementById('bs-current-assets').textContent = '$' + (balance.currentAssets || 0).toLocaleString();
+        document.getElementById('bs-noncurrent-assets').textContent = '$' + (balance.nonCurrentAssets || 0).toLocaleString();
+        document.getElementById('bs-current-liabilities').textContent = '$' + (balance.currentLiabilities || 0).toLocaleString();
+        document.getElementById('bs-noncurrent-liabilities').textContent = '$' + (balance.nonCurrentLiabilities || 0).toLocaleString();
 
+        // Aged Debtors card
         // Aged Debtors card
         document.getElementById('aged-current').textContent = '$' + (receivables.aged30Days || 0).toLocaleString();
         document.getElementById('aged-31-60').textContent = '$' + (receivables.aged60Days || 0).toLocaleString();
@@ -2796,7 +2852,7 @@
                 $${(receivables.total || 0).toLocaleString()}
               </div>
               <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
-                ${receivables.invoiceCount || 0} invoices • ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
+                ${receivables.invoiceCount || 0} invoices â€¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
               </div>
               
               <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top Customers</h3>
