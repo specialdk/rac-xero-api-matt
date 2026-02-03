@@ -950,7 +950,7 @@
         width: 420px;
         background: var(--bg-card);
         border-left: 1px solid var(--color-border);
-        display: none;
+        display: flex;
         flex-direction: column;
         position: fixed;
         right: 0;
@@ -961,8 +961,8 @@
         transition: width 0.3s ease;
       }
 
-      .chat-panel.active {
-        display: flex;
+      .chat-panel.hidden {
+        display: none;
       }
 
       .chat-panel.expanded {
@@ -986,7 +986,7 @@
       }
 
       .chat-header h3 {
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 600;
         margin: 0;
       }
@@ -1027,10 +1027,10 @@
       }
 
       .chat-context-bar {
-        padding: 8px 12px;
+        padding: 10px 14px;
         background: #F8F9FA;
         border-bottom: 1px solid var(--color-border);
-        font-size: 11px;
+        font-size: 12px;
         color: var(--color-text-secondary);
         display: flex;
         align-items: center;
@@ -1061,7 +1061,7 @@
         max-width: 90%;
         padding: 12px 16px;
         border-radius: 12px;
-        font-size: 13px;
+        font-size: 14px;
         line-height: 1.5;
         position: relative;
       }
@@ -1083,7 +1083,7 @@
       }
 
       .chat-message-time {
-        font-size: 10px;
+        font-size: 11px;
         opacity: 0.6;
         margin-top: 6px;
         display: block;
@@ -1156,7 +1156,7 @@
       }
 
       .chat-suggestions-label {
-        font-size: 10px;
+        font-size: 11px;
         color: var(--color-text-muted);
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -1170,11 +1170,11 @@
       }
 
       .suggestion-chip {
-        padding: 6px 12px;
+        padding: 8px 14px;
         background: var(--bg-page);
         border: 1px solid var(--color-border);
         border-radius: 16px;
-        font-size: 11px;
+        font-size: 13px;
         color: var(--color-text-secondary);
         cursor: pointer;
         transition: all 0.2s;
@@ -1205,7 +1205,7 @@
         padding: 12px 16px;
         border: 1px solid var(--color-border);
         border-radius: 24px;
-        font-size: 13px;
+        font-size: 14px;
         outline: none;
         transition: border-color 0.2s, box-shadow 0.2s;
         resize: none;
@@ -1312,30 +1312,6 @@
 
       .ai-insight-action:hover {
         text-decoration: underline;
-      }
-
-      .chat-input {
-        flex: 1;
-        padding: 10px 14px;
-        border: 1px solid var(--color-border);
-        border-radius: 20px;
-        font-size: 13px;
-        outline: none;
-      }
-
-      .chat-input:focus {
-        border-color: var(--color-primary);
-      }
-
-      .chat-send {
-        width: 38px;
-        height: 38px;
-        background: var(--color-primary);
-        border: none;
-        border-radius: 50%;
-        color: white;
-        cursor: pointer;
-        font-size: 16px;
       }
 
       /* ========== DATA TABLE (for drawers) ========== */
@@ -3169,8 +3145,8 @@
 
       function toggleChat() {
         const panel = document.getElementById('chatPanel');
-        panel.classList.toggle('active');
-        if (panel.classList.contains('active')) {
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) {
           updateChatContext();
           document.getElementById('chatInput').focus();
         }
