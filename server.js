@@ -583,7 +583,7 @@ app.get("/api/outstanding-invoices/:tenantId", async (req, res) => {
       req.params.tenantId,
       null,
       null,
-      'Status=="AUTHORISED"'
+      'Status=="AUTHORISED"&&Type=="ACCREC"'
     );
     const invoices = response.body.invoices || [];
 
