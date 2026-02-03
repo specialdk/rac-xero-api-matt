@@ -139,7 +139,7 @@
         border: none;
         border-radius: 6px;
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
         transition: background 0.2s;
       }
@@ -155,7 +155,7 @@
         border: none;
         border-radius: 6px;
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -169,7 +169,7 @@
         border: 1px solid rgba(255,255,255,0.3);
         border-radius: 6px;
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
       }
@@ -283,7 +283,7 @@
         border: none;
         border-radius: 6px;
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
       }
 
@@ -362,7 +362,7 @@
 
       .kpi-label {
         font-size: var(--font-size-label);
-        font-weight: 500;
+        font-weight: 600;
         color: var(--color-text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -397,7 +397,7 @@
         align-items: center;
         gap: var(--spacing-xs);
         font-size: 12px;
-        font-weight: 500;
+        font-weight: 600;
       }
 
       .kpi-trend.positive { color: var(--color-positive); }
@@ -510,7 +510,7 @@
       }
 
       .budget-bar-label {
-        font-weight: 500;
+        font-weight: 600;
         color: var(--color-text-primary);
       }
 
@@ -664,7 +664,7 @@
 
       .budget-item-label {
         font-size: 15px;
-        font-weight: 500;
+        font-weight: 600;
         color: var(--color-text-primary);
       }
 
@@ -676,10 +676,10 @@
       }
 
       .budget-actual {
-        font-weight: 700;
-        font-size: var(--font-size-kpi);
-        color: var(--color-text-primary);
-      }
+  font-weight: 600;
+  font-size: var(--font-size-kpi);
+  color: var(--color-text-primary);
+}
 
       .budget-target {
         color: var(--color-text-muted);
@@ -730,7 +730,7 @@
 
       .inventory-total-value {
         font-size: 28px;
-        font-weight: 700;
+        font-weight: 600;
         color: var(--color-text-primary);
       }
 
@@ -837,7 +837,7 @@
 
       .customer-name {
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         color: var(--color-text-primary);
         white-space: nowrap;
         overflow: hidden;
@@ -1259,7 +1259,7 @@
               <div class="kpi-label">Receivables</div>
               <span class="kpi-arrow">&#x2192;</span>
             </div>
-            <div class="kpi-value smaller" id="kpi-receivables">Loading...</div>
+            <div class="kpi-value" id="kpi-receivables">Loading...</div>
             <div class="kpi-trend neutral" id="kpi-receivables-trend">--</div>
             <div class="kpi-sparkline">
               <canvas id="sparkReceivables"></canvas>
@@ -1409,7 +1409,7 @@
               </div>
               <div class="budget-item" style="background: #FFFBEB; margin: 0 -16px; padding: 10px 16px;">
                 <div class="budget-item-header">
-                  <span class="budget-item-label"><strong>Gross Profit</strong></span>
+                  <span class="budget-item-label">Gross Profit</span>
                   <span class="budget-actual" id="pl-gross">$0</span>
                 </div>
               </div>
@@ -1421,7 +1421,7 @@
               </div>
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label"><strong>Net Profit</strong></span>
+                  <span class="budget-item-label">Net Profit</span>
                <span class="budget-actual" id="pl-net">$0</span>
                 </div>
               </div>
@@ -1461,18 +1461,6 @@
                   <span class="budget-actual" id="ratio-debt-equity">-</span>
                 </div>
               </div>
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Return on Equity</span>
-                  <span class="budget-actual" id="ratio-roe">-</span>
-                </div>
-              </div>
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Working Capital</span>
-                  <span class="budget-actual" id="ratio-working-capital">-</span>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -1503,38 +1491,14 @@
             <div class="card-content">
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label" style="font-weight: 600;">Assets</span>
+                  <span class="budget-item-label">Total Assets</span>
                   <span class="budget-actual" id="bs-assets">$0</span>
-                </div>
-              </div>
-              <div class="budget-item" style="padding-left: 12px; font-size: 12px; opacity: 0.85;">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Current Assets</span>
-                  <span class="budget-actual" id="bs-current-assets">$0</span>
-                </div>
-              </div>
-              <div class="budget-item" style="padding-left: 12px; font-size: 12px; opacity: 0.85;">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Non-Current Assets</span>
-                  <span class="budget-actual" id="bs-noncurrent-assets">$0</span>
                 </div>
               </div>
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label" style="font-weight: 600;">Liabilities</span>
+                  <span class="budget-item-label">Total Liabilities</span>
                   <span class="budget-actual" id="bs-liabilities">$0</span>
-                </div>
-              </div>
-              <div class="budget-item" style="padding-left: 12px; font-size: 12px; opacity: 0.85;">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Current Liabilities</span>
-                  <span class="budget-actual" id="bs-current-liabilities">$0</span>
-                </div>
-              </div>
-              <div class="budget-item" style="padding-left: 12px; font-size: 12px; opacity: 0.85;">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Non-Current Liabilities</span>
-                  <span class="budget-actual" id="bs-noncurrent-liabilities">$0</span>
                 </div>
               </div>
               <div class="budget-item" style="background: #E8F5E9; margin: 0 -16px; padding: 10px 16px;">
@@ -1577,6 +1541,12 @@
                 <div class="budget-item-header">
                   <span class="budget-item-label">90+ days</span>
                   <span class="budget-actual" id="aged-90plus">$0</span>
+                </div>
+              </div>
+              <div class="budget-item" style="border-top: 2px solid var(--color-border); margin-top: 8px; padding-top: 8px;">
+                <div class="budget-item-header">
+                  <span class="budget-item-label" style="font-weight: 600;">Total</span>
+                  <span class="budget-actual" id="aged-total" style="font-weight: 600;">$0</span>
                 </div>
               </div>
             </div>
@@ -2159,7 +2129,8 @@
             aged90Days: days61_90,
             agedOver120Days: over90,
             total: total,
-            invoiceCount: invoices.length
+            invoiceCount: invoices.length,
+            invoices: invoices
           };
 
           document.getElementById("kpi-receivables").textContent = "$" + total.toLocaleString();
@@ -2255,21 +2226,19 @@
         const pl = window.dashboardData.pl;
         const balance = window.dashboardData.balance;
 
-        // Current Ratio = Current Assets / Current Liabilities (PROPER formula)
-        const currentAssets = (balance.currentAssets || 0);
-        const currentLiabilities = (balance.currentLiabilities || 0);
-        const currentRatio = currentLiabilities > 0 
-          ? (currentAssets / currentLiabilities).toFixed(2) 
+        // Current Ratio = Current Assets / Current Liabilities (simplified using totals)
+        const currentRatio = balance.totalLiabilities > 0 
+          ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
           : '-';
         
-        // Gross Margin = (Revenue - COGS) / Revenue * 100
+        // Gross Margin = (Revenue - COGS) / Revenue Ãƒâ€” 100
         const revenue = Math.abs(pl.revenue || 0);
         const cogs = Math.abs(pl.cogs || 0);
         const grossMargin = revenue > 0 
           ? (((revenue - cogs) / revenue) * 100).toFixed(1) + '%'
           : '-';
         
-        // Net Profit Margin = Net Profit / Revenue * 100
+        // Net Profit Margin = Net Profit / Revenue Ãƒâ€” 100
         const netProfit = pl.netProfit || 0;
         const netMargin = revenue > 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'
@@ -2279,46 +2248,30 @@
         const debtEquity = balance.totalEquity > 0 
           ? (balance.totalLiabilities / balance.totalEquity).toFixed(2)
           : '-';
-        
-        // Return on Equity (ROE) = Net Profit / Total Equity * 100
-        const roe = balance.totalEquity > 0 
-          ? ((netProfit / balance.totalEquity) * 100).toFixed(1) + '%'
-          : '-';
-        
-        // Working Capital = Current Assets - Current Liabilities
-        const workingCapital = currentAssets - currentLiabilities;
-        const workingCapitalFormatted = '$' + workingCapital.toLocaleString();
 
         // Update DOM
         document.getElementById('ratio-current').textContent = currentRatio;
         document.getElementById('ratio-gross-margin').textContent = grossMargin;
         document.getElementById('ratio-net-margin').textContent = netMargin;
         document.getElementById('ratio-debt-equity').textContent = debtEquity;
-        document.getElementById('ratio-roe').textContent = roe;
-        document.getElementById('ratio-working-capital').textContent = workingCapitalFormatted;
       }
         
-      // ========== UPDATE BALANCE SHEET & AGED CARDS ==========
+        // ========== UPDATE BALANCE SHEET & AGED CARDS ==========
       function updateSummaryCards() {
         const balance = window.dashboardData.balance;
         const receivables = window.dashboardData.receivables;
 
-        // Balance Sheet card - Totals
+        // Balance Sheet card
         document.getElementById('bs-assets').textContent = '$' + (balance.totalAssets || 0).toLocaleString();
         document.getElementById('bs-liabilities').textContent = '$' + (balance.totalLiabilities || 0).toLocaleString();
         document.getElementById('bs-equity').textContent = '$' + (balance.totalEquity || 0).toLocaleString();
-        
-        // Balance Sheet card - Current/Non-current breakdown
-        document.getElementById('bs-current-assets').textContent = '$' + (balance.currentAssets || 0).toLocaleString();
-        document.getElementById('bs-noncurrent-assets').textContent = '$' + (balance.nonCurrentAssets || 0).toLocaleString();
-        document.getElementById('bs-current-liabilities').textContent = '$' + (balance.currentLiabilities || 0).toLocaleString();
-        document.getElementById('bs-noncurrent-liabilities').textContent = '$' + (balance.nonCurrentLiabilities || 0).toLocaleString();
 
         // Aged Debtors card
         document.getElementById('aged-current').textContent = '$' + (receivables.aged30Days || 0).toLocaleString();
         document.getElementById('aged-31-60').textContent = '$' + (receivables.aged60Days || 0).toLocaleString();
         document.getElementById('aged-61-90').textContent = '$' + (receivables.aged90Days || 0).toLocaleString();
         document.getElementById('aged-90plus').textContent = '$' + (receivables.agedOver120Days || 0).toLocaleString();
+        document.getElementById('aged-total').textContent = '$' + (receivables.total || 0).toLocaleString();
         document.getElementById('aged-subtitle').textContent = (receivables.invoiceCount || 0) + ' invoices outstanding';
       }
 
@@ -2835,6 +2788,63 @@
                   <tr><td>Debt to Equity</td><td style="text-align:right">${balance.totalLiabilities && balance.totalEquity ? (balance.totalLiabilities / balance.totalEquity).toFixed(2) : 'N/A'}</td></tr>
                 </tbody>
               </table>
+            </div>
+          `,
+          receivables: `
+            <div style="padding: 16px 0;">
+              <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
+                $${(receivables.total || 0).toLocaleString()}
+              </div>
+              <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                ${receivables.invoiceCount || 0} invoices • ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
+              </div>
+              
+              <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top Customers</h3>
+              <table class="data-table">
+                <thead><tr><th>Customer</th><th style="text-align:center">Inv</th><th style="text-align:right">Amount</th></tr></thead>
+                <tbody>
+                  ${(() => {
+                    const invoices = receivables.invoices || [];
+                    const byCustomer = {};
+                    invoices.forEach(inv => {
+                      const name = inv.contact || 'Unknown';
+                      if (!byCustomer[name]) byCustomer[name] = { amount: 0, count: 0 };
+                      byCustomer[name].amount += inv.amountDue || 0;
+                      byCustomer[name].count++;
+                    });
+                    return Object.entries(byCustomer)
+                      .sort((a, b) => b[1].amount - a[1].amount)
+                      .slice(0, 10)
+                      .map(([name, data]) => `
+                        <tr>
+                          <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</td>
+                          <td style="text-align:center; color: var(--color-text-muted);">${data.count}</td>
+                          <td style="text-align:right; font-weight: 600;">$${data.amount.toLocaleString()}</td>
+                        </tr>
+                      `).join('');
+                  })()}
+                </tbody>
+              </table>
+              
+              <h3 style="margin: 20px 0 12px; font-size: 14px; font-weight: 600;">Aging Summary</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div style="padding: 10px; background: #E6F4EA; border-radius: 6px;">
+                  <div style="font-size: 11px; color: var(--color-text-muted);">Current (0-30)</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-positive);">$${(receivables.aged30Days || 0).toLocaleString()}</div>
+                </div>
+                <div style="padding: 10px; background: #FFF4E5; border-radius: 6px;">
+                  <div style="font-size: 11px; color: var(--color-text-muted);">31-60 days</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">$${(receivables.aged60Days || 0).toLocaleString()}</div>
+                </div>
+                <div style="padding: 10px; background: #FFF4E5; border-radius: 6px;">
+                  <div style="font-size: 11px; color: var(--color-text-muted);">61-90 days</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">$${(receivables.aged90Days || 0).toLocaleString()}</div>
+                </div>
+                <div style="padding: 10px; background: #FDECE9; border-radius: 6px;">
+                  <div style="font-size: 11px; color: var(--color-text-muted);">90+ days</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-negative);">$${(receivables.agedOver120Days || 0).toLocaleString()}</div>
+                </div>
+              </div>
             </div>
           `
         };
