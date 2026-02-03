@@ -4893,7 +4893,26 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
       }
     }
     
-    // One-time fix: Delete a specific daily_metrics row
+    console.log(`ðŸ Backfill complete: ${successCount} success, ${failCount} failed out of ${results.length} total`);
+    
+    res.json({
+      message: 'Monthly balance backfill complete',
+      summary: { 
+        total: results.length, 
+        success: successCount, 
+        failed: failCount,
+        skipped: results.filter(r => r.status === 'skipped').length
+      },
+      results
+    });
+    
+  } catch (error) {
+    console.error("âŒ Backfill error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// One-time fix: Delete a specific daily_metrics row
 app.post("/api/delete-metrics-row", async (req, res) => {
   try {
     const { org, date } = req.body;
@@ -4916,27 +4935,6 @@ app.post("/api/delete-metrics-row", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-    console.log(`ðŸ Backfill complete: ${successCount} success, ${failCount} failed out of ${results.length} total`);
-    
-    res.json({
-      message: 'Monthly balance backfill complete',
-      summary: { 
-        total: results.length, 
-        success: successCount, 
-        failed: failCount,
-        skipped: results.filter(r => r.status === 'skipped').length
-      },
-      results
-    });
-    
-  } catch (error) {
-    console.error("âŒ Backfill error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
 
 // Initialize database and start server
 async function startServer() {
@@ -4964,5 +4962,6 @@ async function startServer() {
     process.exit(1);
   }
 }
+
 
 startServer();
