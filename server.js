@@ -5032,7 +5032,7 @@ app.get("/api/reversal-journals/:tenantId", async (req, res) => {
           }
 
           if (plCategory === "revenue") {
-            revenueAdjustment += -lineAmount;
+            revenueAdjustment += lineAmount;
           } else if (plCategory === "cogs") {
             cogsAdjustment += lineAmount;
           } else if (plCategory === "expense") {
