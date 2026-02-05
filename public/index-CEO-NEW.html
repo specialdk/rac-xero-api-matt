@@ -2273,6 +2273,29 @@
         document.getElementById("kpi-receivables").textContent = "$" + totalReceivables.toLocaleString();
         document.getElementById("kpi-receivables-trend").textContent = `${allInvoices.length} invoices across all entities`;
 
+        // Store consolidated receivables for drawer (calculate aging from allInvoices)
+        let arCurrent = 0, ar31_60 = 0, ar61_90 = 0, arOver90 = 0;
+        const now = new Date();
+        allInvoices.forEach(inv => {
+          const amount = inv.amountDue || 0;
+          const dueDate = inv.dueDate ? new Date(inv.dueDate) : now;
+          const daysOverdue = Math.max(0, Math.floor((now - dueDate) / (1000 * 60 * 60 * 24)));
+          if (daysOverdue <= 30) arCurrent += amount;
+          else if (daysOverdue <= 60) ar31_60 += amount;
+          else if (daysOverdue <= 90) ar61_90 += amount;
+          else arOver90 += amount;
+        });
+        window.dashboardData.receivables = {
+          aged30Days: arCurrent,
+          aged60Days: ar31_60,
+          aged90Days: ar61_90,
+          agedOver120Days: arOver90,
+          total: totalReceivables,
+          invoiceCount: allInvoices.length,
+          invoices: allInvoices,
+          isConsolidated: true
+        };
+
         // Store for other functions (with entity breakdown for sidecard)
         window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, netProfit: netProfit, entityBreakdown: allEntityPL, isConsolidated: true };
 
