@@ -2171,8 +2171,10 @@
         let totalCash = 0;
         let totalRevenue = 0;
         let totalExpenses = 0;
+        let totalCogs = 0;
         let totalReceivables = 0;
         let allInvoices = [];
+        let allBankAccounts = [];
         let successCount = 0;
 
         document.getElementById("kpi-cash").textContent = "Loading...";
@@ -2192,6 +2194,13 @@
               totalCash += cashData.totalCash;
               successCount++;
             }
+            // Collect bank accounts tagged with entity name
+            if (cashData.bankAccounts) {
+              const entityDisplay = { 'Mining': 'Mining', 'Aboriginal Corporation': 'Aboriginal Corp', 'Enterprises': 'Enterprises', 'Property': 'Property Mgmt', 'Ngarrkuwuy': 'Ngarrkuwuy', 'Invest': 'Miliditjpi Trust', 'Marrin': 'Marrin Square' };
+              cashData.bankAccounts.forEach(acc => {
+                allBankAccounts.push({ name: acc.name, balance: acc.balance, entity: entityDisplay[entity] || entity });
+              });
+            }
 
             // P&L
             const plResp = await fetch(`${API_BASE}/api/profit-loss-summary`, {
@@ -2207,6 +2216,7 @@
             });
             const plData = await plResp.json();
             totalRevenue += plData.summary?.totalRevenue || 0;
+            totalCogs += plData.summary?.totalCOGS || 0;
             totalExpenses += plData.summary?.totalExpenses || 0;
 
             // Invoices
@@ -2230,7 +2240,11 @@
         document.getElementById("kpi-cash-trend").innerHTML = `&#x1F4B0; ${successCount} entities`;
         document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
 
-        const netProfit = totalRevenue - totalExpenses;
+        // Store consolidated cash for drawer
+        window.dashboardData.cash = { totalCash, bankAccounts: allBankAccounts, isConsolidated: true };
+
+        const grossProfit = totalRevenue - totalCogs;
+        const netProfit = grossProfit - totalExpenses;
         document.getElementById("kpi-revenue").textContent = "$" + totalRevenue.toLocaleString();
         document.getElementById("kpi-revenue-trend").textContent = "\u{1F4CA} Consolidated";
         
@@ -2242,10 +2256,13 @@
         document.getElementById("kpi-receivables-trend").textContent = `${allInvoices.length} invoices across all entities`;
 
         // Store for other functions
-        window.dashboardData.pl = { revenue: totalRevenue, netProfit: netProfit };
+        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, netProfit: netProfit };
 
         // Update P&L Summary card
         document.getElementById("pl-revenue").textContent = "$" + totalRevenue.toLocaleString();
+        document.getElementById("pl-cogs").textContent = "$" + totalCogs.toLocaleString();
+        document.getElementById("pl-gross").textContent = "$" + grossProfit.toLocaleString();
+        document.getElementById("pl-opex").textContent = "$" + totalExpenses.toLocaleString();
         document.getElementById("pl-net").innerHTML = "<strong>$" + netProfit.toLocaleString() + "</strong>";
 
         // Inventory stays the same
@@ -3116,13 +3133,36 @@
         const contents = {
           cash: `
             <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Bank Accounts</h3>
-              <table class="data-table">
-                <thead><tr><th>Account</th><th style="text-align:right">Balance</th></tr></thead>
+              ${cash.isConsolidated ? (() => {
+                const grouped = {};
+                (cash.bankAccounts || []).forEach(acc => {
+                  if (!grouped[acc.entity]) grouped[acc.entity] = { accounts: [], subtotal: 0 };
+                  grouped[acc.entity].accounts.push(acc);
+                  grouped[acc.entity].subtotal += acc.balance || 0;
+                });
+                return Object.entries(grouped).map(([entity, data]) => `
+                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} — $${data.subtotal.toLocaleString()}</h3>
+                  <table class="data-table" style="margin-bottom: 12px;">
+                    <tbody>
+                      ${data.accounts.map(acc => `
+                        <tr><td style="padding-left:12px; font-size:13px;">${acc.name}</td><td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td></tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                `).join('');
+              })() : `
+                <h3 style="margin-bottom: 16px; font-size: 15px;">Bank Accounts</h3>
+                <table class="data-table">
+                  <thead><tr><th>Account</th><th style="text-align:right">Balance</th></tr></thead>
+                  <tbody>
+                    ${(cash.bankAccounts || []).map(acc => `
+                      <tr><td>${acc.name}</td><td style="text-align:right">$${(acc.balance || 0).toLocaleString()}</td></tr>
+                    `).join('') || '<tr><td colspan="2">No accounts found</td></tr>'}
+                  </tbody>
+                </table>
+              `}
+              <table class="data-table" style="margin-top: 8px;">
                 <tbody>
-                  ${(cash.bankAccounts || []).map(acc => `
-                    <tr><td>${acc.name}</td><td style="text-align:right">$${(acc.balance || 0).toLocaleString()}</td></tr>
-                  `).join('') || '<tr><td colspan="2">No accounts found</td></tr>'}
                   <tr style="font-weight:600; background:#f5f5f5;">
                     <td>Total Cash</td><td style="text-align:right">$${(cash.totalCash || 0).toLocaleString()}</td>
                   </tr>

@@ -49,7 +49,7 @@
         
         /* Layout */
         --header-height: 56px;
-        --drawer-width: 420px;
+        --drawer-width: 450px;
       }
 
       * {
@@ -1092,21 +1092,13 @@
 
       /* ========== AI CHAT PANEL ========== */
       .chat-panel {
-        width: 360px;
+        width: 450px;
+        min-width: 450px;
         background: var(--bg-card);
         border-left: 1px solid var(--color-border);
-        display: none;
-        flex-direction: column;
-        position: fixed;
-        right: 0;
-        top: var(--header-height);
-        bottom: 0;
-        z-index: 50;
-        box-shadow: var(--shadow-drawer);
-      }
-
-      .chat-panel.active {
         display: flex;
+        flex-direction: column;
+        z-index: 50;
       }
 
       .chat-header {
@@ -1122,17 +1114,6 @@
       .chat-header h3 {
         font-size: 14px;
         font-weight: 600;
-      }
-
-      .chat-close {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 14px;
       }
 
       .chat-messages {
@@ -1345,7 +1326,6 @@
         <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
-        <button class="btn-chat" onclick="toggleChat()">&#x1F4AC; Ask AI</button>
         <button class="btn-dashboard" onclick="window.location.href='index.html'">&#x1F4CA; Full Dashboard</button>
       </div>
     </header>
@@ -1704,7 +1684,6 @@
       <div class="chat-panel" id="chatPanel">
         <div class="chat-header">
           <h3>&#x1F4AC; Ask about your finances</h3>
-          <button class="chat-close" onclick="toggleChat()">&times;</button>
         </div>
         <div class="chat-messages" id="chatMessages">
           <div class="chat-message assistant">
