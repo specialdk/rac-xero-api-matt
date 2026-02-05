@@ -1896,7 +1896,7 @@
             btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount">0</span>';
             // Open drawer to show "no reversals found" message
             document.getElementById('drawerTitle').textContent = 'Reversal Journals';
-            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">✅</p><p>No reversal journals found in this period.</p></div>';
+            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">âœ…</p><p>No reversal journals found in this period.</p></div>';
             document.getElementById('drawer').classList.add('active');
             document.getElementById('drawerOverlay').classList.add('active');
             return;
@@ -2175,6 +2175,7 @@
         let totalReceivables = 0;
         let allInvoices = [];
         let allBankAccounts = [];
+        let allEntityPL = [];
         let successCount = 0;
 
         document.getElementById("kpi-cash").textContent = "Loading...";
@@ -2215,9 +2216,23 @@
             }),
             });
             const plData = await plResp.json();
-            totalRevenue += plData.summary?.totalRevenue || 0;
-            totalCogs += plData.summary?.totalCOGS || 0;
-            totalExpenses += plData.summary?.totalExpenses || 0;
+            const entityRevenue = plData.summary?.totalRevenue || 0;
+            const entityCogs = plData.summary?.totalCOGS || 0;
+            const entityExpenses = plData.summary?.totalExpenses || 0;
+            totalRevenue += entityRevenue;
+            totalCogs += entityCogs;
+            totalExpenses += entityExpenses;
+
+            // Collect per-entity P&L for revenue sidecard
+            const entityDisplay = { 'Mining': 'Mining', 'Aboriginal Corporation': 'Aboriginal Corp', 'Enterprises': 'Enterprises', 'Property': 'Property Mgmt', 'Ngarrkuwuy': 'Ngarrkuwuy', 'Invest': 'Miliditjpi Trust', 'Marrin': 'Marrin Square' };
+            allEntityPL.push({
+              entity: entityDisplay[entity] || entity,
+              revenue: entityRevenue,
+              cogs: entityCogs,
+              opex: entityExpenses,
+              gross: entityRevenue - entityCogs,
+              netProfit: entityRevenue - entityCogs - entityExpenses
+            });
 
             // Invoices
             const invResp = await fetch(`${API_BASE}/api/outstanding-invoices`, {
@@ -2255,8 +2270,8 @@
         document.getElementById("kpi-receivables").textContent = "$" + totalReceivables.toLocaleString();
         document.getElementById("kpi-receivables-trend").textContent = `${allInvoices.length} invoices across all entities`;
 
-        // Store for other functions
-        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, netProfit: netProfit };
+        // Store for other functions (with entity breakdown for sidecard)
+        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, netProfit: netProfit, entityBreakdown: allEntityPL, isConsolidated: true };
 
         // Update P&L Summary card
         document.getElementById("pl-revenue").textContent = "$" + totalRevenue.toLocaleString();
@@ -2627,14 +2642,14 @@
           ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
           : '-';
         
-        // Gross Margin = (Revenue - COGS) / Revenue ÃƒÆ’Ã¢â‚¬â€ 100
+        // Gross Margin = (Revenue - COGS) / Revenue ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 100
         const revenue = Math.abs(pl.revenue || 0);
         const cogs = Math.abs(pl.cogs || 0);
         const grossMargin = revenue > 0 
           ? (((revenue - cogs) / revenue) * 100).toFixed(1) + '%'
           : '-';
         
-        // Net Profit Margin = Net Profit / Revenue ÃƒÆ’Ã¢â‚¬â€ 100
+        // Net Profit Margin = Net Profit / Revenue ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 100
         const netProfit = pl.netProfit || 0;
         const netMargin = revenue > 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'
@@ -3127,6 +3142,7 @@
 
       function getDrawerContent(type) {
         const cash = window.dashboardData.cash;
+        const pl = window.dashboardData.pl || {};
         const balance = window.dashboardData.balance;
         const receivables = window.dashboardData.receivables;
 
@@ -3141,7 +3157,7 @@
                   grouped[acc.entity].subtotal += acc.balance || 0;
                 });
                 return Object.entries(grouped).map(([entity, data]) => `
-                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} — $${data.subtotal.toLocaleString()}</h3>
+                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} â€” $${data.subtotal.toLocaleString()}</h3>
                   <table class="data-table" style="margin-bottom: 12px;">
                     <tbody>
                       ${data.accounts.map(acc => `
@@ -3168,6 +3184,68 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+          `,
+          revenue: `
+            <div style="padding: 16px 0;">
+              ${pl.isConsolidated ? (() => {
+                const breakdown = pl.entityBreakdown || [];
+                return `
+                  <h3 style="margin-bottom: 12px; font-size: 15px;">Revenue by Entity</h3>
+                  <table class="data-table" style="margin-bottom: 16px;">
+                    <thead><tr><th>Entity</th><th style="text-align:right">Revenue</th><th style="text-align:right">COGS</th><th style="text-align:right">Net Profit</th></tr></thead>
+                    <tbody>
+                      ${breakdown.map(e => `
+                        <tr>
+                          <td style="font-size:13px;">${e.entity}</td>
+                          <td style="text-align:right; font-size:13px;">$${e.revenue.toLocaleString()}</td>
+                          <td style="text-align:right; font-size:13px; color: var(--color-text-muted);">$${e.cogs.toLocaleString()}</td>
+                          <td style="text-align:right; font-size:13px; color: ${e.netProfit >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; font-weight:600;">$${e.netProfit.toLocaleString()}</td>
+                        </tr>
+                      `).join('')}
+                      <tr style="font-weight:600; background:#f5f5f5; border-top: 2px solid #ddd;">
+                        <td>Total</td>
+                        <td style="text-align:right">$${(pl.revenue || 0).toLocaleString()}</td>
+                        <td style="text-align:right; color: var(--color-text-muted);">$${(pl.cogs || 0).toLocaleString()}</td>
+                        <td style="text-align:right; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(pl.netProfit || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <h3 style="margin: 16px 0 12px; font-size: 14px; font-weight: 600;">Consolidated P&L Summary</h3>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div style="padding: 10px; background: #E6F4EA; border-radius: 6px;">
+                      <div style="font-size: 11px; color: var(--color-text-muted);">Revenue</div>
+                      <div style="font-size: 16px; font-weight: 600; color: var(--color-positive);">$${(pl.revenue || 0).toLocaleString()}</div>
+                    </div>
+                    <div style="padding: 10px; background: #FFF4E5; border-radius: 6px;">
+                      <div style="font-size: 11px; color: var(--color-text-muted);">COGS</div>
+                      <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">$${(pl.cogs || 0).toLocaleString()}</div>
+                    </div>
+                    <div style="padding: 10px; background: #E8F0FE; border-radius: 6px;">
+                      <div style="font-size: 11px; color: var(--color-text-muted);">Gross Profit</div>
+                      <div style="font-size: 16px; font-weight: 600; color: var(--color-primary);">$${(pl.gross || 0).toLocaleString()}</div>
+                    </div>
+                    <div style="padding: 10px; background: ${(pl.netProfit || 0) >= 0 ? '#E6F4EA' : '#FDECE9'}; border-radius: 6px;">
+                      <div style="font-size: 11px; color: var(--color-text-muted);">Net Profit</div>
+                      <div style="font-size: 16px; font-weight: 600; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(pl.netProfit || 0).toLocaleString()}</div>
+                    </div>
+                  </div>
+                `;
+              })() : `
+                <h3 style="margin-bottom: 16px; font-size: 15px;">P&L Breakdown</h3>
+                <table class="data-table">
+                  <tbody>
+                    <tr><td>Revenue</td><td style="text-align:right; color: var(--color-positive); font-weight:600;">$${(pl.revenue || 0).toLocaleString()}</td></tr>
+                    <tr><td>Cost of Goods Sold</td><td style="text-align:right">$${(pl.cogs || 0).toLocaleString()}</td></tr>
+                    <tr style="background:#f9f9f9;"><td style="font-weight:600;">Gross Profit</td><td style="text-align:right; font-weight:600;">$${(pl.gross || 0).toLocaleString()}</td></tr>
+                    <tr><td>Operating Expenses</td><td style="text-align:right">$${(pl.opex || 0).toLocaleString()}</td></tr>
+                    <tr style="font-weight:600; background:#f5f5f5; border-top: 2px solid #ddd;">
+                      <td>Net Profit</td>
+                      <td style="text-align:right; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(pl.netProfit || 0).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              `}
             </div>
           `,
           balance: `
@@ -3215,7 +3293,7 @@
                 $${(receivables.total || 0).toLocaleString()}
               </div>
               <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
-                ${receivables.invoiceCount || 0} invoices â€¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
+                ${receivables.invoiceCount || 0} invoices Ã¢â‚¬Â¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
               </div>
               
               <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top Customers</h3>
