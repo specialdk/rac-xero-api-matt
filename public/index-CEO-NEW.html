@@ -2232,7 +2232,9 @@
               opex: entityExpenses,
               gross: entityRevenue - entityCogs,
               netProfit: entityRevenue - entityCogs - entityExpenses,
-              revenueAccounts: plData.summary?.revenueAccounts || []
+              revenueAccounts: plData.summary?.revenueAccounts || [],
+              cogsAccounts: plData.summary?.cogsAccounts || [],
+              expenseAccounts: plData.summary?.expenseAccounts || []
             });
 
             // Invoices
@@ -2360,7 +2362,7 @@
           const totalExpenses = cogs + opex; // For budget comparison
 
           // Store for budget comparison
-          window.dashboardData.pl = { revenue, totalExpenses, cogs, opex, gross, netProfit, revenueAccounts: data.summary?.revenueAccounts || [] };
+          window.dashboardData.pl = { revenue, totalExpenses, cogs, opex, gross, netProfit, revenueAccounts: data.summary?.revenueAccounts || [], cogsAccounts: data.summary?.cogsAccounts || [], expenseAccounts: data.summary?.expenseAccounts || [] };
 
           // Update KPI cards
           document.getElementById("kpi-revenue").textContent = "$" + revenue.toLocaleString();
@@ -3248,6 +3250,94 @@
               })()}
             </div>
           `,
+          profit: (() => {
+            // Helper to render the P&L waterfall with COGS and OpEx line items
+            const renderPLWaterfall = (data, title) => {
+              const cogsItems = (data.cogsAccounts || []).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+              const opexItems = (data.expenseAccounts || []).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+              return `
+                ${title ? `<h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${title}</h3>` : ''}
+                <table class="data-table" style="margin-bottom: 16px;">
+                  <tbody>
+                    <tr style="background:#E6F4EA;">
+                      <td style="font-weight:600;">Revenue</td>
+                      <td style="text-align:right; font-weight:600; color: var(--color-positive);">$${(data.revenue || 0).toLocaleString()}</td>
+                    </tr>
+                    ${cogsItems.length > 0 ? `
+                      <tr style="background:#f9f9f9;"><td colspan="2" style="font-size:12px; font-weight:600; color: var(--color-text-muted); padding-top:8px;">COST OF GOODS SOLD</td></tr>
+                      ${cogsItems.map(acc => `
+                        <tr>
+                          <td style="padding-left:12px; font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px;">$${acc.amount.toLocaleString()}</td>
+                        </tr>
+                      `).join('')}
+                      <tr style="font-weight:600; background:#FFF4E5;">
+                        <td>Total COGS</td>
+                        <td style="text-align:right">$${(data.cogs || 0).toLocaleString()}</td>
+                      </tr>
+                    ` : ''}
+                    <tr style="font-weight:600; background:#E8F0FE;">
+                      <td>Gross Profit</td>
+                      <td style="text-align:right; color: var(--color-primary);">$${(data.gross || 0).toLocaleString()}</td>
+                    </tr>
+                    ${opexItems.length > 0 ? `
+                      <tr style="background:#f9f9f9;"><td colspan="2" style="font-size:12px; font-weight:600; color: var(--color-text-muted); padding-top:8px;">OPERATING EXPENSES</td></tr>
+                      ${opexItems.map(acc => `
+                        <tr>
+                          <td style="padding-left:12px; font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px;">$${acc.amount.toLocaleString()}</td>
+                        </tr>
+                      `).join('')}
+                      <tr style="font-weight:600; background:#FFF4E5;">
+                        <td>Total OpEx</td>
+                        <td style="text-align:right">$${(data.opex || 0).toLocaleString()}</td>
+                      </tr>
+                    ` : ''}
+                    <tr style="font-weight:700; background:#f5f5f5; border-top: 2px solid #ddd; font-size: 15px;">
+                      <td>Net Profit</td>
+                      <td style="text-align:right; color: ${(data.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(data.netProfit || 0).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              `;
+            };
+
+            if (pl.isConsolidated) {
+              const breakdown = pl.entityBreakdown || [];
+              return `
+                <div style="padding: 16px 0;">
+                  <div style="font-size: 28px; font-weight: 600; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
+                    $${(pl.netProfit || 0).toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                    Net Profit across ${breakdown.length} entities
+                  </div>
+                  ${breakdown.filter(e => e.revenue !== 0 || e.cogs !== 0 || e.opex !== 0).map(e => 
+                    renderPLWaterfall(e, `${e.entity} \u2014 Net: $${e.netProfit.toLocaleString()}`)
+                  ).join('')}
+                  <table class="data-table" style="margin-top: 8px;">
+                    <tbody>
+                      <tr style="font-weight:700; background:#f5f5f5; font-size: 15px;">
+                        <td>Consolidated Net Profit</td><td style="text-align:right; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(pl.netProfit || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              `;
+            } else {
+              return `
+                <div style="padding: 16px 0;">
+                  <div style="font-size: 28px; font-weight: 600; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
+                    $${(pl.netProfit || 0).toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                    Full P&L breakdown
+                  </div>
+                  ${renderPLWaterfall(pl)}
+                </div>
+              `;
+            }
+          })(),
           balance: `
             <div style="padding: 16px 0;">
               <h3 style="margin-bottom: 16px; font-size: 15px;">Balance Sheet Summary</h3>
