@@ -5059,7 +5059,7 @@ app.get("/api/reversal-journals/:tenantId", async (req, res) => {
       }
     }
 
-    const netProfitAdjustment = revenueAdjustment - cogsAdjustment - expenseAdjustment;
+   const netProfitAdjustment = revenueAdjustment + cogsAdjustment + expenseAdjustment;
 
     console.log(`✅ Found ${reversalJournals.length} reversal journals. Revenue: $${revenueAdjustment.toFixed(2)}, COGS: $${cogsAdjustment.toFixed(2)}, Expense: $${expenseAdjustment.toFixed(2)}`);
 
