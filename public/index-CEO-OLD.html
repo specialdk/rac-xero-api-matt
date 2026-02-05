@@ -308,6 +308,151 @@
       }
 
       .snapshot-status.success { color: #34D399; }
+
+      /* ========== REVERSAL TOGGLE ========== */
+      .btn-reversal {
+        padding: 6px 14px;
+        background: rgba(255,255,255,0.15);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .btn-reversal:hover {
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+      }
+
+      .btn-reversal.active {
+        background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+        border-color: transparent;
+        color: white;
+      }
+
+      .btn-reversal .reversal-count {
+        background: rgba(255,255,255,0.25);
+        padding: 1px 6px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .btn-reversal.active .reversal-count {
+        background: rgba(255,255,255,0.3);
+      }
+
+      .btn-reversal.loading {
+        opacity: 0.7;
+        pointer-events: none;
+      }
+
+      /* Reversal drawer content */
+      .reversal-summary {
+        background: #FEF2F2;
+        border: 1px solid #FECACA;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .reversal-summary h4 {
+        color: #991B1B;
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+
+      .reversal-summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .reversal-summary-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        padding: 4px 0;
+      }
+
+      .reversal-summary-item .label { color: #6B7280; }
+      .reversal-summary-item .value { font-weight: 600; color: #111827; }
+
+      .reversal-journal-card {
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 10px;
+      }
+
+      .reversal-journal-card .journal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+
+      .reversal-journal-card .journal-ref {
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--color-text-primary);
+      }
+
+      .reversal-journal-card .journal-date {
+        font-size: 12px;
+        color: var(--color-text-muted);
+      }
+
+      .reversal-journal-card .journal-amount {
+        font-weight: 700;
+        font-size: 14px;
+        color: #DC2626;
+      }
+
+      .reversal-journal-card .journal-lines {
+        margin-top: 8px;
+        border-top: 1px solid var(--color-border);
+        padding-top: 8px;
+      }
+
+      .reversal-journal-card .journal-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        padding: 3px 0;
+        color: var(--color-text-secondary);
+      }
+
+      .reversal-journal-card .journal-line .line-account {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-right: 8px;
+      }
+
+      .reversal-journal-card .journal-line .line-amount {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .reversal-journal-card .journal-line .line-amount.debit { color: #DC2626; }
+      .reversal-journal-card .journal-line .line-amount.credit { color: #059669; }
+
+      .reversal-journal-card .journal-desc {
+        font-size: 11px;
+        color: var(--color-text-muted);
+        margin-top: 6px;
+        font-style: italic;
+        line-height: 1.4;
+      }
       .snapshot-status.error { color: #F87171; }
 
 
@@ -327,16 +472,6 @@
         display: flex;
         flex-direction: column;
         gap: var(--spacing-md);
-        margin-right: 420px;
-        transition: margin-right 0.3s ease;
-      }
-
-      body.chat-hidden .dashboard {
-        margin-right: 0;
-      }
-
-      body.chat-expanded .dashboard {
-        margin-right: 600px;
       }
 
       /* ========== KPI ROW (Top) ========== */
@@ -957,10 +1092,10 @@
 
       /* ========== AI CHAT PANEL ========== */
       .chat-panel {
-        width: 420px;
+        width: 360px;
         background: var(--bg-card);
         border-left: 1px solid var(--color-border);
-        display: flex;
+        display: none;
         flex-direction: column;
         position: fixed;
         right: 0;
@@ -968,15 +1103,10 @@
         bottom: 0;
         z-index: 50;
         box-shadow: var(--shadow-drawer);
-        transition: width 0.3s ease;
       }
 
-      .chat-panel.hidden {
-        display: none;
-      }
-
-      .chat-panel.expanded {
-        width: 600px;
+      .chat-panel.active {
+        display: flex;
       }
 
       .chat-header {
@@ -989,72 +1119,20 @@
         color: white;
       }
 
-      .chat-header-left {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
       .chat-header h3 {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
-        margin: 0;
-      }
-
-      .chat-header-actions {
-        display: flex;
-        gap: 6px;
-      }
-
-      .chat-header-btn {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-      }
-
-      .chat-header-btn:hover {
-        background: rgba(255,255,255,0.3);
       }
 
       .chat-close {
         background: rgba(255,255,255,0.2);
         border: none;
         color: white;
-        width: 28px;
-        height: 28px;
+        width: 26px;
+        height: 26px;
         border-radius: 50%;
         cursor: pointer;
         font-size: 14px;
-      }
-
-      .chat-context-bar {
-        padding: 10px 14px;
-        background: #F8F9FA;
-        border-bottom: 1px solid var(--color-border);
-        font-size: 12px;
-        color: var(--color-text-secondary);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .chat-context-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-
-      .chat-context-item strong {
-        color: var(--color-text-primary);
       }
 
       .chat-messages {
@@ -1063,265 +1141,84 @@
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-md);
-        background: #FAFBFC;
+        gap: var(--spacing-sm);
       }
 
       .chat-message {
-        max-width: 90%;
-        padding: 12px 16px;
+        max-width: 85%;
+        padding: 10px 14px;
         border-radius: 12px;
-        font-size: 14px;
-        line-height: 1.5;
-        position: relative;
+        font-size: 13px;
+        line-height: 1.4;
       }
 
       .chat-message.assistant {
-        background: white;
+        background: var(--bg-page);
         color: var(--color-text-primary);
         align-self: flex-start;
-        border: 1px solid var(--color-border);
         border-bottom-left-radius: 4px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
       }
 
       .chat-message.user {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--color-primary);
         color: white;
         align-self: flex-end;
         border-bottom-right-radius: 4px;
       }
 
-      .chat-message-time {
-        font-size: 11px;
-        opacity: 0.6;
-        margin-top: 6px;
-        display: block;
-      }
-
-      .chat-message-actions {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        display: none;
-        gap: 4px;
-      }
-
-      .chat-message.assistant:hover .chat-message-actions {
-        display: flex;
-      }
-
-      .chat-message-action-btn {
-        background: var(--bg-page);
-        border: 1px solid var(--color-border);
-        border-radius: 4px;
-        padding: 2px 6px;
-        font-size: 10px;
-        cursor: pointer;
-        color: var(--color-text-secondary);
-      }
-
-      .chat-message-action-btn:hover {
-        background: var(--color-border);
-      }
-
-      .chat-typing {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 16px;
-        background: white;
-        border: 1px solid var(--color-border);
-        border-radius: 12px;
-        border-bottom-left-radius: 4px;
-        align-self: flex-start;
-        max-width: 120px;
-      }
-
-      .chat-typing-dots {
-        display: flex;
-        gap: 4px;
-      }
-
-      .chat-typing-dot {
-        width: 8px;
-        height: 8px;
-        background: #667eea;
-        border-radius: 50%;
-        animation: typing-bounce 1.4s ease-in-out infinite;
-      }
-
-      .chat-typing-dot:nth-child(2) { animation-delay: 0.2s; }
-      .chat-typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-      @keyframes typing-bounce {
-        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-        30% { transform: translateY(-4px); opacity: 1; }
-      }
-
       .chat-suggestions {
-        padding: 10px 12px;
+        padding: var(--spacing-sm);
         border-top: 1px solid var(--color-border);
-        background: white;
-      }
-
-      .chat-suggestions-label {
-        font-size: 11px;
-        color: var(--color-text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 8px;
-      }
-
-      .chat-suggestions-list {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
       }
 
       .suggestion-chip {
-        padding: 8px 14px;
+        padding: 6px 12px;
         background: var(--bg-page);
         border: 1px solid var(--color-border);
         border-radius: 16px;
-        font-size: 13px;
+        font-size: 11px;
         color: var(--color-text-secondary);
         cursor: pointer;
         transition: all 0.2s;
       }
 
       .suggestion-chip:hover {
-        border-color: #667eea;
-        color: #667eea;
-        background: #F0F0FF;
+        border-color: var(--color-primary);
+        color: var(--color-primary);
       }
 
       .chat-input-area {
-        padding: 12px;
+        padding: var(--spacing-sm);
         border-top: 1px solid var(--color-border);
-        background: white;
         display: flex;
-        gap: 8px;
-        align-items: flex-end;
-      }
-
-      .chat-input-wrapper {
-        flex: 1;
-        position: relative;
+        gap: 6px;
       }
 
       .chat-input {
-        width: 100%;
-        padding: 12px 16px;
+        flex: 1;
+        padding: 10px 14px;
         border: 1px solid var(--color-border);
-        border-radius: 24px;
-        font-size: 14px;
+        border-radius: 20px;
+        font-size: 13px;
         outline: none;
-        transition: border-color 0.2s, box-shadow 0.2s;
-        resize: none;
-        min-height: 44px;
-        max-height: 120px;
-        font-family: inherit;
       }
 
       .chat-input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: var(--color-primary);
       }
 
       .chat-send {
-        width: 44px;
-        height: 44px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        width: 38px;
+        height: 38px;
+        background: var(--color-primary);
         border: none;
         border-radius: 50%;
         color: white;
         cursor: pointer;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s, box-shadow 0.2s;
-        flex-shrink: 0;
-      }
-
-      .chat-send:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-      }
-
-      .chat-send:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-
-      /* AI Insights Alert */
-      .ai-insight-alert {
-        position: fixed;
-        bottom: 80px;
-        right: 24px;
-        background: white;
-        border: 1px solid var(--color-border);
-        border-left: 4px solid #667eea;
-        border-radius: 8px;
-        padding: 12px 16px;
-        max-width: 300px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 40;
-        display: none;
-        animation: slideInRight 0.3s ease;
-      }
-
-      .ai-insight-alert.show {
-        display: block;
-      }
-
-      @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
-
-      .ai-insight-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-
-      .ai-insight-title {
-        font-size: 11px;
-        font-weight: 600;
-        color: #667eea;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .ai-insight-close {
-        background: none;
-        border: none;
-        color: var(--color-text-muted);
-        cursor: pointer;
         font-size: 16px;
-      }
-
-      .ai-insight-text {
-        font-size: 13px;
-        color: var(--color-text-primary);
-        line-height: 1.4;
-      }
-
-      .ai-insight-action {
-        margin-top: 10px;
-        font-size: 12px;
-        color: #667eea;
-        cursor: pointer;
-        font-weight: 500;
-      }
-
-      .ai-insight-action:hover {
-        text-decoration: underline;
       }
 
       /* ========== DATA TABLE (for drawers) ========== */
@@ -1447,6 +1344,7 @@
         <button class="btn-refresh" onclick="loadDashboard()">&#x21BB; Refresh</button>
         <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
+        <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
         <button class="btn-chat" onclick="toggleChat()">&#x1F4AC; Ask AI</button>
         <button class="btn-dashboard" onclick="window.location.href='index.html'">&#x1F4CA; Full Dashboard</button>
       </div>
@@ -1805,70 +1703,27 @@
       <!-- ========== AI CHAT PANEL ========== -->
       <div class="chat-panel" id="chatPanel">
         <div class="chat-header">
-          <div class="chat-header-left">
-            <h3>&#x1F9E0; AI Financial Assistant</h3>
-          </div>
-          <div class="chat-header-actions">
-            <button class="chat-header-btn" onclick="toggleChatExpand()" title="Expand/Collapse">&#x2922;</button>
-            <button class="chat-header-btn" onclick="clearChat()" title="Clear conversation">&#x1F5D1;</button>
-            <button class="chat-close" onclick="toggleChat()" title="Close">&times;</button>
-          </div>
-        </div>
-        <div class="chat-context-bar" id="chatContextBar">
-          <div class="chat-context-item">
-            <span>&#x1F3E2;</span>
-            <strong id="chatContextEntity">Mining</strong>
-          </div>
-          <div class="chat-context-item">
-            <span>&#x1F4C5;</span>
-            <strong id="chatContextPeriod">Q3 FY25/26</strong>
-          </div>
-          <div class="chat-context-item">
-            <span>&#x2714;</span>
-            <span>Live data connected</span>
-          </div>
+          <h3>&#x1F4AC; Ask about your finances</h3>
+          <button class="chat-close" onclick="toggleChat()">&times;</button>
         </div>
         <div class="chat-messages" id="chatMessages">
           <div class="chat-message assistant">
-            <strong>Welcome!</strong> I'm your AI financial assistant with access to your Xero data.
+            Hi! I can help you understand your Mining financial data. Try asking me things like:
             <br><br>
-            I can help you:
-            <br>&#x2022; Analyze revenue and expense trends
-            <br>&#x2022; Explain changes in your P&L
-            <br>&#x2022; Compare entities or periods
-            <br>&#x2022; Investigate specific accounts
-            <br><br>
-            Try asking a question or use the suggestions below.
-            <span class="chat-message-time">Just now</span>
+            &bull; "What's driving our revenue decline?"<br>
+            &bull; "Show me our biggest expenses"<br>
+            &bull; "Compare to last year"
           </div>
         </div>
-        <div class="chat-suggestions" id="chatSuggestions">
-          <div class="chat-suggestions-label">Suggested questions</div>
-          <div class="chat-suggestions-list" id="suggestionsList">
-            <span class="suggestion-chip" onclick="sendSuggestion('Why is profit negative this quarter?')">Why is profit negative?</span>
-            <span class="suggestion-chip" onclick="sendSuggestion('What are our top 5 expenses?')">Top 5 expenses</span>
-            <span class="suggestion-chip" onclick="sendSuggestion('How does this compare to last quarter?')">Compare to last quarter</span>
-            <span class="suggestion-chip" onclick="sendSuggestion('Summarize our cash position')">Cash position summary</span>
-          </div>
+        <div class="chat-suggestions">
+          <span class="suggestion-chip" onclick="sendSuggestion('Top 3 expenses?')">Top expenses</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('Why profit negative?')">Profit analysis</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('Cash forecast')">Cash forecast</span>
         </div>
         <div class="chat-input-area">
-          <div class="chat-input-wrapper">
-            <textarea class="chat-input" id="chatInput" placeholder="Ask about your financial data..." rows="1" onkeypress="handleChatKeypress(event)" oninput="autoResizeTextarea(this)"></textarea>
-          </div>
-          <button class="chat-send" id="chatSendBtn" onclick="sendChat()">&#x27A4;</button>
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ask a question..." onkeypress="handleChatKeypress(event)">
+          <button class="chat-send" onclick="sendChat()">&#x27A4;</button>
         </div>
-      </div>
-
-      <!-- AI Proactive Insight Alert -->
-      <div class="ai-insight-alert" id="aiInsightAlert">
-        <div class="ai-insight-header">
-          <span class="ai-insight-title">&#x1F4A1; AI Insight</span>
-          <button class="ai-insight-close" onclick="dismissInsight()">&times;</button>
-        </div>
-        <div class="ai-insight-text" id="aiInsightText">
-          Revenue is down 15% compared to last quarter. Would you like me to analyze the contributing factors?
-        </div>
-        <div class="ai-insight-action" onclick="investigateInsight()">Investigate this &rarr;</div>
       </div>
     </div>
 
@@ -1972,6 +1827,257 @@
         balance: {}
       };
 
+      // ========== REVERSAL JOURNALS STATE ==========
+      window.reversalState = {
+        active: false,
+        loading: false,
+        data: null,
+        originalPL: null,
+      };
+
+      function resetReversalState() {
+        window.reversalState = { active: false, loading: false, data: null, originalPL: null };
+        const btn = document.getElementById('reversalToggle');
+        if (btn) {
+          btn.classList.remove('active');
+          btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span>';
+        }
+      }
+
+      async function toggleReversals() {
+        const btn = document.getElementById('reversalToggle');
+        const state = window.reversalState;
+        if (state.loading) return;
+
+        if (!state.active) {
+          // === TURNING ON - hide reversals ===
+          if (!state.data) {
+            state.loading = true;
+            btn.classList.add('loading');
+            btn.innerHTML = '&#x23F3; Loading...';
+
+            try {
+              const entity = getSelectedEntity();
+              const period = document.getElementById("periodSelector").value;
+              const quarterInfo = getQuarterDates(period);
+
+              if (entity === 'ALL') {
+                const entities = getSelectedEntities();
+                let combined = {
+                  reversalCount: 0,
+                  plImpact: { revenueAdjustment: 0, cogsAdjustment: 0, expenseAdjustment: 0, netProfitAdjustment: 0 },
+                  reversalJournals: [],
+                  totalManualJournals: 0,
+                };
+                for (const ent of entities) {
+                  try {
+                    const resp = await fetch(`${API_BASE}/api/reversal-journals`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ organizationName: ent, dateFrom: quarterInfo.startDate, dateTo: quarterInfo.endDate }),
+                    });
+                    const data = await resp.json();
+                    if (data.reversalCount > 0) {
+                      combined.reversalCount += data.reversalCount;
+                      combined.totalManualJournals += data.totalManualJournals;
+                      combined.plImpact.revenueAdjustment += data.plImpact.revenueAdjustment;
+                      combined.plImpact.cogsAdjustment += data.plImpact.cogsAdjustment;
+                      combined.plImpact.expenseAdjustment += data.plImpact.expenseAdjustment;
+                      combined.plImpact.netProfitAdjustment += data.plImpact.netProfitAdjustment;
+                      data.reversalJournals.forEach(j => { j.entityName = ent; });
+                      combined.reversalJournals.push(...data.reversalJournals);
+                    }
+                  } catch (e) { console.warn(`Reversal fetch failed for ${ent}:`, e); }
+                }
+                state.data = combined;
+              } else {
+                const resp = await fetch(`${API_BASE}/api/reversal-journals`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationName: entity, dateFrom: quarterInfo.startDate, dateTo: quarterInfo.endDate }),
+                });
+                state.data = await resp.json();
+              }
+
+              const countEl = document.getElementById('reversalCount');
+              countEl.textContent = state.data.reversalCount;
+              countEl.style.display = state.data.reversalCount > 0 ? 'inline' : 'none';
+            } catch (error) {
+              console.error("Failed to fetch reversal journals:", error);
+              state.loading = false;
+              btn.classList.remove('loading');
+              btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span>';
+              return;
+            }
+            state.loading = false;
+            btn.classList.remove('loading');
+          }
+
+          if (state.data.reversalCount === 0) {
+            btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount">0</span>';
+            // Open drawer to show "no reversals found" message
+            document.getElementById('drawerTitle').textContent = 'Reversal Journals';
+            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">✅</p><p>No reversal journals found in this period.</p></div>';
+            document.getElementById('drawer').classList.add('active');
+            document.getElementById('drawerOverlay').classList.add('active');
+            return;
+          }
+
+          // Store original P&L values
+          state.originalPL = { ...window.dashboardData.pl };
+          state.active = true;
+          applyReversalAdjustments();
+          btn.classList.add('active');
+          btn.innerHTML = '&#x1F504; Reversals Hidden <span class="reversal-count" id="reversalCount">' + state.data.reversalCount + '</span>';
+          showReversalDrawer();
+
+        } else {
+          // === TURNING OFF - show reversals again ===
+          state.active = false;
+          if (state.originalPL) {
+            window.dashboardData.pl = { ...state.originalPL };
+            restoreOriginalPL();
+          }
+          btn.classList.remove('active');
+          btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount">' + (state.data?.reversalCount || 0) + '</span>';
+          closeDrawer();
+        }
+      }
+
+      function applyReversalAdjustments() {
+        const adj = window.reversalState.data.plImpact;
+        const pl = window.dashboardData.pl;
+
+        const adjRevenue = (pl.revenue || 0) + adj.revenueAdjustment;
+        const adjCogs = (pl.cogs || 0) - adj.cogsAdjustment;
+        const adjOpex = (pl.opex || 0) - adj.expenseAdjustment;
+        const adjGross = adjRevenue - adjCogs;
+        const adjNetProfit = adjGross - adjOpex;
+
+        document.getElementById("kpi-revenue").textContent = "$" + adjRevenue.toLocaleString();
+        document.getElementById("kpi-profit").textContent = "$" + adjNetProfit.toLocaleString();
+
+        const plRevEl = document.getElementById("pl-revenue");
+        const plCogsEl = document.getElementById("pl-cogs");
+        const plGrossEl = document.getElementById("pl-gross");
+        const plOpexEl = document.getElementById("pl-opex");
+        const plNetEl = document.getElementById("pl-net");
+        if (plRevEl) plRevEl.textContent = "$" + adjRevenue.toLocaleString();
+        if (plCogsEl) plCogsEl.textContent = "$" + adjCogs.toLocaleString();
+        if (plGrossEl) plGrossEl.textContent = "$" + adjGross.toLocaleString();
+        if (plOpexEl) plOpexEl.textContent = "$" + adjOpex.toLocaleString();
+        if (plNetEl) plNetEl.textContent = "$" + adjNetProfit.toLocaleString();
+
+        document.getElementById("kpi-profit-trend").innerHTML =
+          adjNetProfit >= 0 ? '<span>\u2191</span> Profitable (excl. reversals)' : '<span>\u2193</span> Loss (excl. reversals)';
+        document.getElementById("kpi-profit-trend").className =
+          adjNetProfit >= 0 ? "kpi-trend positive" : "kpi-trend negative";
+        document.getElementById("kpi-revenue-trend").innerHTML = '<span>\u2191</span> Excl. reversals';
+      }
+
+      function restoreOriginalPL() {
+        const pl = window.dashboardData.pl;
+        document.getElementById("kpi-revenue").textContent = "$" + (pl.revenue || 0).toLocaleString();
+        const netProfit = pl.netProfit || 0;
+        document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
+
+        const plRevEl = document.getElementById("pl-revenue");
+        const plCogsEl = document.getElementById("pl-cogs");
+        const plGrossEl = document.getElementById("pl-gross");
+        const plOpexEl = document.getElementById("pl-opex");
+        const plNetEl = document.getElementById("pl-net");
+        if (plRevEl) plRevEl.textContent = "$" + (pl.revenue || 0).toLocaleString();
+        if (plCogsEl) plCogsEl.textContent = "$" + (pl.cogs || 0).toLocaleString();
+        if (plGrossEl) plGrossEl.textContent = "$" + (pl.gross || 0).toLocaleString();
+        if (plOpexEl) plOpexEl.textContent = "$" + (pl.opex || 0).toLocaleString();
+        if (plNetEl) plNetEl.textContent = "$" + netProfit.toLocaleString();
+
+        document.getElementById("kpi-profit-trend").innerHTML =
+          netProfit >= 0 ? '<span>\u2191</span> Profitable' : '<span>\u2193</span> Loss position';
+        document.getElementById("kpi-profit-trend").className =
+          netProfit >= 0 ? "kpi-trend positive" : "kpi-trend negative";
+        document.getElementById("kpi-revenue-trend").innerHTML =
+          (pl.revenue || 0) >= 0 ? '<span>\u2191</span> Period revenue' : '<span>\u2193</span> Negative revenue';
+      }
+
+      function showReversalDrawer() {
+        const data = window.reversalState.data;
+        const adj = data.plImpact;
+
+        let html = `
+          <div class="reversal-summary">
+            <h4>&#x26A0;&#xFE0F; ${data.reversalCount} Reversal Journal${data.reversalCount !== 1 ? 's' : ''} Excluded</h4>
+            <div class="reversal-summary-grid">
+              <div class="reversal-summary-item" style="grid-column: span 2;">
+                <span class="label">Revenue Impact</span>
+                <span class="value" style="color: ${adj.revenueAdjustment >= 0 ? '#059669' : '#DC2626'}">
+                  ${adj.revenueAdjustment >= 0 ? '+' : ''}$${adj.revenueAdjustment.toLocaleString()}
+                </span>
+              </div>
+              <div class="reversal-summary-item" style="grid-column: span 2;">
+                <span class="label">COGS Impact</span>
+                <span class="value" style="color: ${adj.cogsAdjustment <= 0 ? '#059669' : '#DC2626'}">
+                  ${adj.cogsAdjustment > 0 ? '-' : '+'}$${Math.abs(adj.cogsAdjustment).toLocaleString()}
+                </span>
+              </div>
+              <div class="reversal-summary-item" style="grid-column: span 2;">
+                <span class="label">Expense Impact</span>
+                <span class="value" style="color: ${adj.expenseAdjustment <= 0 ? '#059669' : '#DC2626'}">
+                  ${adj.expenseAdjustment > 0 ? '-' : '+'}$${Math.abs(adj.expenseAdjustment).toLocaleString()}
+                </span>
+              </div>
+              <div class="reversal-summary-item" style="grid-column: span 2; border-top: 1px solid #FECACA; padding-top: 8px; margin-top: 4px;">
+                <span class="label" style="font-weight: 600;">Net Profit Impact</span>
+                <span class="value" style="color: ${adj.netProfitAdjustment >= 0 ? '#059669' : '#DC2626'}; font-size: 15px;">
+                  ${adj.netProfitAdjustment >= 0 ? '+' : ''}$${adj.netProfitAdjustment.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        data.reversalJournals.forEach(journal => {
+          const journalDate = new Date(journal.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+          const totalAmount = Math.max(journal.totalDebits, journal.totalCredits);
+          const entityTag = journal.entityName ? `<span style="font-size:11px; color:#6B7280; margin-left:6px;">(${journal.entityName})</span>` : '';
+          const reversalLine = journal.lines.find(l => (l.description || '').toLowerCase().includes('reversal:'));
+          const description = reversalLine ? reversalLine.description : (journal.narration || journal.reference || 'No description');
+
+          html += `
+            <div class="reversal-journal-card">
+              <div class="journal-header">
+                <div>
+                  <span class="journal-ref">${journal.reference || 'Journal #' + (journal.journalNumber || 'N/A')}${entityTag}</span>
+                  <div class="journal-date">${journalDate}</div>
+                </div>
+                <span class="journal-amount">$${totalAmount.toLocaleString()}</span>
+              </div>
+              <div class="journal-desc">${description.length > 150 ? description.substring(0, 150) + '...' : description}</div>
+              <div class="journal-lines">
+          `;
+
+          journal.lines.forEach(line => {
+            const amount = Math.abs(line.lineAmount);
+            const isDebit = line.lineAmount > 0;
+            html += `
+              <div class="journal-line">
+                <span class="line-account" title="${line.accountName}">${line.accountName}</span>
+                <span class="line-amount ${isDebit ? 'debit' : 'credit'}">
+                  ${isDebit ? 'Dr' : 'Cr'} $${amount.toLocaleString()}
+                </span>
+              </div>
+            `;
+          });
+
+          html += '</div></div>';
+        });
+
+        document.getElementById('drawerTitle').textContent = 'Reversal Journals';
+        document.getElementById('drawerContent').innerHTML = html;
+        document.getElementById('drawer').classList.add('active');
+        document.getElementById('drawerOverlay').classList.add('active');
+      }
+
       // ========== QUARTER DATE CALCULATIONS ==========
       function getQuarterDates(quarter) {
         const today = new Date();
@@ -2010,6 +2116,9 @@
 
       // ========== MAIN DASHBOARD LOAD ==========
       async function loadDashboard() {
+        // Reset reversal filter when dashboard reloads
+        resetReversalState();
+        
         const entity = getSelectedEntity();
         const period = document.getElementById("periodSelector").value;
         const quarterInfo = getQuarterDates(period);
@@ -2074,9 +2183,6 @@
         // Initialize charts
         initSparklines();
         initTrendChart();
-        
-        // Check for AI insights to display
-        checkForInsights();
       }
 
       // ========== CONSOLIDATED DASHBOARD (All Entities) ==========
@@ -2170,9 +2276,6 @@
         updateHealthStatus();
         initSparklines();
         initTrendChart();
-        
-        // Check for AI insights to display
-        checkForInsights();
       }
 
       // ========== CASH POSITION ==========
@@ -3149,295 +3252,22 @@
         return contents[type] || '<p>Loading...</p>';
       }
 
-      // ========== AI CHAT FUNCTIONS ==========
-      let chatHistory = [];
-      let isAiTyping = false;
-
+      // ========== CHAT FUNCTIONS ==========
       function toggleChat() {
-        const panel = document.getElementById('chatPanel');
-        panel.classList.toggle('hidden');
-        document.body.classList.toggle('chat-hidden');
-        if (!panel.classList.contains('hidden')) {
-          updateChatContext();
-          document.getElementById('chatInput').focus();
-        }
+        document.getElementById('chatPanel').classList.toggle('active');
       }
 
-      function toggleChatExpand() {
-        const panel = document.getElementById('chatPanel');
-        panel.classList.toggle('expanded');
-        document.body.classList.toggle('chat-expanded');
-      }
-
-      function updateChatContext() {
-        const entity = getSelectedEntity();
-        const period = document.getElementById('periodSelector').value;
-        
-        const entityNames = {
-          'ALL': 'All Entities',
-          'Mining': 'Rirratjingu Mining',
-          'Aboriginal Corporation': 'RAC Aboriginal Corp',
-          'Enterprises': 'RAC Enterprises',
-          'Property': 'Property Management',
-          'Ngarrkuwuy': 'Ngarrkuwuy Developments',
-          'Invest': 'Miliditjpi Trust',
-          'Marrin': 'Marrin Square'
-        };
-        
-        document.getElementById('chatContextEntity').textContent = entityNames[entity] || entity;
-        document.getElementById('chatContextPeriod').textContent = period + ' FY25/26';
-        
-        // Update suggestions based on context
-        updateSuggestions();
-      }
-
-      function updateSuggestions() {
-        const pl = window.dashboardData.pl || {};
-        const suggestions = [];
-        
-        // Dynamic suggestions based on current data
-        if (pl.netProfit < 0) {
-          suggestions.push({ text: 'Why is profit negative?', query: 'Why is profit negative this quarter? What are the main contributing factors?' });
-        }
-        if (pl.revenue < 0) {
-          suggestions.push({ text: 'Explain negative revenue', query: 'Why is revenue showing as negative? Is this a data issue or credit notes?' });
-        }
-        
-        // Standard suggestions
-        suggestions.push({ text: 'Top 5 expenses', query: 'What are our top 5 expense categories this period?' });
-        suggestions.push({ text: 'Cash position analysis', query: 'Analyze our current cash position and liquidity' });
-        suggestions.push({ text: 'Compare to last quarter', query: 'How does this quarter compare to last quarter?' });
-        suggestions.push({ text: 'Balance sheet summary', query: 'Give me a summary of our balance sheet health' });
-        
-        const container = document.getElementById('suggestionsList');
-        container.innerHTML = suggestions.slice(0, 4).map(s => 
-          `<span class="suggestion-chip" onclick="sendSuggestion('${s.query.replace(/'/g, "\\'")}')">${s.text}</span>`
-        ).join('');
-      }
-
-      function clearChat() {
-        if (!confirm('Clear conversation history?')) return;
-        chatHistory = [];
-        const messages = document.getElementById('chatMessages');
-        messages.innerHTML = `
-          <div class="chat-message assistant">
-            <strong>Conversation cleared.</strong> How can I help you analyze your financial data?
-            <span class="chat-message-time">Just now</span>
-          </div>
-        `;
-      }
-
-      function autoResizeTextarea(el) {
-        el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-      }
-
-      function getTimestamp() {
-        return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-
-      function addChatMessage(text, type, showActions = false) {
-        const messages = document.getElementById('chatMessages');
-        const div = document.createElement('div');
-        div.className = `chat-message ${type}`;
-        
-        if (type === 'assistant' && showActions) {
-          div.innerHTML = `
-            ${text}
-            <div class="chat-message-actions">
-              <button class="chat-message-action-btn" onclick="copyMessage(this)">Copy</button>
-            </div>
-            <span class="chat-message-time">${getTimestamp()}</span>
-          `;
-        } else {
-          div.innerHTML = `${text}<span class="chat-message-time">${getTimestamp()}</span>`;
-        }
-        
-        messages.appendChild(div);
-        messages.scrollTop = messages.scrollHeight;
-        return div;
-      }
-
-      function showTypingIndicator() {
-        const messages = document.getElementById('chatMessages');
-        const typing = document.createElement('div');
-        typing.className = 'chat-typing';
-        typing.id = 'typingIndicator';
-        typing.innerHTML = `
-          <div class="chat-typing-dots">
-            <div class="chat-typing-dot"></div>
-            <div class="chat-typing-dot"></div>
-            <div class="chat-typing-dot"></div>
-          </div>
-        `;
-        messages.appendChild(typing);
-        messages.scrollTop = messages.scrollHeight;
-      }
-
-      function hideTypingIndicator() {
-        const typing = document.getElementById('typingIndicator');
-        if (typing) typing.remove();
-      }
-
-      function copyMessage(btn) {
-        const message = btn.closest('.chat-message');
-        const text = message.innerText.replace('Copy', '').replace(/\d{1,2}:\d{2}\s?(AM|PM)?/i, '').trim();
-        navigator.clipboard.writeText(text);
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 2000);
-      }
-
-      function getDashboardContext() {
-        const entity = getSelectedEntity();
-        const period = document.getElementById('periodSelector').value;
-        const pl = window.dashboardData.pl || {};
-        const balance = window.dashboardData.balance || {};
-        const cash = window.dashboardData.cash || {};
-        const receivables = window.dashboardData.receivables || {};
-        
-        return {
-          entity: entity,
-          period: period,
-          metrics: {
-            revenue: pl.revenue || 0,
-            cogs: pl.cogs || 0,
-            grossProfit: pl.gross || 0,
-            opex: pl.opex || 0,
-            netProfit: pl.netProfit || 0,
-            totalAssets: balance.totalAssets || 0,
-            totalLiabilities: balance.totalLiabilities || 0,
-            totalEquity: balance.totalEquity || 0,
-            currentAssets: balance.currentAssets || 0,
-            currentLiabilities: balance.currentLiabilities || 0,
-            cashPosition: cash.totalCash || 0,
-            receivablesTotal: receivables.total || 0,
-            receivablesCurrent: receivables.aged30Days || 0,
-            receivablesOverdue: (receivables.aged60Days || 0) + (receivables.aged90Days || 0) + (receivables.agedOver120Days || 0)
-          }
-        };
-      }
-
-      async function sendChat() {
+      function sendChat() {
         const input = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('chatSendBtn');
         const message = input.value.trim();
-        
-        if (!message || isAiTyping) return;
+        if (!message) return;
 
-        // Add user message
         addChatMessage(message, 'user');
-        chatHistory.push({ role: 'user', content: message });
-        
         input.value = '';
-        input.style.height = 'auto';
-        
-        // Disable input while processing
-        isAiTyping = true;
-        sendBtn.disabled = true;
-        showTypingIndicator();
 
-        try {
-          const context = getDashboardContext();
-          
-          const response = await fetch(`${API_BASE}/api/ai-chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message: message,
-              context: context,
-              history: chatHistory.slice(-10) // Last 10 messages for context
-            })
-          });
-
-          hideTypingIndicator();
-
-          if (!response.ok) {
-            throw new Error('AI service unavailable');
-          }
-
-          const data = await response.json();
-          const aiResponse = data.response || data.message || 'I apologize, but I could not generate a response.';
-          
-          addChatMessage(aiResponse, 'assistant', true);
-          chatHistory.push({ role: 'assistant', content: aiResponse });
-
-        } catch (error) {
-          console.error('AI Chat error:', error);
-          hideTypingIndicator();
-          
-          // Fallback to local analysis
-          const fallbackResponse = generateLocalAnalysis(message);
-          addChatMessage(fallbackResponse, 'assistant', true);
-        }
-
-        isAiTyping = false;
-        sendBtn.disabled = false;
-        input.focus();
-      }
-
-      function generateLocalAnalysis(question) {
-        const ctx = getDashboardContext();
-        const q = question.toLowerCase();
-        
-        // Simple pattern matching for offline fallback
-        if (q.includes('profit') && q.includes('negative')) {
-          const deficit = Math.abs(ctx.metrics.netProfit);
-          return `Based on the current data for ${ctx.entity}:
-
-<strong>Net Profit: $${ctx.metrics.netProfit.toLocaleString()}</strong>
-
-The negative profit is driven by:
-&#x2022; Revenue: $${ctx.metrics.revenue.toLocaleString()}
-&#x2022; COGS: $${ctx.metrics.cogs.toLocaleString()}
-&#x2022; Operating Expenses: $${ctx.metrics.opex.toLocaleString()}
-
-Total expenses exceed revenue by $${deficit.toLocaleString()}. I'd recommend examining the expense breakdown in detail to identify cost reduction opportunities.`;
-        }
-        
-        if (q.includes('expense') || q.includes('cost')) {
-          return `For ${ctx.entity} in ${ctx.period}:
-
-<strong>Expense Summary:</strong>
-&#x2022; Cost of Goods Sold: $${ctx.metrics.cogs.toLocaleString()}
-&#x2022; Operating Expenses: $${ctx.metrics.opex.toLocaleString()}
-&#x2022; Total Expenses: $${(ctx.metrics.cogs + ctx.metrics.opex).toLocaleString()}
-
-For a detailed breakdown by category, I'd need to query the full expense report. Would you like me to analyze specific expense categories?`;
-        }
-        
-        if (q.includes('cash') || q.includes('liquidity')) {
-          const workingCapital = ctx.metrics.currentAssets - ctx.metrics.currentLiabilities;
-          return `<strong>Cash & Liquidity Analysis for ${ctx.entity}:</strong>
-
-&#x2022; Cash Position: $${ctx.metrics.cashPosition.toLocaleString()}
-&#x2022; Current Assets: $${ctx.metrics.currentAssets.toLocaleString()}
-&#x2022; Current Liabilities: $${ctx.metrics.currentLiabilities.toLocaleString()}
-&#x2022; Working Capital: $${workingCapital.toLocaleString()}
-
-${workingCapital > 0 ? 'The positive working capital indicates healthy short-term liquidity.' : 'The negative working capital suggests potential short-term liquidity concerns.'}`;
-        }
-        
-        if (q.includes('balance') || q.includes('asset') || q.includes('equity')) {
-          return `<strong>Balance Sheet Summary for ${ctx.entity}:</strong>
-
-<strong>Assets:</strong> $${ctx.metrics.totalAssets.toLocaleString()}
-<strong>Liabilities:</strong> $${ctx.metrics.totalLiabilities.toLocaleString()}
-<strong>Equity:</strong> $${ctx.metrics.totalEquity.toLocaleString()}
-
-Current Ratio: ${ctx.metrics.currentLiabilities > 0 ? (ctx.metrics.currentAssets / ctx.metrics.currentLiabilities).toFixed(2) : 'N/A'}
-Debt/Equity: ${ctx.metrics.totalEquity > 0 ? (ctx.metrics.totalLiabilities / ctx.metrics.totalEquity).toFixed(2) : 'N/A'}`;
-        }
-        
-        // Generic response
-        return `I'm analyzing data for <strong>${ctx.entity}</strong> (${ctx.period}):
-
-<strong>Key Metrics:</strong>
-&#x2022; Revenue: $${ctx.metrics.revenue.toLocaleString()}
-&#x2022; Net Profit: $${ctx.metrics.netProfit.toLocaleString()}
-&#x2022; Cash: $${ctx.metrics.cashPosition.toLocaleString()}
-&#x2022; Total Assets: $${ctx.metrics.totalAssets.toLocaleString()}
-
-For more specific analysis, try asking about expenses, cash position, balance sheet, or profit trends.`;
+        setTimeout(() => {
+          addChatMessage("I'm analyzing your Mining financial data... This would connect to your MCP tools for real-time analysis.", 'assistant');
+        }, 1000);
       }
 
       function sendSuggestion(text) {
@@ -3445,41 +3275,17 @@ For more specific analysis, try asking about expenses, cash position, balance sh
         sendChat();
       }
 
+      function addChatMessage(text, type) {
+        const messages = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.className = `chat-message ${type}`;
+        div.textContent = text;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
       function handleChatKeypress(event) {
-        if (event.key === 'Enter' && !event.shiftKey) {
-          event.preventDefault();
-          sendChat();
-        }
-      }
-
-      // Proactive Insights
-      function showInsight(text) {
-        document.getElementById('aiInsightText').innerHTML = text;
-        document.getElementById('aiInsightAlert').classList.add('show');
-      }
-
-      function dismissInsight() {
-        document.getElementById('aiInsightAlert').classList.remove('show');
-      }
-
-      function investigateInsight() {
-        const insightText = document.getElementById('aiInsightText').innerText;
-        dismissInsight();
-        toggleChat();
-        document.getElementById('chatInput').value = `Tell me more about: ${insightText}`;
-        sendChat();
-      }
-
-      // Check for proactive insights after dashboard loads
-      function checkForInsights() {
-        const pl = window.dashboardData.pl || {};
-        
-        // Example: Alert if profit is significantly negative
-        if (pl.netProfit < -10000) {
-          setTimeout(() => {
-            showInsight(`Net profit is <strong>$${pl.netProfit.toLocaleString()}</strong> this period. Would you like me to analyze the contributing factors?`);
-          }, 3000);
-        }
+        if (event.key === 'Enter') sendChat();
       }
 
 // ========== SNAPSHOT FUNCTIONS ==========
