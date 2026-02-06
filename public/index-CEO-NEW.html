@@ -1555,42 +1555,6 @@
             </div>
           </div>
 
-          <!-- Key Financial Ratios -->
-          <div class="summary-card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">Key Ratios</div>
-                <div class="card-subtitle">Financial health indicators</div>
-              </div>
-            </div>
-            <div class="card-content">
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Current Ratio</span>
-                  <span class="budget-actual" id="ratio-current">-</span>
-                </div>
-              </div>
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Gross Margin</span>
-                  <span class="budget-actual" id="ratio-gross-margin">-</span>
-                </div>
-              </div>
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Net Margin</span>
-                  <span class="budget-actual" id="ratio-net-margin">-</span>
-                </div>
-              </div>
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Debt/Equity</span>
-                  <span class="budget-actual" id="ratio-debt-equity">-</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Top Customers -->
           <div class="summary-card">
             <div class="card-header">
@@ -1638,44 +1602,38 @@
             </div>
           </div>
 
-          <!-- Aged Debtors Summary -->
-          <div class="summary-card" onclick="openDrawer('aged')" style="cursor: pointer;">
+          <!-- Key Financial Ratios -->
+          <div class="summary-card" onclick="openDrawer('ratios')" style="cursor: pointer;">
             <div class="card-header">
               <div>
-               <div class="card-title">Aged Debtors</div>
-                <div class="card-subtitle" id="aged-subtitle">Outstanding invoices</div>
+               <div class="card-title">Key Ratios</div>
+                <div class="card-subtitle" id="ratios-subtitle">Financial health indicators</div>
               </div>
               <span style="color: var(--color-text-muted); font-size: 18px;">›</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label">Current (0-30)</span>
-                  <span class="budget-actual" id="aged-current">$0</span>
+                  <span class="budget-item-label">Current Ratio</span>
+                  <span class="budget-actual" id="ratio-current">--</span>
                 </div>
               </div>
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label">31-60 days</span>
-                  <span class="budget-actual" id="aged-31-60">$0</span>
+                  <span class="budget-item-label">Gross Margin</span>
+                  <span class="budget-actual" id="ratio-gross-margin">--</span>
                 </div>
               </div>
               <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label">61-90 days</span>
-                  <span class="budget-actual" id="aged-61-90">$0</span>
+                  <span class="budget-item-label">Net Profit Margin</span>
+                  <span class="budget-actual" id="ratio-net-margin">--</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #FDECE9; margin: 0 -16px; padding: 10px 16px;">
+              <div class="budget-item">
                 <div class="budget-item-header">
-                  <span class="budget-item-label">90+ days</span>
-                  <span class="budget-actual" id="aged-90plus">$0</span>
-                </div>
-              </div>
-              <div class="budget-item" style="border-top: 2px solid var(--color-border); margin-top: 8px; padding-top: 8px;">
-                <div class="budget-item-header">
-                  <span class="budget-item-label" style="font-weight: 600;">Total</span>
-                  <span class="budget-actual" id="aged-total" style="font-weight: 600;">$0</span>
+                  <span class="budget-item-label">Debt to Equity</span>
+                  <span class="budget-actual" id="ratio-debt-equity">--</span>
                 </div>
               </div>
             </div>
@@ -2147,9 +2105,11 @@
           loadProfitLoss(quarterInfo),
           loadAgedReceivables(),
           loadInventory(),
-          loadTopCustomers(quarterInfo),
           loadHistoricalData(),
         ]);
+
+        // Load top customers after receivables data is available
+        await loadTopCustomers(quarterInfo);
 
         // Load budget after P&L (needs P&L data)
         await loadBudget(quarterInfo);
@@ -2354,7 +2314,12 @@
         document.getElementById("kpi-inventory").textContent = "$3.5M";
         document.getElementById("kpi-inventory-trend").innerHTML = "\u2714 Stock levels healthy";
 
+        // Load Top Customers from aggregated invoices
+        await loadTopCustomers(quarterInfo);
+
         updateHealthStatus();
+        loadFinancialRatios();
+        updateSummaryCards();
         initSparklines();
         initTrendChart();
       }
@@ -2684,23 +2649,40 @@
         const period = document.getElementById("periodSelector").value;
         document.getElementById("customers-period").textContent = `${period} FY25/26`;
         
-        // Static data - would come from invoices analysis filtered by period
-        // TODO: Replace with API call using quarterInfo.startDate and quarterInfo.endDate
-        const customers = [
-          { name: "Liberty Industrial Pty Ltd", value: 205723, orders: 2 },
-          { name: "RMG Project Construction", value: 73088, orders: 13 },
-          { name: "Sitzler", value: 65073, orders: 6 },
-        ];
+        // Get invoices from receivables data
+        const invoices = window.dashboardData.receivables?.invoices || [];
+        
+        // Group by customer name and sum amounts
+        const customerTotals = {};
+        invoices.forEach(inv => {
+          const name = inv.contact || inv.contactName || 'Unknown';
+          if (!customerTotals[name]) {
+            customerTotals[name] = { name, value: 0, orders: 0 };
+          }
+          customerTotals[name].value += inv.amountDue || 0;
+          customerTotals[name].orders += 1;
+        });
+
+        // Convert to array, sort by value descending, take top 5
+        const customers = Object.values(customerTotals)
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 5);
 
         const maxValue = customers[0]?.value || 1;
 
         const customerList = document.getElementById("customerList");
+        
+        if (customers.length === 0) {
+          customerList.innerHTML = '<div class="customer-item" style="color: var(--color-text-muted);">No outstanding receivables</div>';
+          return;
+        }
+
         customerList.innerHTML = customers.map((c, i) => `
           <div class="customer-item">
             <span class="customer-rank">${i + 1}</span>
             <div class="customer-info">
               <div class="customer-name">${c.name}</div>
-              <div class="customer-orders">${c.orders} invoices</div>
+              <div class="customer-orders">${c.orders} invoice${c.orders !== 1 ? 's' : ''}</div>
               <div class="customer-bar">
                 <div class="customer-bar-fill" style="width: ${(c.value / maxValue) * 100}%"></div>
               </div>
@@ -2755,13 +2737,36 @@
         document.getElementById('bs-liabilities').textContent = '$' + (balance.totalLiabilities || 0).toLocaleString();
         document.getElementById('bs-equity').textContent = '$' + (balance.totalEquity || 0).toLocaleString();
 
-        // Aged Debtors card
-        document.getElementById('aged-current').textContent = '$' + (receivables.aged30Days || 0).toLocaleString();
-        document.getElementById('aged-31-60').textContent = '$' + (receivables.aged60Days || 0).toLocaleString();
-        document.getElementById('aged-61-90').textContent = '$' + (receivables.aged90Days || 0).toLocaleString();
-        document.getElementById('aged-90plus').textContent = '$' + (receivables.agedOver120Days || 0).toLocaleString();
-        document.getElementById('aged-total').textContent = '$' + (receivables.total || 0).toLocaleString();
-        document.getElementById('aged-subtitle').textContent = (receivables.invoiceCount || 0) + ' invoices outstanding';
+        // Key Ratios card
+        const pl = window.dashboardData.pl || {};
+        const revenue = pl.revenue || 0;
+        const grossProfit = pl.gross || 0;
+        const netProfit = pl.netProfit || 0;
+
+        // Current Ratio (Assets / Liabilities)
+        const currentRatio = balance.totalLiabilities > 0 
+          ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
+          : 'N/A';
+        document.getElementById('ratio-current').textContent = currentRatio;
+
+        // Gross Margin (Gross Profit / Revenue × 100)
+        const grossMargin = revenue !== 0 
+          ? ((grossProfit / revenue) * 100).toFixed(1) + '%'
+          : 'N/A';
+        document.getElementById('ratio-gross-margin').textContent = grossMargin;
+
+        // Net Profit Margin (Net Profit / Revenue × 100)
+        const netMargin = revenue !== 0 
+          ? ((netProfit / revenue) * 100).toFixed(1) + '%'
+          : 'N/A';
+        document.getElementById('ratio-net-margin').textContent = netMargin;
+        document.getElementById('ratio-net-margin').style.color = netProfit >= 0 ? 'var(--color-positive)' : 'var(--color-negative)';
+
+        // Debt to Equity
+        const debtEquity = balance.totalEquity > 0 
+          ? (balance.totalLiabilities / balance.totalEquity).toFixed(2) 
+          : 'N/A';
+        document.getElementById('ratio-debt-equity').textContent = debtEquity;
       }
 
       // ========== HEALTH STATUS ==========
@@ -3202,8 +3207,7 @@
           inventory: 'Inventory Detail',
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
-          ratios: 'Financial Ratios',
-          aged: 'Aged Debtors Analysis'
+          ratios: 'Key Financial Ratios'
         };
 
         title.textContent = titles[type] || 'Detail View';
@@ -3523,31 +3527,85 @@
               })()}
             </div>
           `,
-          aged: `
-            <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Aged Receivables</h3>
-              <table class="data-table">
-                <thead><tr><th>Age</th><th style="text-align:right">Amount</th></tr></thead>
-                <tbody>
-                  <tr><td>Current (0-30 days)</td><td style="text-align:right">$${(receivables.aged30Days || 0).toLocaleString()}</td></tr>
-                  <tr><td>31-60 days</td><td style="text-align:right">$${(receivables.aged60Days || 0).toLocaleString()}</td></tr>
-                  <tr><td>61-90 days</td><td style="text-align:right">$${(receivables.aged90Days || 0).toLocaleString()}</td></tr>
-                  <tr><td>90+ days</td><td style="text-align:right">$${(receivables.agedOver120Days || 0).toLocaleString()}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          `,
-          ratios: `
-            <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Financial Ratios</h3>
-              <table class="data-table">
-                <tbody>
-                  <tr><td>Current Ratio</td><td style="text-align:right">${balance.totalAssets && balance.totalLiabilities ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) : 'N/A'}</td></tr>
-                  <tr><td>Debt to Equity</td><td style="text-align:right">${balance.totalLiabilities && balance.totalEquity ? (balance.totalLiabilities / balance.totalEquity).toFixed(2) : 'N/A'}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          `,
+          ratios: (() => {
+            const revenue = pl.revenue || 0;
+            const grossProfit = pl.gross || 0;
+            const netProfit = pl.netProfit || 0;
+            const assets = balance.totalAssets || 0;
+            const liabilities = balance.totalLiabilities || 0;
+            const equity = balance.totalEquity || 0;
+
+            const currentRatio = liabilities > 0 ? (assets / liabilities).toFixed(2) : 'N/A';
+            const grossMargin = revenue !== 0 ? ((grossProfit / revenue) * 100).toFixed(1) : 'N/A';
+            const netMargin = revenue !== 0 ? ((netProfit / revenue) * 100).toFixed(1) : 'N/A';
+            const debtEquity = equity > 0 ? (liabilities / equity).toFixed(2) : 'N/A';
+
+            return `
+              <div style="padding: 16px 0;">
+                <h3 style="margin-bottom: 20px; font-size: 15px;">Financial Ratios</h3>
+
+                <!-- Current Ratio -->
+                <div style="margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600;">Current Ratio</span>
+                    <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(currentRatio) >= 1.5 ? 'var(--color-positive)' : parseFloat(currentRatio) >= 1 ? 'var(--color-warning)' : 'var(--color-negative)'};">${currentRatio}</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    = Total Assets ÷ Total Liabilities<br>
+                    = $${assets.toLocaleString()} ÷ $${liabilities.toLocaleString()}
+                  </div>
+                  <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
+                    ${parseFloat(currentRatio) >= 1.5 ? '✓ Strong liquidity' : parseFloat(currentRatio) >= 1 ? '⚠ Adequate liquidity' : '⚠ Low liquidity'}
+                  </div>
+                </div>
+
+                <!-- Gross Margin -->
+                <div style="margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600;">Gross Margin</span>
+                    <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(grossMargin) >= 30 ? 'var(--color-positive)' : parseFloat(grossMargin) >= 15 ? 'var(--color-warning)' : 'var(--color-negative)'};">${grossMargin}%</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    = Gross Profit ÷ Revenue × 100<br>
+                    = $${grossProfit.toLocaleString()} ÷ $${revenue.toLocaleString()} × 100
+                  </div>
+                  <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
+                    Profit after direct costs
+                  </div>
+                </div>
+
+                <!-- Net Profit Margin -->
+                <div style="margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600;">Net Profit Margin</span>
+                    <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(netMargin) >= 10 ? 'var(--color-positive)' : parseFloat(netMargin) >= 0 ? 'var(--color-warning)' : 'var(--color-negative)'};">${netMargin}%</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    = Net Profit ÷ Revenue × 100<br>
+                    = $${netProfit.toLocaleString()} ÷ $${revenue.toLocaleString()} × 100
+                  </div>
+                  <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
+                    ${parseFloat(netMargin) >= 10 ? '✓ Healthy profitability' : parseFloat(netMargin) >= 0 ? '⚠ Marginal profit' : '⚠ Operating at a loss'}
+                  </div>
+                </div>
+
+                <!-- Debt to Equity -->
+                <div style="margin-bottom: 8px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600;">Debt to Equity</span>
+                    <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(debtEquity) <= 1 ? 'var(--color-positive)' : parseFloat(debtEquity) <= 2 ? 'var(--color-warning)' : 'var(--color-negative)'};">${debtEquity}</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    = Total Liabilities ÷ Total Equity<br>
+                    = $${liabilities.toLocaleString()} ÷ $${equity.toLocaleString()}
+                  </div>
+                  <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
+                    ${parseFloat(debtEquity) <= 1 ? '✓ Low leverage' : parseFloat(debtEquity) <= 2 ? '⚠ Moderate leverage' : '⚠ High leverage'}
+                  </div>
+                </div>
+              </div>
+            `;
+          })(),
           receivables: `
             <div style="padding: 16px 0;">
               <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
