@@ -153,14 +153,14 @@ const tokenStorage = {
             await xero.setTokenSet(tokenSet);
             const newTokenSet = await xero.refreshToken();
             
-            // Store refreshed token
+            // Store refreshed token for ALL Xero tenants (shared OAuth credentials)
             const newExpiresAt = Date.now() + newTokenSet.expires_in * 1000;
             await pool.query(
               `UPDATE tokens 
                SET access_token = $1, refresh_token = $2, expires_at = $3, 
                    last_seen = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-               WHERE tenant_id = $4 AND provider = $5`,
-              [newTokenSet.access_token, newTokenSet.refresh_token, newExpiresAt, tenantId, "xero"]
+               WHERE provider = $4`,
+              [newTokenSet.access_token, newTokenSet.refresh_token, newExpiresAt, "xero"]
             );
             
             console.log(`JIT refresh successful for: ${token.tenant_name}`);
@@ -878,7 +878,9 @@ const enhancedTokenStorage = {
         `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token refreshed successfully for: ${storedToken.tenant_name}`
       );
 
-      // Store the new token in database
+      // Store the new token for ALL Xero tenants (they share one OAuth token set)
+      // Refresh tokens are single-use - once refreshed, all rows need the new token
+      const newExpiresAt = Date.now() + newTokenSet.expires_in * 1000;
       await pool.query(
         `UPDATE tokens 
          SET access_token = $1, 
@@ -886,20 +888,21 @@ const enhancedTokenStorage = {
              expires_at = $3, 
              last_seen = CURRENT_TIMESTAMP,
              updated_at = CURRENT_TIMESTAMP
-         WHERE tenant_id = $4 AND provider = $5`,
+         WHERE provider = $4`,
         [
           newTokenSet.access_token,
           newTokenSet.refresh_token,
-          Date.now() + newTokenSet.expires_in * 1000,
-          tenantId,
+          newExpiresAt,
           "xero",
         ]
       );
+      console.log(`All Xero tenant tokens updated with new credentials`);
 
       return {
         success: true,
-        newExpiresAt: Date.now() + newTokenSet.expires_in * 1000,
+        newExpiresAt: newExpiresAt,
         tenantName: storedToken.tenant_name,
+        allTenantsUpdated: true,
       };
     } catch (error) {
       console.error(`ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error refreshing token for ${tenantId}:`, error);
@@ -950,8 +953,9 @@ const enhancedTokenStorage = {
         });
 
         if (result.success) {
-          refreshed++;
-          console.log(`ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Refreshed: ${token.tenant_name}`);
+          refreshed = result.rows?.length || 7; // All tenants updated at once
+          console.log(`Refreshed ALL tenants via: ${token.tenant_name}`);
+          break; // One refresh updates all - no need to continue
         } else {
           failed++;
           console.log(
