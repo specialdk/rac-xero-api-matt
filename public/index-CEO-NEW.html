@@ -1466,7 +1466,7 @@
           </div>
 
           <!-- Budget vs Actual - Horizontal Bars -->
-          <div class="chart-card">
+          <div class="chart-card" onclick="openDrawer('budget')" style="cursor: pointer;">
             <div class="chart-header">
               <div>
                 <div class="chart-title">Budget vs Actual</div>
@@ -1493,7 +1493,7 @@
               <!-- Expenses Bar -->
               <div class="budget-bar-item">
                 <div class="budget-bar-header">
-                  <span class="budget-bar-label">Expenses</span>
+                  <span class="budget-bar-label">OpEx</span>
                   <div class="budget-bar-values">
                     <span class="budget-bar-actual" id="bar-exp-actual">$0</span>
                     <span class="budget-bar-target" id="bar-exp-target">of $0</span>
@@ -2588,13 +2588,18 @@
           console.log("Parsed budget:", budget);
           const proRatedRevenue = Math.round(budget.revenue * quarterInfo.proRateFactor);
           const proRatedExpenses = Math.round(budget.expenses * quarterInfo.proRateFactor);
-          const proRatedGrossProfit = proRatedRevenue - (proRatedExpenses * 0.55); // Approximate COGS
+          const proRatedCogs = Math.round(budget.cogs * quarterInfo.proRateFactor);
+          const proRatedGrossProfit = proRatedRevenue - proRatedCogs;
 
-          // Store budget targets for reversal refresh
+          // Store budget targets and detail for reversal refresh + sidecard
           window.dashboardData.budgetTargets = {
             proRatedRevenue,
             proRatedExpenses,
-            proRatedGrossProfit
+            proRatedCogs,
+            proRatedGrossProfit,
+            rawBudget: budget,
+            proRateFactor: quarterInfo.proRateFactor,
+            quarterLabel: quarterInfo.label || `Q${quarterInfo.quarter} FY${quarterInfo.fiscalYear}`
           };
 
           refreshBudgetBars();
@@ -2610,7 +2615,7 @@
         if (!targets) return;
 
         const actualRevenue = window.dashboardData.pl?.revenue || 0;
-        const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
+        const actualExpenses = window.dashboardData.pl?.opex || 0;
         const actualGross = window.dashboardData.pl?.gross || 0;
 
         const revVar = targets.proRatedRevenue > 0 ? ((actualRevenue - targets.proRatedRevenue) / targets.proRatedRevenue) * 100 : 0;
@@ -2653,6 +2658,8 @@
       function parseBudgetFromReport(report) {
         let revenue = 0;
         let expenses = 0;
+        let cogs = 0;
+        const lineItems = [];
 
         // Railway API returns: { rows: [...] } with camelCase properties
         const rows = report?.rows || report?.Reports?.[0]?.Rows || [];
@@ -2673,8 +2680,13 @@
                 const m3 = parseFloat(cells[3]?.value || cells[3]?.Value) || 0;
                 const total = m1 + m2 + m3;
 
+                lineItems.push({ label: cells[0]?.value || cells[0]?.Value || '', total, section: title });
+
                 if (label.includes("total income") || label.includes("total revenue")) {
                   if (total > revenue) revenue = total;
+                }
+                if (label.includes("total cost of") || label.includes("total cogs") || label.includes("total direct costs")) {
+                  cogs = total;
                 }
                 if (label.includes("total operating expenses") || label.includes("total expenses")) {
                   if (total > expenses) expenses = total;
@@ -2683,7 +2695,7 @@
             }
           }
         }
-        return { revenue, expenses };
+        return { revenue, expenses, cogs, lineItems };
       }
 
       // ========== AGED RECEIVABLES (via Outstanding Invoices) ==========
@@ -3457,7 +3469,8 @@
           expenses: 'Top Expenses',
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
-          ratios: 'Key Financial Ratios'
+          ratios: 'Key Financial Ratios',
+          budget: 'Budget vs Actual Detail'
         };
 
         title.textContent = titles[type] || 'Detail View';
@@ -3975,7 +3988,97 @@
                 </div>
               </div>
             </div>
-          `
+          `,
+          budget: (() => {
+            const targets = window.dashboardData.budgetTargets;
+            if (!targets) return '<div style="padding: 40px; text-align: center; color: var(--color-text-muted);">No budget data loaded</div>';
+
+            const actualRevenue = pl.revenue || 0;
+            const actualCogs = pl.cogs || 0;
+            const actualGross = pl.gross || 0;
+            const actualOpex = pl.opex || 0;
+            const actualNetProfit = pl.netProfit || 0;
+
+            const budgetRevenue = targets.proRatedRevenue;
+            const budgetCogs = targets.proRatedCogs;
+            const budgetExpenses = targets.proRatedExpenses;
+            const budgetGross = targets.proRatedGrossProfit;
+            const budgetNetProfit = budgetGross - budgetExpenses;
+
+            const pct = (actual, budget) => budget !== 0 ? ((actual - budget) / Math.abs(budget) * 100).toFixed(1) : 'N/A';
+            const varColor = (actual, budget, lowerIsBetter) => {
+              if (budget === 0) return 'var(--color-text-muted)';
+              const diff = actual - budget;
+              if (lowerIsBetter) return diff <= 0 ? 'var(--color-positive)' : 'var(--color-negative)';
+              return diff >= 0 ? 'var(--color-positive)' : 'var(--color-negative)';
+            };
+            const varBg = (actual, budget, lowerIsBetter) => {
+              if (budget === 0) return '#f8f9fa';
+              const diff = actual - budget;
+              if (lowerIsBetter) return diff <= 0 ? '#E6F4EA' : '#FDECE9';
+              return diff >= 0 ? '#E6F4EA' : '#FDECE9';
+            };
+
+            const proRatePct = (targets.proRateFactor * 100).toFixed(0);
+            const isReversals = window.reversalState?.active;
+
+            function budgetRow(label, actual, budget, lowerIsBetter, highlight) {
+              const variance = actual - budget;
+              const pctVal = pct(actual, budget);
+              const bgStyle = highlight ? `background: ${highlight}; margin: 0 -16px; padding: 14px 16px;` : 'padding: 14px 0;';
+              return `
+                <div style="${bgStyle} border-bottom: 1px solid var(--color-border);">
+                  <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px;">${label}</div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                    <div>
+                      <div style="font-size: 11px; color: var(--color-text-muted);">Actual</div>
+                      <div style="font-size: 16px; font-weight: 600;">$${fmt(actual)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size: 11px; color: var(--color-text-muted);">Budget</div>
+                      <div style="font-size: 16px; font-weight: 600; color: var(--color-text-secondary);">$${fmt(budget)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size: 11px; color: var(--color-text-muted);">Variance</div>
+                      <div style="font-size: 16px; font-weight: 600; color: ${varColor(actual, budget, lowerIsBetter)};">
+                        ${variance >= 0 ? '+' : ''}$${fmt(variance)}
+                      </div>
+                      <span style="display: inline-block; margin-top: 2px; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; background: ${varBg(actual, budget, lowerIsBetter)}; color: ${varColor(actual, budget, lowerIsBetter)};">
+                        ${pctVal !== 'N/A' ? (parseFloat(pctVal) >= 0 ? '+' : '') + pctVal + '%' : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+
+            return `
+              <div style="padding: 16px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                  <div>
+                    <div style="font-size: 13px; color: var(--color-text-muted);">Pro-rated to ${proRatePct}% of quarter</div>
+                    ${isReversals ? '<div style="font-size: 12px; color: #DC2626; margin-top: 4px;">&#x1F504; Reversals excluded from actuals</div>' : ''}
+                  </div>
+                </div>
+
+                ${budgetRow('Revenue', actualRevenue, budgetRevenue, false, null)}
+                ${budgetRow('COGS', actualCogs, budgetCogs, true, null)}
+                ${budgetRow('Gross Profit', actualGross, budgetGross, false, '#FFFBEB')}
+                ${budgetRow('Operating Expenses', actualOpex, budgetExpenses, true, null)}
+                ${budgetRow('Net Profit', actualNetProfit, budgetNetProfit, false, '#E8F5E9')}
+
+                <div style="margin-top: 20px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                  <h4 style="font-size: 13px; margin-bottom: 8px;">Budget Notes</h4>
+                  <div style="font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;">
+                    <div>\u2022 Full quarter budget: Revenue $${fmt(targets.rawBudget?.revenue || 0)}, Expenses $${fmt(targets.rawBudget?.expenses || 0)}</div>
+                    <div>\u2022 Pro-rated at ${proRatePct}% (${proRatePct}% through the quarter)</div>
+                    <div>\u2022 Expense budget bar shows <strong>Operating Expenses only</strong> (excludes COGS)</div>
+                    ${targets.rawBudget?.cogs ? '<div>\\u2022 COGS budget: $' + fmt(targets.rawBudget.cogs) + ' (full quarter)</div>' : '<div>\\u2022 No separate COGS budget found in Xero</div>'}
+                  </div>
+                </div>
+              </div>
+            `;
+          })()
         };
 
         return contents[type] || '<p>Loading...</p>';
