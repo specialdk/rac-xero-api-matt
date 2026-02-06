@@ -2422,6 +2422,9 @@
         document.getElementById("pl-opex").textContent = "$" + totalExpenses.toLocaleString();
         document.getElementById("pl-net").innerHTML = "<strong>$" + netProfit.toLocaleString() + "</strong>";
 
+        // Update Operating Expenses card to match P&L OpEx exactly
+        document.getElementById("kpi-top-expense").textContent = "$" + totalExpenses.toLocaleString();
+
         // Inventory stays the same
         document.getElementById("kpi-inventory").textContent = "$3.5M";
         document.getElementById("kpi-inventory-trend").innerHTML = "\u2714 Stock levels healthy";
@@ -2540,6 +2543,10 @@
           document.getElementById("pl-gross").textContent = "$" + gross.toLocaleString();
           document.getElementById("pl-opex").textContent = "$" + opex.toLocaleString();
           document.getElementById("pl-net").textContent = "$" + netProfit.toLocaleString();
+
+          // Update Operating Expenses card to match P&L OpEx (for non-Mining entities)
+          const expCard = document.getElementById("kpi-top-expense");
+          if (expCard) expCard.textContent = "$" + opex.toLocaleString();
 
         } catch (error) {
           console.error("Error loading P&L:", error);
