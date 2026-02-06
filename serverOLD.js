@@ -4936,125 +4936,192 @@ app.post("/api/delete-metrics-row", async (req, res) => {
   }
 });
 
-// ========== AI CHAT ENDPOINT ==========
-app.post("/api/ai-chat", async (req, res) => {
+// ============================================================================
+// REVERSAL JOURNALS ENDPOINT
+// Fetches manual journals, identifies reversals by description pattern,
+// and calculates their P&L impact for the dashboard toggle feature
+// ============================================================================
+
+app.get("/api/reversal-journals/:tenantId", async (req, res) => {
   try {
-    const { message, context, history } = req.body;
-    
-    if (!message) {
-      return res.status(400).json({ error: "Message is required" });
+    const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
+    if (!tokenData) {
+      return res.status(404).json({ error: "Tenant not found or token expired" });
     }
 
-    // Check for Anthropic API key
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-    if (!anthropicApiKey) {
-      console.log("AI Chat: No API key configured, using local analysis");
-      return res.json({ 
-        response: "AI analysis is not configured. Please add ANTHROPIC_API_KEY to your environment variables.",
-        source: "fallback"
-      });
-    }
+    await xero.setTokenSet(tokenData);
 
-    // Build system prompt with financial context
-    const entityName = context?.entity || "Unknown Entity";
-    const period = context?.period || "Current Period";
-    const metrics = context?.metrics || {};
+    const dateFrom = req.query.dateFrom || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+    const dateTo = req.query.dateTo || new Date().toISOString().split("T")[0];
 
-    const systemPrompt = `You are an expert financial analyst assistant for RAC (Rirratjingu Aboriginal Corporation), an Australian mining company. You have access to real-time financial data from their Xero accounting system.
+    console.log(`🔄 Fetching reversal journals for ${tokenData.tenantName} from ${dateFrom} to ${dateTo}`);
 
-CURRENT CONTEXT:
-- Entity: ${entityName}
-- Period: ${period}
-- Fiscal Year: FY25/26 (July 2025 - June 2026)
+    // Step 1: Get chart of accounts for account type lookup
+    const accountsResponse = await xero.accountingApi.getAccounts(req.params.tenantId);
+    const accountTypeMap = {};
+    (accountsResponse.body.accounts || []).forEach(acc => {
+      accountTypeMap[acc.code] = {
+        type: acc.type,
+        name: acc.name,
+        class: acc.class
+      };
+    });
 
-CURRENT FINANCIAL METRICS:
-- Revenue: $${(metrics.revenue || 0).toLocaleString()}
-- Cost of Goods Sold: $${(metrics.cogs || 0).toLocaleString()}
-- Gross Profit: $${(metrics.grossProfit || 0).toLocaleString()}
-- Operating Expenses: $${(metrics.opex || 0).toLocaleString()}
-- Net Profit: $${(metrics.netProfit || 0).toLocaleString()}
+    // Step 2: Get list of manual journals for the date range
+    const whereClause = `Date >= DateTime(${dateFrom.replace(/-/g, ",")}) AND Date <= DateTime(${dateTo.replace(/-/g, ",")})`;
+    const journalListResponse = await xero.accountingApi.getManualJournals(
+      req.params.tenantId,
+      null,
+      whereClause
+    );
 
-BALANCE SHEET:
-- Total Assets: $${(metrics.totalAssets || 0).toLocaleString()}
-- Current Assets: $${(metrics.currentAssets || 0).toLocaleString()}
-- Total Liabilities: $${(metrics.totalLiabilities || 0).toLocaleString()}
-- Current Liabilities: $${(metrics.currentLiabilities || 0).toLocaleString()}
-- Total Equity: $${(metrics.totalEquity || 0).toLocaleString()}
+    const journalList = (journalListResponse.body.manualJournals || [])
+      .filter(j => j.status === "POSTED");
 
-LIQUIDITY:
-- Cash Position: $${(metrics.cashPosition || 0).toLocaleString()}
-- Total Receivables: $${(metrics.receivablesTotal || 0).toLocaleString()}
-- Overdue Receivables: $${(metrics.receivablesOverdue || 0).toLocaleString()}
+    console.log(`📋 Found ${journalList.length} posted manual journals in period`);
 
-INSTRUCTIONS:
-1. Provide clear, actionable financial insights based on the data
-2. Use specific numbers from the metrics when answering
-3. If profit is negative, explain potential causes and suggest areas to investigate
-4. Keep responses concise but thorough (2-4 paragraphs max)
-5. Use bullet points for lists
-6. Highlight important figures in bold using <strong> tags
-7. If asked about data you don't have, acknowledge the limitation
-8. Be professional but conversational in tone`;
+    // Step 3: Fetch each journal individually to get line details
+    const reversalJournals = [];
+    let revenueAdjustment = 0;
+    let cogsAdjustment = 0;
+    let expenseAdjustment = 0;
 
-    // Build messages array
-    const messages = [];
-    
-    // Add conversation history if provided
-    if (history && Array.isArray(history)) {
-      history.forEach(msg => {
-        if (msg.role === 'user' || msg.role === 'assistant') {
-          messages.push({
-            role: msg.role,
-            content: msg.content
+    for (const journal of journalList) {
+      try {
+        const detailResponse = await xero.accountingApi.getManualJournal(
+          req.params.tenantId,
+          journal.manualJournalID
+        );
+
+        const fullJournal = detailResponse.body.manualJournals?.[0];
+        if (!fullJournal || !fullJournal.journalLines) continue;
+
+        // Check if ANY line description or narration contains "Reversal:"
+        const hasReversalInLines = fullJournal.journalLines.some(line =>
+          (line.description || "").toLowerCase().includes("reversal:")
+        );
+        const hasReversalInNarration = (fullJournal.narration || "").toLowerCase().includes("reversal:");
+
+        if (!hasReversalInLines && !hasReversalInNarration) continue;
+
+        const journalDetail = {
+          journalID: fullJournal.manualJournalID,
+          journalNumber: fullJournal.journalNumber,
+          reference: fullJournal.reference || "",
+          narration: fullJournal.narration || "",
+          date: fullJournal.date,
+          status: fullJournal.status,
+          lines: [],
+          totalDebits: 0,
+          totalCredits: 0,
+        };
+
+        fullJournal.journalLines.forEach(line => {
+          const accountInfo = accountTypeMap[line.accountCode] || {};
+          const accountClass = (accountInfo.class || "").toUpperCase();
+          const accountType = (accountInfo.type || "").toUpperCase();
+          const lineAmount = line.lineAmount || 0;
+
+          let plCategory = "other";
+          if (accountClass === "REVENUE" || accountType === "REVENUE" || accountType === "SALES") {
+            plCategory = "revenue";
+          } else if (accountType === "DIRECTCOSTS") {
+            plCategory = "cogs";
+          } else if (accountClass === "EXPENSE" || accountType === "EXPENSE" || accountType === "OVERHEADS") {
+            plCategory = "expense";
+          }
+
+          if (plCategory === "revenue") {
+            revenueAdjustment += lineAmount;
+          } else if (plCategory === "cogs") {
+            cogsAdjustment += lineAmount;
+          } else if (plCategory === "expense") {
+            expenseAdjustment += lineAmount;
+          }
+
+          journalDetail.lines.push({
+            accountCode: line.accountCode,
+            accountName: accountInfo.name || line.accountCode,
+            accountType: accountType,
+            plCategory: plCategory,
+            description: line.description || "",
+            lineAmount: lineAmount,
+            isDebit: lineAmount > 0,
           });
-        }
-      });
-    }
-    
-    // Add current message
-    messages.push({
-      role: "user",
-      content: message
-    });
 
-    // Call Anthropic API
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicApiKey,
-        "anthropic-version": "2023-06-01"
+          if (lineAmount > 0) journalDetail.totalDebits += lineAmount;
+          if (lineAmount < 0) journalDetail.totalCredits += Math.abs(lineAmount);
+        });
+
+        reversalJournals.push(journalDetail);
+      } catch (err) {
+        console.warn(`⚠️ Could not fetch journal ${journal.manualJournalID}:`, err.message);
+      }
+    }
+
+   const netProfitAdjustment = revenueAdjustment + cogsAdjustment + expenseAdjustment;
+
+    console.log(`✅ Found ${reversalJournals.length} reversal journals. Revenue: $${revenueAdjustment.toFixed(2)}, COGS: $${cogsAdjustment.toFixed(2)}, Expense: $${expenseAdjustment.toFixed(2)}`);
+
+    res.json({
+      tenantId: req.params.tenantId,
+      tenantName: tokenData.tenantName,
+      dateFrom,
+      dateTo,
+      totalManualJournals: journalList.length,
+      reversalCount: reversalJournals.length,
+      plImpact: {
+        revenueAdjustment: Math.round(revenueAdjustment * 100) / 100,
+        cogsAdjustment: Math.round(cogsAdjustment * 100) / 100,
+        expenseAdjustment: Math.round(expenseAdjustment * 100) / 100,
+        netProfitAdjustment: Math.round(netProfitAdjustment * 100) / 100,
+        description: "To get P&L WITHOUT reversals: add revenueAdjustment to revenue, subtract cogsAdjustment from COGS, subtract expenseAdjustment from expenses"
       },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: messages
-      })
+      reversalJournals: reversalJournals,
+      generatedAt: new Date().toISOString(),
     });
+  } catch (error) {
+    console.error("Error getting reversal journals:", error);
+    res.status(500).json({
+      error: "Failed to get reversal journals",
+      details: error.message,
+    });
+  }
+});
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Anthropic API error:", response.status, errorText);
-      throw new Error(`Anthropic API error: ${response.status}`);
+app.post("/api/reversal-journals", async (req, res) => {
+  try {
+    const { organizationName, tenantId, dateFrom, dateTo } = req.body;
+
+    if (!organizationName && !tenantId) {
+      return res.status(400).json({ error: "Organization name or tenant ID required" });
     }
 
-    const data = await response.json();
-    const aiResponse = data.content?.[0]?.text || "I couldn't generate a response.";
+    let actualTenantId = tenantId;
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
 
-    res.json({ 
-      response: aiResponse,
-      source: "anthropic",
-      model: "claude-sonnet-4-20250514"
-    });
+    const params = new URLSearchParams();
+    if (dateFrom) params.append("dateFrom", dateFrom);
+    if (dateTo) params.append("dateTo", dateTo);
+    const qs = params.toString() ? `?${params.toString()}` : "";
 
+    const url = `${req.protocol}://${req.get("host")}/api/reversal-journals/${actualTenantId}${qs}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    res.json(result);
   } catch (error) {
-    console.error("AI Chat error:", error);
-    res.status(500).json({ 
-      error: "AI service error",
-      message: error.message,
-      response: "I'm having trouble connecting to the AI service. Please try again in a moment."
-    });
+    console.error("Reversal journals POST error:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 

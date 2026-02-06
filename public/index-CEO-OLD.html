@@ -1393,8 +1393,8 @@
             <div class="kpi-status-bar healthy" id="kpi-receivables-status"></div>
           </div>
 
-          <!-- Inventory Value -->
-          <div class="kpi-card" onclick="openDrawer('inventory')">
+          <!-- Inventory Value (Mining only) / Top Expenses (other entities) -->
+          <div id="inventory-card" class="kpi-card" onclick="openDrawer('inventory')">
             <div class="kpi-header">
               <div class="kpi-label">Inventory Value</div>
               <span class="kpi-arrow">&#x2192;</span>
@@ -1405,6 +1405,20 @@
               <canvas id="sparkInventory"></canvas>
             </div>
             <div class="kpi-status-bar healthy" id="kpi-inventory-status"></div>
+          </div>
+
+          <!-- Top Expenses (non-Mining entities) -->
+          <div id="expenses-card" class="kpi-card" onclick="openDrawer('expenses')" style="display: none;">
+            <div class="kpi-header">
+              <div class="kpi-label">OPERATING EXPENSES</div>
+              <span class="kpi-arrow">&#x2192;</span>
+            </div>
+            <div class="kpi-value" id="kpi-top-expense">Loading...</div>
+            <div class="kpi-trend neutral" id="kpi-expense-trend">--</div>
+            <div class="kpi-sparkline">
+              <canvas id="sparkExpenses"></canvas>
+            </div>
+            <div class="kpi-status-bar" id="kpi-expense-status"></div>
           </div>
         </div>
 
@@ -1555,42 +1569,6 @@
             </div>
           </div>
 
-          <!-- Key Financial Ratios -->
-          <div class="summary-card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">Key Ratios</div>
-                <div class="card-subtitle">Financial health indicators</div>
-              </div>
-            </div>
-            <div class="card-content">
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Current Ratio</span>
-                  <span class="budget-actual" id="ratio-current">-</span>
-                </div>
-              </div>
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Gross Margin</span>
-                  <span class="budget-actual" id="ratio-gross-margin">-</span>
-                </div>
-              </div>
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Net Margin</span>
-                  <span class="budget-actual" id="ratio-net-margin">-</span>
-                </div>
-              </div>
-              <div class="budget-item">
-                <div class="budget-item-header">
-                  <span class="budget-item-label">Debt/Equity</span>
-                  <span class="budget-actual" id="ratio-debt-equity">-</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Top Customers -->
           <div class="summary-card">
             <div class="card-header">
@@ -1638,14 +1616,50 @@
             </div>
           </div>
 
+          <!-- Key Financial Ratios -->
+          <div class="summary-card" onclick="openDrawer('ratios')" style="cursor: pointer;">
+            <div class="card-header">
+              <div>
+               <div class="card-title">Key Ratios</div>
+                <div class="card-subtitle" id="ratios-subtitle">Financial health indicators</div>
+              </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">›</span>
+            </div>
+            <div class="card-content">
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Current Ratio</span>
+                  <span class="budget-actual" id="ratio-current">--</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Gross Margin</span>
+                  <span class="budget-actual" id="ratio-gross-margin">--</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Net Profit Margin</span>
+                  <span class="budget-actual" id="ratio-net-margin">--</span>
+                </div>
+              </div>
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label">Debt to Equity</span>
+                  <span class="budget-actual" id="ratio-debt-equity">--</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Aged Debtors Summary -->
-          <div class="summary-card" onclick="openDrawer('aged')" style="cursor: pointer;">
+          <div class="summary-card">
             <div class="card-header">
               <div>
                <div class="card-title">Aged Debtors</div>
                 <div class="card-subtitle" id="aged-subtitle">Outstanding invoices</div>
               </div>
-              <span style="color: var(--color-text-muted); font-size: 18px;">›</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1936,6 +1950,13 @@
         const adjGross = adjRevenue - adjCogs;
         const adjNetProfit = adjGross - adjOpex;
 
+        // Update the dashboardData so sparklines reflect the changes
+        window.dashboardData.pl.revenue = adjRevenue;
+        window.dashboardData.pl.cogs = adjCogs;
+        window.dashboardData.pl.opex = adjOpex;
+        window.dashboardData.pl.gross = adjGross;
+        window.dashboardData.pl.netProfit = adjNetProfit;
+
         document.getElementById("kpi-revenue").textContent = "$" + adjRevenue.toLocaleString();
         document.getElementById("kpi-profit").textContent = "$" + adjNetProfit.toLocaleString();
 
@@ -1955,12 +1976,27 @@
         document.getElementById("kpi-profit-trend").className =
           adjNetProfit >= 0 ? "kpi-trend positive" : "kpi-trend negative";
         document.getElementById("kpi-revenue-trend").innerHTML = '<span>\u2191</span> Excl. reversals';
+
+        // Refresh sparklines to show adjusted values
+        initSparklines();
+        // Also update financial ratios
+        loadFinancialRatios();
+        updateSummaryCards();
       }
 
       function restoreOriginalPL() {
         const pl = window.dashboardData.pl;
-        document.getElementById("kpi-revenue").textContent = "$" + (pl.revenue || 0).toLocaleString();
-        const netProfit = pl.netProfit || 0;
+        const origPL = window.reversalState.originalPL;
+        
+        // Restore actual values in dashboardData
+        window.dashboardData.pl.revenue = origPL.revenue;
+        window.dashboardData.pl.cogs = origPL.cogs;
+        window.dashboardData.pl.opex = origPL.opex;
+        window.dashboardData.pl.gross = origPL.gross;
+        window.dashboardData.pl.netProfit = origPL.netProfit;
+
+        document.getElementById("kpi-revenue").textContent = "$" + (origPL.revenue || 0).toLocaleString();
+        const netProfit = origPL.netProfit || 0;
         document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
 
         const plRevEl = document.getElementById("pl-revenue");
@@ -1968,10 +2004,10 @@
         const plGrossEl = document.getElementById("pl-gross");
         const plOpexEl = document.getElementById("pl-opex");
         const plNetEl = document.getElementById("pl-net");
-        if (plRevEl) plRevEl.textContent = "$" + (pl.revenue || 0).toLocaleString();
-        if (plCogsEl) plCogsEl.textContent = "$" + (pl.cogs || 0).toLocaleString();
-        if (plGrossEl) plGrossEl.textContent = "$" + (pl.gross || 0).toLocaleString();
-        if (plOpexEl) plOpexEl.textContent = "$" + (pl.opex || 0).toLocaleString();
+        if (plRevEl) plRevEl.textContent = "$" + (origPL.revenue || 0).toLocaleString();
+        if (plCogsEl) plCogsEl.textContent = "$" + (origPL.cogs || 0).toLocaleString();
+        if (plGrossEl) plGrossEl.textContent = "$" + (origPL.gross || 0).toLocaleString();
+        if (plOpexEl) plOpexEl.textContent = "$" + (origPL.opex || 0).toLocaleString();
         if (plNetEl) plNetEl.textContent = "$" + netProfit.toLocaleString();
 
         document.getElementById("kpi-profit-trend").innerHTML =
@@ -1979,7 +2015,13 @@
         document.getElementById("kpi-profit-trend").className =
           netProfit >= 0 ? "kpi-trend positive" : "kpi-trend negative";
         document.getElementById("kpi-revenue-trend").innerHTML =
-          (pl.revenue || 0) >= 0 ? '<span>\u2191</span> Period revenue' : '<span>\u2193</span> Negative revenue';
+          (origPL.revenue || 0) >= 0 ? '<span>\u2191</span> Period revenue' : '<span>\u2193</span> Negative revenue';
+
+        // Refresh sparklines to show original values
+        initSparklines();
+        // Also update financial ratios
+        loadFinancialRatios();
+        updateSummaryCards();
       }
 
       function showReversalDrawer() {
@@ -2107,6 +2149,19 @@
 
         console.log("Loading dashboard for:", entity, period, quarterInfo);
 
+        // Toggle Inventory vs Top Expenses card based on entity
+        // Mining shows Inventory (the quarry operation)
+        // ALL and other individual entities show Top Expenses
+        const inventoryCard = document.getElementById('inventory-card');
+        const expensesCard = document.getElementById('expenses-card');
+        if (entity === 'Mining') {
+          inventoryCard.style.display = 'block';
+          expensesCard.style.display = 'none';
+        } else {
+          inventoryCard.style.display = 'none';
+          expensesCard.style.display = 'block';
+        }
+
         // Update header title based on selection
         const selectedEntities = getSelectedEntities();
         const entityNames = {
@@ -2147,9 +2202,11 @@
           loadProfitLoss(quarterInfo),
           loadAgedReceivables(),
           loadInventory(),
-          loadTopCustomers(quarterInfo),
           loadHistoricalData(),
         ]);
+
+        // Load top customers after receivables data is available
+        await loadTopCustomers(quarterInfo);
 
         // Load budget after P&L (needs P&L data)
         await loadBudget(quarterInfo);
@@ -2159,6 +2216,8 @@
 
         // Calculate and display financial ratios
         loadFinancialRatios();
+        // Load top expenses (for non-Mining entities)
+        loadTopExpenses();
         // Update Balance Sheet and Aged Debtors cards
         updateSummaryCards();
 
@@ -2327,7 +2386,20 @@
         };
 
         // Store for other functions (with entity breakdown for sidecard)
-        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, netProfit: netProfit, entityBreakdown: allEntityPL, isConsolidated: true };
+        // Aggregate expense accounts across all entities
+        const allExpenseAccounts = {};
+        allEntityPL.forEach(entityPL => {
+          (entityPL.expenseAccounts || []).forEach(exp => {
+            const name = exp.name || 'Unknown';
+            if (!allExpenseAccounts[name]) {
+              allExpenseAccounts[name] = { name, amount: 0 };
+            }
+            allExpenseAccounts[name].amount += exp.amount || 0;
+          });
+        });
+        const aggregatedExpenses = Object.values(allExpenseAccounts);
+
+        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, netProfit: netProfit, entityBreakdown: allEntityPL, expenseAccounts: aggregatedExpenses, isConsolidated: true };
 
         // Store consolidated balance sheet for drawer
         window.dashboardData.balance = {
@@ -2350,11 +2422,20 @@
         document.getElementById("pl-opex").textContent = "$" + totalExpenses.toLocaleString();
         document.getElementById("pl-net").innerHTML = "<strong>$" + netProfit.toLocaleString() + "</strong>";
 
+        // Update Operating Expenses card to match P&L OpEx exactly
+        document.getElementById("kpi-top-expense").textContent = "$" + totalExpenses.toLocaleString();
+
         // Inventory stays the same
         document.getElementById("kpi-inventory").textContent = "$3.5M";
         document.getElementById("kpi-inventory-trend").innerHTML = "\u2714 Stock levels healthy";
 
+        // Load Top Customers from aggregated invoices
+        await loadTopCustomers(quarterInfo);
+
         updateHealthStatus();
+        loadFinancialRatios();
+        loadTopExpenses();
+        updateSummaryCards();
         initSparklines();
         initTrendChart();
       }
@@ -2393,7 +2474,15 @@
           });
           const data = await response.json();
           
-          window.dashboardData.balance = data.trialBalance?.totals || {};
+          // Store totals plus account arrays for sidecard detail
+          window.dashboardData.balance = {
+            totalAssets: data.trialBalance?.totals?.totalAssets || 0,
+            totalLiabilities: data.trialBalance?.totals?.totalLiabilities || 0,
+            totalEquity: data.trialBalance?.totals?.totalEquity || 0,
+            assets: data.trialBalance?.assets || [],
+            liabilities: data.trialBalance?.liabilities || [],
+            equity: data.trialBalance?.equity || []
+          };
           
         } catch (error) {
           console.error("Error loading trial balance:", error);
@@ -2454,6 +2543,10 @@
           document.getElementById("pl-gross").textContent = "$" + gross.toLocaleString();
           document.getElementById("pl-opex").textContent = "$" + opex.toLocaleString();
           document.getElementById("pl-net").textContent = "$" + netProfit.toLocaleString();
+
+          // Update Operating Expenses card to match P&L OpEx (for non-Mining entities)
+          const expCard = document.getElementById("kpi-top-expense");
+          if (expCard) expCard.textContent = "$" + opex.toLocaleString();
 
         } catch (error) {
           console.error("Error loading P&L:", error);
@@ -2670,29 +2763,138 @@
         */
       }
 
+      // ========== TOP EXPENSES ==========
+      function loadTopExpenses() {
+        const pl = window.dashboardData.pl || {};
+        const expenseAccounts = pl.expenseAccounts || [];
+        
+        // Sort by absolute value descending, take top 5
+        const topExpenses = [...expenseAccounts]
+          .sort((a, b) => Math.abs(b.amount || 0) - Math.abs(a.amount || 0))
+          .slice(0, 5);
+
+        // Store for drawer
+        window.dashboardData.topExpenses = topExpenses;
+
+        const totalExpenses = Math.abs(pl.opex || 0);
+
+        if (topExpenses.length === 0) {
+          document.getElementById("kpi-top-expense").textContent = "No data";
+          document.getElementById("kpi-expense-trend").textContent = "--";
+          return;
+        }
+
+        // Show Total Operating Expenses as the main value
+        document.getElementById("kpi-top-expense").textContent = "$" + totalExpenses.toLocaleString();
+        
+        // Show #1 expense as the subtitle
+        const topExpense = topExpenses[0];
+        document.getElementById("kpi-expense-trend").innerHTML = `#1: ${topExpense.name?.substring(0, 20) || "Unknown"}`;
+        document.getElementById("kpi-expense-trend").className = "kpi-trend neutral";
+
+        // Initialize expense sparkline with historical trend
+        initExpenseSparkline();
+      }
+
+      function initExpenseSparkline() {
+        const canvas = document.getElementById('sparkExpenses');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        
+        // Generate trend data from monthly historical if available, else use pattern
+        const monthly = window.historicalData?.monthly || [];
+        let expenseData;
+        
+        if (monthly.length >= 3) {
+          // Use actual historical expense data
+          expenseData = monthly.slice(-7).map(m => Math.abs(m.expenses || 0));
+        } else {
+          // Generate realistic pattern based on current OpEx
+          const currentOpex = Math.abs(window.dashboardData.pl?.opex || 100000);
+          const monthlyAvg = currentOpex / 3; // Quarterly to monthly estimate
+          expenseData = [
+            monthlyAvg * 0.85,
+            monthlyAvg * 0.92,
+            monthlyAvg * 1.05,
+            monthlyAvg * 0.98,
+            monthlyAvg * 1.10,
+            monthlyAvg * 0.95,
+            monthlyAvg * 1.02
+          ];
+        }
+
+        // Destroy existing chart if any
+        if (window.expenseSparkChart) {
+          window.expenseSparkChart.destroy();
+        }
+
+        window.expenseSparkChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['', '', '', '', '', '', ''],
+            datasets: [{
+              data: expenseData,
+              borderColor: '#FF8C00',
+              backgroundColor: 'rgba(255, 140, 0, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { display: false },
+              y: { display: false }
+            }
+          }
+        });
+      }
+
       // ========== TOP CUSTOMERS ==========
       async function loadTopCustomers(quarterInfo) {
         // Update subtitle to show current period
         const period = document.getElementById("periodSelector").value;
         document.getElementById("customers-period").textContent = `${period} FY25/26`;
         
-        // Static data - would come from invoices analysis filtered by period
-        // TODO: Replace with API call using quarterInfo.startDate and quarterInfo.endDate
-        const customers = [
-          { name: "Liberty Industrial Pty Ltd", value: 205723, orders: 2 },
-          { name: "RMG Project Construction", value: 73088, orders: 13 },
-          { name: "Sitzler", value: 65073, orders: 6 },
-        ];
+        // Get invoices from receivables data
+        const invoices = window.dashboardData.receivables?.invoices || [];
+        
+        // Group by customer name and sum amounts
+        const customerTotals = {};
+        invoices.forEach(inv => {
+          const name = inv.contact || inv.contactName || 'Unknown';
+          if (!customerTotals[name]) {
+            customerTotals[name] = { name, value: 0, orders: 0 };
+          }
+          customerTotals[name].value += inv.amountDue || 0;
+          customerTotals[name].orders += 1;
+        });
+
+        // Convert to array, sort by value descending, take top 5
+        const customers = Object.values(customerTotals)
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 5);
 
         const maxValue = customers[0]?.value || 1;
 
         const customerList = document.getElementById("customerList");
+        
+        if (customers.length === 0) {
+          customerList.innerHTML = '<div class="customer-item" style="color: var(--color-text-muted);">No outstanding receivables</div>';
+          return;
+        }
+
         customerList.innerHTML = customers.map((c, i) => `
           <div class="customer-item">
             <span class="customer-rank">${i + 1}</span>
             <div class="customer-info">
               <div class="customer-name">${c.name}</div>
-              <div class="customer-orders">${c.orders} invoices</div>
+              <div class="customer-orders">${c.orders} invoice${c.orders !== 1 ? 's' : ''}</div>
               <div class="customer-bar">
                 <div class="customer-bar-fill" style="width: ${(c.value / maxValue) * 100}%"></div>
               </div>
@@ -2746,6 +2948,37 @@
         document.getElementById('bs-assets').textContent = '$' + (balance.totalAssets || 0).toLocaleString();
         document.getElementById('bs-liabilities').textContent = '$' + (balance.totalLiabilities || 0).toLocaleString();
         document.getElementById('bs-equity').textContent = '$' + (balance.totalEquity || 0).toLocaleString();
+
+        // Key Ratios card
+        const pl = window.dashboardData.pl || {};
+        const revenue = pl.revenue || 0;
+        const grossProfit = pl.gross || 0;
+        const netProfit = pl.netProfit || 0;
+
+        // Current Ratio (Assets / Liabilities)
+        const currentRatio = balance.totalLiabilities > 0 
+          ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
+          : 'N/A';
+        document.getElementById('ratio-current').textContent = currentRatio;
+
+        // Gross Margin (Gross Profit / Revenue × 100)
+        const grossMargin = revenue !== 0 
+          ? ((grossProfit / revenue) * 100).toFixed(1) + '%'
+          : 'N/A';
+        document.getElementById('ratio-gross-margin').textContent = grossMargin;
+
+        // Net Profit Margin (Net Profit / Revenue × 100)
+        const netMargin = revenue !== 0 
+          ? ((netProfit / revenue) * 100).toFixed(1) + '%'
+          : 'N/A';
+        document.getElementById('ratio-net-margin').textContent = netMargin;
+        document.getElementById('ratio-net-margin').style.color = netProfit >= 0 ? 'var(--color-positive)' : 'var(--color-negative)';
+
+        // Debt to Equity
+        const debtEquity = balance.totalEquity > 0 
+          ? (balance.totalLiabilities / balance.totalEquity).toFixed(2) 
+          : 'N/A';
+        document.getElementById('ratio-debt-equity').textContent = debtEquity;
 
         // Aged Debtors card
         document.getElementById('aged-current').textContent = '$' + (receivables.aged30Days || 0).toLocaleString();
@@ -3192,10 +3425,10 @@
           profit: 'Profit & Loss Detail',
           receivables: 'Aged Receivables',
           inventory: 'Inventory Detail',
+          expenses: 'Top Expenses',
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
-          ratios: 'Financial Ratios',
-          aged: 'Aged Debtors Analysis'
+          ratios: 'Key Financial Ratios'
         };
 
         title.textContent = titles[type] || 'Detail View';
@@ -3452,45 +3685,211 @@
                     </div>
                   </div>
                 `;
-              })() : `
-                <h3 style="margin-bottom: 16px; font-size: 15px;">Balance Sheet Summary</h3>
+              })() : (() => {
+                const assetAccounts = (balance.assets || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+                const liabilityAccounts = (balance.liabilities || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+                const equityAccounts = (balance.equity || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+                return `
+                  <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
+                    $${(balance.totalEquity || 0).toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                    Net Equity
+                  </div>
+
+                  <h3 style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-primary);">Assets</h3>
+                  <table class="data-table" style="margin-bottom: 16px;">
+                    <tbody>
+                      ${assetAccounts.map(acc => `
+                        <tr>
+                          <td style="font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td>
+                        </tr>
+                      `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No asset accounts</td></tr>'}
+                      <tr style="font-weight:600; background:#E8F0FE;">
+                        <td>Total Assets</td>
+                        <td style="text-align:right; color: var(--color-primary);">$${(balance.totalAssets || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <h3 style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-warning);">Liabilities</h3>
+                  <table class="data-table" style="margin-bottom: 16px;">
+                    <tbody>
+                      ${liabilityAccounts.map(acc => `
+                        <tr>
+                          <td style="font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td>
+                        </tr>
+                      `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No liability accounts</td></tr>'}
+                      <tr style="font-weight:600; background:#FFF4E5;">
+                        <td>Total Liabilities</td>
+                        <td style="text-align:right; color: var(--color-warning);">$${(balance.totalLiabilities || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <h3 style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-positive);">Equity</h3>
+                  <table class="data-table">
+                    <tbody>
+                      ${equityAccounts.map(acc => `
+                        <tr>
+                          <td style="font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px; color: ${(acc.balance || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(acc.balance || 0).toLocaleString()}</td>
+                        </tr>
+                      `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No equity accounts</td></tr>'}
+                      <tr style="font-weight:600; background:#E6F4EA;">
+                        <td>Net Equity</td>
+                        <td style="text-align:right; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(balance.totalEquity || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                `;
+              })()}
+            </div>
+          `,
+          ratios: (() => {
+            const revenue = pl.revenue || 0;
+            const grossProfit = pl.gross || 0;
+            const netProfit = pl.netProfit || 0;
+            const assets = balance.totalAssets || 0;
+            const liabilities = balance.totalLiabilities || 0;
+            const equity = balance.totalEquity || 0;
+
+            const currentRatio = liabilities > 0 ? (assets / liabilities).toFixed(2) : 'N/A';
+            const grossMargin = revenue !== 0 ? ((grossProfit / revenue) * 100).toFixed(1) : 'N/A';
+            const netMargin = revenue !== 0 ? ((netProfit / revenue) * 100).toFixed(1) : 'N/A';
+            const debtEquity = equity > 0 ? (liabilities / equity).toFixed(2) : 'N/A';
+
+            return `
+              <div style="padding: 16px 0;">
+                <h3 style="margin-bottom: 20px; font-size: 15px;">Financial Ratios</h3>
+
+                <!-- Current Ratio -->
+                <div style="margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600;">Current Ratio</span>
+                    <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(currentRatio) >= 1.5 ? 'var(--color-positive)' : parseFloat(currentRatio) >= 1 ? 'var(--color-warning)' : 'var(--color-negative)'};">${currentRatio}</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    = Total Assets ÷ Total Liabilities<br>
+                    = $${assets.toLocaleString()} ÷ $${liabilities.toLocaleString()}
+                  </div>
+                  <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
+                    ${parseFloat(currentRatio) >= 1.5 ? '✓ Strong liquidity' : parseFloat(currentRatio) >= 1 ? '⚠ Adequate liquidity' : '⚠ Low liquidity'}
+                  </div>
+                </div>
+
+                <!-- Gross Margin -->
+                <div style="margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600;">Gross Margin</span>
+                    <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(grossMargin) >= 30 ? 'var(--color-positive)' : parseFloat(grossMargin) >= 15 ? 'var(--color-warning)' : 'var(--color-negative)'};">${grossMargin}%</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    = Gross Profit ÷ Revenue × 100<br>
+                    = $${grossProfit.toLocaleString()} ÷ $${revenue.toLocaleString()} × 100
+                  </div>
+                  <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
+                    Profit after direct costs
+                  </div>
+                </div>
+
+                <!-- Net Profit Margin -->
+                <div style="margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600;">Net Profit Margin</span>
+                    <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(netMargin) >= 10 ? 'var(--color-positive)' : parseFloat(netMargin) >= 0 ? 'var(--color-warning)' : 'var(--color-negative)'};">${netMargin}%</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    = Net Profit ÷ Revenue × 100<br>
+                    = $${netProfit.toLocaleString()} ÷ $${revenue.toLocaleString()} × 100
+                  </div>
+                  <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
+                    ${parseFloat(netMargin) >= 10 ? '✓ Healthy profitability' : parseFloat(netMargin) >= 0 ? '⚠ Marginal profit' : '⚠ Operating at a loss'}
+                  </div>
+                </div>
+
+                <!-- Debt to Equity -->
+                <div style="margin-bottom: 8px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600;">Debt to Equity</span>
+                    <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(debtEquity) <= 1 ? 'var(--color-positive)' : parseFloat(debtEquity) <= 2 ? 'var(--color-warning)' : 'var(--color-negative)'};">${debtEquity}</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted);">
+                    = Total Liabilities ÷ Total Equity<br>
+                    = $${liabilities.toLocaleString()} ÷ $${equity.toLocaleString()}
+                  </div>
+                  <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
+                    ${parseFloat(debtEquity) <= 1 ? '✓ Low leverage' : parseFloat(debtEquity) <= 2 ? '⚠ Moderate leverage' : '⚠ High leverage'}
+                  </div>
+                </div>
+              </div>
+            `;
+          })(),
+          expenses: (() => {
+            const topExpenses = window.dashboardData.topExpenses || [];
+            const totalOpex = Math.abs(pl.opex || 0);
+            
+            if (topExpenses.length === 0) {
+              return `
+                <div style="padding: 16px 0;">
+                  <div style="color: var(--color-text-muted);">No expense data available</div>
+                </div>
+              `;
+            }
+
+            return `
+              <div style="padding: 16px 0;">
+                <div style="font-size: 28px; font-weight: 600; color: var(--color-warning); margin-bottom: 4px;">
+                  $${totalOpex.toLocaleString()}
+                </div>
+                <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                  Total Operating Expenses
+                </div>
+
+                <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top Expense Categories</h3>
                 <table class="data-table">
+                  <thead><tr><th>Expense Category</th><th style="text-align:right">Amount</th><th style="text-align:right">% of Total</th></tr></thead>
                   <tbody>
-                    <tr><td>Total Assets</td><td style="text-align:right">$${(balance.totalAssets || 0).toLocaleString()}</td></tr>
-                    <tr><td>Total Liabilities</td><td style="text-align:right">$${(balance.totalLiabilities || 0).toLocaleString()}</td></tr>
-                    <tr style="font-weight:600; background:#f5f5f5;">
-                      <td>Net Equity</td><td style="text-align:right">$${(balance.totalEquity || 0).toLocaleString()}</td>
-                    </tr>
+                    ${topExpenses.map((exp, i) => {
+                      const amount = Math.abs(exp.amount || 0);
+                      const pct = totalOpex > 0 ? ((amount / totalOpex) * 100).toFixed(1) : 0;
+                      return `
+                        <tr>
+                          <td style="font-size:13px;">
+                            <span style="display: inline-block; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: ${i === 0 ? '#D13438' : i === 1 ? '#FF8C00' : '#FFC300'}; color: white; font-size: 11px; margin-right: 8px;">${i + 1}</span>
+                            ${exp.name || 'Unknown'}
+                          </td>
+                          <td style="text-align:right; font-size:13px; font-weight: 600;">$${amount.toLocaleString()}</td>
+                          <td style="text-align:right; font-size:13px; color: var(--color-text-muted);">${pct}%</td>
+                        </tr>
+                      `;
+                    }).join('')}
                   </tbody>
                 </table>
-              `}
-            </div>
-          `,
-          aged: `
-            <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Aged Receivables</h3>
-              <table class="data-table">
-                <thead><tr><th>Age</th><th style="text-align:right">Amount</th></tr></thead>
-                <tbody>
-                  <tr><td>Current (0-30 days)</td><td style="text-align:right">$${(receivables.aged30Days || 0).toLocaleString()}</td></tr>
-                  <tr><td>31-60 days</td><td style="text-align:right">$${(receivables.aged60Days || 0).toLocaleString()}</td></tr>
-                  <tr><td>61-90 days</td><td style="text-align:right">$${(receivables.aged90Days || 0).toLocaleString()}</td></tr>
-                  <tr><td>90+ days</td><td style="text-align:right">$${(receivables.agedOver120Days || 0).toLocaleString()}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          `,
-          ratios: `
-            <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Financial Ratios</h3>
-              <table class="data-table">
-                <tbody>
-                  <tr><td>Current Ratio</td><td style="text-align:right">${balance.totalAssets && balance.totalLiabilities ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) : 'N/A'}</td></tr>
-                  <tr><td>Debt to Equity</td><td style="text-align:right">${balance.totalLiabilities && balance.totalEquity ? (balance.totalLiabilities / balance.totalEquity).toFixed(2) : 'N/A'}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          `,
+
+                <div style="margin-top: 20px;">
+                  <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Expense Breakdown</h3>
+                  ${topExpenses.slice(0, 5).map((exp, i) => {
+                    const amount = Math.abs(exp.amount || 0);
+                    const pct = totalOpex > 0 ? ((amount / totalOpex) * 100) : 0;
+                    return `
+                      <div style="margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                          <span style="font-size: 12px;">${exp.name || 'Unknown'}</span>
+                          <span style="font-size: 12px; font-weight: 600;">$${amount.toLocaleString()}</span>
+                        </div>
+                        <div style="height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden;">
+                          <div style="height: 100%; width: ${pct}%; background: ${i === 0 ? '#D13438' : i === 1 ? '#FF8C00' : '#FFC300'}; border-radius: 4px;"></div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          })(),
           receivables: `
             <div style="padding: 16px 0;">
               <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">

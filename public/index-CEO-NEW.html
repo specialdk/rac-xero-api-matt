@@ -468,9 +468,9 @@
       .dashboard {
         flex: 1;
         padding: var(--spacing-md);
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: 1fr 1fr 1fr;
         gap: var(--spacing-md);
       }
 
@@ -578,7 +578,6 @@
         display: grid;
         grid-template-columns: 2fr 1fr;
         gap: var(--spacing-md);
-        min-height: 200px;
       }
 
       .chart-card {
@@ -588,6 +587,7 @@
         box-shadow: var(--shadow-card);
         display: flex;
         flex-direction: column;
+        overflow: hidden;
       }
 
       .chart-header {
@@ -630,15 +630,17 @@
       .chart-container {
         flex: 1;
         position: relative;
-        min-height: 150px;
+        min-height: 0;
       }
 
       /* ========== BUDGET HORIZONTAL BARS ========== */
       .budget-bars-container {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-md);
-        padding: var(--spacing-sm) 0;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-xs) 0;
+        flex: 1;
+        overflow: hidden;
       }
 
       .budget-bar-item {
@@ -749,14 +751,12 @@
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         gap: var(--spacing-md);
-        flex: 1;
-        min-height: 0;
       }
 
       .summary-card {
         background: var(--bg-card);
         border-radius: 10px;
-        padding: var(--spacing-md);
+        padding: 12px var(--spacing-md);
         box-shadow: var(--shadow-card);
         display: flex;
         flex-direction: column;
@@ -767,7 +767,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: var(--spacing-sm);
+        margin-bottom: var(--spacing-xs);
       }
 
       .card-title {
@@ -792,8 +792,8 @@
       .budget-item {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        padding: 10px 0;
+        gap: 4px;
+        padding: 6px 0;
         border-bottom: 1px solid var(--color-border);
       }
 
@@ -808,7 +808,7 @@
       }
 
       .budget-item-label {
-        font-size: 15px;
+        font-size: 13px;
         font-weight: 600;
         color: var(--color-text-primary);
       }
@@ -822,7 +822,7 @@
 
       .budget-actual {
   font-weight: 600;
-  font-size: var(--font-size-kpi);
+  font-size: 20px;
   color: var(--color-text-primary);
 }
 
@@ -950,29 +950,31 @@
       .customer-list {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 4px;
+        overflow-y: auto;
       }
 
       .customer-item {
         display: flex;
         align-items: center;
         gap: var(--spacing-sm);
-        padding: 10px;
+        padding: 6px 8px;
         background: var(--bg-page);
-        border-radius: 8px;
+        border-radius: 6px;
       }
 
       .customer-rank {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: var(--color-primary);
         color: white;
         border-radius: 50%;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 600;
+        flex-shrink: 0;
       }
 
       .customer-info {
@@ -995,7 +997,7 @@
       }
 
       .customer-value {
-        font-size: 26px;
+        font-size: 15px;
         font-weight: 600;
         color: var(--color-text-primary);
       }
@@ -1533,7 +1535,7 @@
                 <div class="card-title">P&L Summary</div>
                 <div class="card-subtitle" id="pl-period">Q3 FY25/26</div>
               </div>
-              <span style="color: var(--color-text-muted); font-size: 18px;">›</span>
+              <span style="color: var(--color-text-muted); font-size: 18px;">â€º</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1548,7 +1550,7 @@
                   <span class="budget-actual" id="pl-cogs">$0</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #FFFBEB; margin: 0 -16px; padding: 10px 16px;">
+              <div class="budget-item" style="background: #FFFBEB; margin: 0 -16px; padding: 6px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label">Gross Profit</span>
                   <span class="budget-actual" id="pl-gross">$0</span>
@@ -1592,7 +1594,7 @@
                 <div class="card-title">Balance Sheet</div>
                 <div class="card-subtitle">Current position</div>
               </div>
-              <span style="color: var(--color-text-muted); font-size: 18px;">›</span>
+              <span style="color: var(--color-text-muted); font-size: 18px;">â€º</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1607,7 +1609,7 @@
                   <span class="budget-actual" id="bs-liabilities">$0</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #E8F5E9; margin: 0 -16px; padding: 10px 16px;">
+              <div class="budget-item" style="background: #E8F5E9; margin: 0 -16px; padding: 6px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label">Net Equity</span>
                   <span class="budget-actual" id="bs-equity">$0</span>
@@ -1623,7 +1625,7 @@
                <div class="card-title">Key Ratios</div>
                 <div class="card-subtitle" id="ratios-subtitle">Financial health indicators</div>
               </div>
-              <span style="color: var(--color-text-muted); font-size: 18px;">›</span>
+              <span style="color: var(--color-text-muted); font-size: 18px;">â€º</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1680,7 +1682,7 @@
                   <span class="budget-actual" id="aged-61-90">$0</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #FDECE9; margin: 0 -16px; padding: 10px 16px;">
+              <div class="budget-item" style="background: #FDECE9; margin: 0 -16px; padding: 6px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label">90+ days</span>
                   <span class="budget-actual" id="aged-90plus">$0</span>
@@ -1913,7 +1915,7 @@
             btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount">0</span>';
             // Open drawer to show "no reversals found" message
             document.getElementById('drawerTitle').textContent = 'Reversal Journals';
-            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">âœ…</p><p>No reversal journals found in this period.</p></div>';
+            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">Ã¢Å“â€¦</p><p>No reversal journals found in this period.</p></div>';
             document.getElementById('drawer').classList.add('active');
             document.getElementById('drawerOverlay').classList.add('active');
             return;
@@ -2914,14 +2916,14 @@
           ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
           : '-';
         
-        // Gross Margin = (Revenue - COGS) / Revenue ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 100
+        // Gross Margin = (Revenue - COGS) / Revenue ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â 100
         const revenue = Math.abs(pl.revenue || 0);
         const cogs = Math.abs(pl.cogs || 0);
         const grossMargin = revenue > 0 
           ? (((revenue - cogs) / revenue) * 100).toFixed(1) + '%'
           : '-';
         
-        // Net Profit Margin = Net Profit / Revenue ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 100
+        // Net Profit Margin = Net Profit / Revenue ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â 100
         const netProfit = pl.netProfit || 0;
         const netMargin = revenue > 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'
@@ -2961,13 +2963,13 @@
           : 'N/A';
         document.getElementById('ratio-current').textContent = currentRatio;
 
-        // Gross Margin (Gross Profit / Revenue × 100)
+        // Gross Margin (Gross Profit / Revenue Ã— 100)
         const grossMargin = revenue !== 0 
           ? ((grossProfit / revenue) * 100).toFixed(1) + '%'
           : 'N/A';
         document.getElementById('ratio-gross-margin').textContent = grossMargin;
 
-        // Net Profit Margin (Net Profit / Revenue × 100)
+        // Net Profit Margin (Net Profit / Revenue Ã— 100)
         const netMargin = revenue !== 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'
           : 'N/A';
@@ -3460,7 +3462,7 @@
                   grouped[acc.entity].subtotal += acc.balance || 0;
                 });
                 return Object.entries(grouped).map(([entity, data]) => `
-                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} â€” $${data.subtotal.toLocaleString()}</h3>
+                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} Ã¢â‚¬â€ $${data.subtotal.toLocaleString()}</h3>
                   <table class="data-table" style="margin-bottom: 12px;">
                     <tbody>
                       ${data.accounts.map(acc => `
@@ -3772,11 +3774,11 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(currentRatio) >= 1.5 ? 'var(--color-positive)' : parseFloat(currentRatio) >= 1 ? 'var(--color-warning)' : 'var(--color-negative)'};">${currentRatio}</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Total Assets ÷ Total Liabilities<br>
-                    = $${assets.toLocaleString()} ÷ $${liabilities.toLocaleString()}
+                    = Total Assets Ã· Total Liabilities<br>
+                    = $${assets.toLocaleString()} Ã· $${liabilities.toLocaleString()}
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
-                    ${parseFloat(currentRatio) >= 1.5 ? '✓ Strong liquidity' : parseFloat(currentRatio) >= 1 ? '⚠ Adequate liquidity' : '⚠ Low liquidity'}
+                    ${parseFloat(currentRatio) >= 1.5 ? 'âœ“ Strong liquidity' : parseFloat(currentRatio) >= 1 ? 'âš  Adequate liquidity' : 'âš  Low liquidity'}
                   </div>
                 </div>
 
@@ -3787,8 +3789,8 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(grossMargin) >= 30 ? 'var(--color-positive)' : parseFloat(grossMargin) >= 15 ? 'var(--color-warning)' : 'var(--color-negative)'};">${grossMargin}%</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Gross Profit ÷ Revenue × 100<br>
-                    = $${grossProfit.toLocaleString()} ÷ $${revenue.toLocaleString()} × 100
+                    = Gross Profit Ã· Revenue Ã— 100<br>
+                    = $${grossProfit.toLocaleString()} Ã· $${revenue.toLocaleString()} Ã— 100
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
                     Profit after direct costs
@@ -3802,11 +3804,11 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(netMargin) >= 10 ? 'var(--color-positive)' : parseFloat(netMargin) >= 0 ? 'var(--color-warning)' : 'var(--color-negative)'};">${netMargin}%</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Net Profit ÷ Revenue × 100<br>
-                    = $${netProfit.toLocaleString()} ÷ $${revenue.toLocaleString()} × 100
+                    = Net Profit Ã· Revenue Ã— 100<br>
+                    = $${netProfit.toLocaleString()} Ã· $${revenue.toLocaleString()} Ã— 100
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
-                    ${parseFloat(netMargin) >= 10 ? '✓ Healthy profitability' : parseFloat(netMargin) >= 0 ? '⚠ Marginal profit' : '⚠ Operating at a loss'}
+                    ${parseFloat(netMargin) >= 10 ? 'âœ“ Healthy profitability' : parseFloat(netMargin) >= 0 ? 'âš  Marginal profit' : 'âš  Operating at a loss'}
                   </div>
                 </div>
 
@@ -3817,11 +3819,11 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(debtEquity) <= 1 ? 'var(--color-positive)' : parseFloat(debtEquity) <= 2 ? 'var(--color-warning)' : 'var(--color-negative)'};">${debtEquity}</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Total Liabilities ÷ Total Equity<br>
-                    = $${liabilities.toLocaleString()} ÷ $${equity.toLocaleString()}
+                    = Total Liabilities Ã· Total Equity<br>
+                    = $${liabilities.toLocaleString()} Ã· $${equity.toLocaleString()}
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
-                    ${parseFloat(debtEquity) <= 1 ? '✓ Low leverage' : parseFloat(debtEquity) <= 2 ? '⚠ Moderate leverage' : '⚠ High leverage'}
+                    ${parseFloat(debtEquity) <= 1 ? 'âœ“ Low leverage' : parseFloat(debtEquity) <= 2 ? 'âš  Moderate leverage' : 'âš  High leverage'}
                   </div>
                 </div>
               </div>
@@ -3896,7 +3898,7 @@
                 $${(receivables.total || 0).toLocaleString()}
               </div>
               <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
-                ${receivables.invoiceCount || 0} invoices Ã¢â‚¬Â¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
+                ${receivables.invoiceCount || 0} invoices ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
               </div>
               
               <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top Customers</h3>
