@@ -1513,12 +1513,13 @@
         <div class="summary-row">
           
           <!-- Budget Progress (Detailed) -->
-          <div class="summary-card">
+          <div class="summary-card" onclick="openDrawer('profit')" style="cursor: pointer;">
             <div class="card-header">
               <div>
                 <div class="card-title">P&L Summary</div>
                 <div class="card-subtitle" id="pl-period">Q3 FY25/26</div>
               </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">›</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1607,12 +1608,13 @@
        
 
         <!-- Balance Sheet Summary -->
-          <div class="summary-card">
+          <div class="summary-card" onclick="openDrawer('balance')" style="cursor: pointer;">
             <div class="card-header">
               <div>
                 <div class="card-title">Balance Sheet</div>
                 <div class="card-subtitle">Current position</div>
               </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">›</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1637,12 +1639,13 @@
           </div>
 
           <!-- Aged Debtors Summary -->
-          <div class="summary-card">
+          <div class="summary-card" onclick="openDrawer('aged')" style="cursor: pointer;">
             <div class="card-header">
               <div>
                <div class="card-title">Aged Debtors</div>
                 <div class="card-subtitle" id="aged-subtitle">Outstanding invoices</div>
               </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">›</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1896,7 +1899,7 @@
             btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount">0</span>';
             // Open drawer to show "no reversals found" message
             document.getElementById('drawerTitle').textContent = 'Reversal Journals';
-            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">✅</p><p>No reversal journals found in this period.</p></div>';
+            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">âœ…</p><p>No reversal journals found in this period.</p></div>';
             document.getElementById('drawer').classList.add('active');
             document.getElementById('drawerOverlay').classList.add('active');
             return;
@@ -2171,8 +2174,15 @@
         let totalCash = 0;
         let totalRevenue = 0;
         let totalExpenses = 0;
+        let totalCogs = 0;
         let totalReceivables = 0;
+        let totalAssets = 0;
+        let totalLiabilities = 0;
+        let totalEquity = 0;
         let allInvoices = [];
+        let allBankAccounts = [];
+        let allEntityPL = [];
+        let allEntityBalance = [];
         let successCount = 0;
 
         document.getElementById("kpi-cash").textContent = "Loading...";
@@ -2192,6 +2202,13 @@
               totalCash += cashData.totalCash;
               successCount++;
             }
+            // Collect bank accounts tagged with entity name
+            if (cashData.bankAccounts) {
+              const entityDisplay = { 'Mining': 'Mining', 'Aboriginal Corporation': 'Aboriginal Corp', 'Enterprises': 'Enterprises', 'Property': 'Property Mgmt', 'Ngarrkuwuy': 'Ngarrkuwuy', 'Invest': 'Miliditjpi Trust', 'Marrin': 'Marrin Square' };
+              cashData.bankAccounts.forEach(acc => {
+                allBankAccounts.push({ name: acc.name, balance: acc.balance, entity: entityDisplay[entity] || entity });
+              });
+            }
 
             // P&L
             const plResp = await fetch(`${API_BASE}/api/profit-loss-summary`, {
@@ -2206,8 +2223,26 @@
             }),
             });
             const plData = await plResp.json();
-            totalRevenue += plData.summary?.totalRevenue || 0;
-            totalExpenses += plData.summary?.totalExpenses || 0;
+            const entityRevenue = plData.summary?.totalRevenue || 0;
+            const entityCogs = plData.summary?.totalCOGS || 0;
+            const entityExpenses = plData.summary?.totalExpenses || 0;
+            totalRevenue += entityRevenue;
+            totalCogs += entityCogs;
+            totalExpenses += entityExpenses;
+
+            // Collect per-entity P&L for revenue sidecard
+            const entityDisplay = { 'Mining': 'Mining', 'Aboriginal Corporation': 'Aboriginal Corp', 'Enterprises': 'Enterprises', 'Property': 'Property Mgmt', 'Ngarrkuwuy': 'Ngarrkuwuy', 'Invest': 'Miliditjpi Trust', 'Marrin': 'Marrin Square' };
+            allEntityPL.push({
+              entity: entityDisplay[entity] || entity,
+              revenue: entityRevenue,
+              cogs: entityCogs,
+              opex: entityExpenses,
+              gross: entityRevenue - entityCogs,
+              netProfit: entityRevenue - entityCogs - entityExpenses,
+              revenueAccounts: plData.summary?.revenueAccounts || [],
+              cogsAccounts: plData.summary?.cogsAccounts || [],
+              expenseAccounts: plData.summary?.expenseAccounts || []
+            });
 
             // Invoices
             const invResp = await fetch(`${API_BASE}/api/outstanding-invoices`, {
@@ -2220,6 +2255,29 @@
               allInvoices = allInvoices.concat(invData);
               totalReceivables += invData.reduce((sum, inv) => sum + (inv.amountDue || 0), 0);
             }
+
+            // Trial Balance (for Balance Sheet)
+            const tbResp = await fetch(`${API_BASE}/api/trial-balance`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ organizationName: entity }),
+            });
+            const tbData = await tbResp.json();
+            const entityAssets = tbData.trialBalance?.totals?.totalAssets || 0;
+            const entityLiabilities = tbData.trialBalance?.totals?.totalLiabilities || 0;
+            const entityEquity = tbData.trialBalance?.totals?.totalEquity || 0;
+            totalAssets += entityAssets;
+            totalLiabilities += entityLiabilities;
+            totalEquity += entityEquity;
+
+            // Collect per-entity balance for sidecard
+            const entityDisplayBal = { 'Mining': 'Mining', 'Aboriginal Corporation': 'Aboriginal Corp', 'Enterprises': 'Enterprises', 'Property': 'Property Mgmt', 'Ngarrkuwuy': 'Ngarrkuwuy', 'Invest': 'Miliditjpi Trust', 'Marrin': 'Marrin Square' };
+            allEntityBalance.push({
+              entity: entityDisplayBal[entity] || entity,
+              assets: entityAssets,
+              liabilities: entityLiabilities,
+              equity: entityEquity
+            });
           } catch (e) {
             console.warn(`Error loading ${entity}:`, e);
           }
@@ -2230,7 +2288,11 @@
         document.getElementById("kpi-cash-trend").innerHTML = `&#x1F4B0; ${successCount} entities`;
         document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
 
-        const netProfit = totalRevenue - totalExpenses;
+        // Store consolidated cash for drawer
+        window.dashboardData.cash = { totalCash, bankAccounts: allBankAccounts, isConsolidated: true };
+
+        const grossProfit = totalRevenue - totalCogs;
+        const netProfit = grossProfit - totalExpenses;
         document.getElementById("kpi-revenue").textContent = "$" + totalRevenue.toLocaleString();
         document.getElementById("kpi-revenue-trend").textContent = "\u{1F4CA} Consolidated";
         
@@ -2241,11 +2303,51 @@
         document.getElementById("kpi-receivables").textContent = "$" + totalReceivables.toLocaleString();
         document.getElementById("kpi-receivables-trend").textContent = `${allInvoices.length} invoices across all entities`;
 
-        // Store for other functions
-        window.dashboardData.pl = { revenue: totalRevenue, netProfit: netProfit };
+        // Store consolidated receivables for drawer (calculate aging from allInvoices)
+        let arCurrent = 0, ar31_60 = 0, ar61_90 = 0, arOver90 = 0;
+        const now = new Date();
+        allInvoices.forEach(inv => {
+          const amount = inv.amountDue || 0;
+          const dueDate = inv.dueDate ? new Date(inv.dueDate) : now;
+          const daysOverdue = Math.max(0, Math.floor((now - dueDate) / (1000 * 60 * 60 * 24)));
+          if (daysOverdue <= 30) arCurrent += amount;
+          else if (daysOverdue <= 60) ar31_60 += amount;
+          else if (daysOverdue <= 90) ar61_90 += amount;
+          else arOver90 += amount;
+        });
+        window.dashboardData.receivables = {
+          aged30Days: arCurrent,
+          aged60Days: ar31_60,
+          aged90Days: ar61_90,
+          agedOver120Days: arOver90,
+          total: totalReceivables,
+          invoiceCount: allInvoices.length,
+          invoices: allInvoices,
+          isConsolidated: true
+        };
+
+        // Store for other functions (with entity breakdown for sidecard)
+        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, netProfit: netProfit, entityBreakdown: allEntityPL, isConsolidated: true };
+
+        // Store consolidated balance sheet for drawer
+        window.dashboardData.balance = {
+          totalAssets: totalAssets,
+          totalLiabilities: totalLiabilities,
+          totalEquity: totalEquity,
+          entityBreakdown: allEntityBalance,
+          isConsolidated: true
+        };
+
+        // Update Balance Sheet card
+        document.getElementById('bs-assets').textContent = '$' + totalAssets.toLocaleString();
+        document.getElementById('bs-liabilities').textContent = '$' + totalLiabilities.toLocaleString();
+        document.getElementById('bs-equity').textContent = '$' + totalEquity.toLocaleString();
 
         // Update P&L Summary card
         document.getElementById("pl-revenue").textContent = "$" + totalRevenue.toLocaleString();
+        document.getElementById("pl-cogs").textContent = "$" + totalCogs.toLocaleString();
+        document.getElementById("pl-gross").textContent = "$" + grossProfit.toLocaleString();
+        document.getElementById("pl-opex").textContent = "$" + totalExpenses.toLocaleString();
         document.getElementById("pl-net").innerHTML = "<strong>$" + netProfit.toLocaleString() + "</strong>";
 
         // Inventory stays the same
@@ -2327,7 +2429,7 @@
           const totalExpenses = cogs + opex; // For budget comparison
 
           // Store for budget comparison
-          window.dashboardData.pl = { revenue, totalExpenses, cogs, opex, gross, netProfit };
+          window.dashboardData.pl = { revenue, totalExpenses, cogs, opex, gross, netProfit, revenueAccounts: data.summary?.revenueAccounts || [], cogsAccounts: data.summary?.cogsAccounts || [], expenseAccounts: data.summary?.expenseAccounts || [] };
 
           // Update KPI cards
           document.getElementById("kpi-revenue").textContent = "$" + revenue.toLocaleString();
@@ -2610,14 +2712,14 @@
           ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
           : '-';
         
-        // Gross Margin = (Revenue - COGS) / Revenue ÃƒÆ’Ã¢â‚¬â€ 100
+        // Gross Margin = (Revenue - COGS) / Revenue ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 100
         const revenue = Math.abs(pl.revenue || 0);
         const cogs = Math.abs(pl.cogs || 0);
         const grossMargin = revenue > 0 
           ? (((revenue - cogs) / revenue) * 100).toFixed(1) + '%'
           : '-';
         
-        // Net Profit Margin = Net Profit / Revenue ÃƒÆ’Ã¢â‚¬â€ 100
+        // Net Profit Margin = Net Profit / Revenue ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 100
         const netProfit = pl.netProfit || 0;
         const netMargin = revenue > 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'
@@ -3110,19 +3212,43 @@
 
       function getDrawerContent(type) {
         const cash = window.dashboardData.cash;
+        const pl = window.dashboardData.pl || {};
         const balance = window.dashboardData.balance;
         const receivables = window.dashboardData.receivables;
 
         const contents = {
           cash: `
             <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Bank Accounts</h3>
-              <table class="data-table">
-                <thead><tr><th>Account</th><th style="text-align:right">Balance</th></tr></thead>
+              ${cash.isConsolidated ? (() => {
+                const grouped = {};
+                (cash.bankAccounts || []).forEach(acc => {
+                  if (!grouped[acc.entity]) grouped[acc.entity] = { accounts: [], subtotal: 0 };
+                  grouped[acc.entity].accounts.push(acc);
+                  grouped[acc.entity].subtotal += acc.balance || 0;
+                });
+                return Object.entries(grouped).map(([entity, data]) => `
+                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} â€” $${data.subtotal.toLocaleString()}</h3>
+                  <table class="data-table" style="margin-bottom: 12px;">
+                    <tbody>
+                      ${data.accounts.map(acc => `
+                        <tr><td style="padding-left:12px; font-size:13px;">${acc.name}</td><td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td></tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                `).join('');
+              })() : `
+                <h3 style="margin-bottom: 16px; font-size: 15px;">Bank Accounts</h3>
+                <table class="data-table">
+                  <thead><tr><th>Account</th><th style="text-align:right">Balance</th></tr></thead>
+                  <tbody>
+                    ${(cash.bankAccounts || []).map(acc => `
+                      <tr><td>${acc.name}</td><td style="text-align:right">$${(acc.balance || 0).toLocaleString()}</td></tr>
+                    `).join('') || '<tr><td colspan="2">No accounts found</td></tr>'}
+                  </tbody>
+                </table>
+              `}
+              <table class="data-table" style="margin-top: 8px;">
                 <tbody>
-                  ${(cash.bankAccounts || []).map(acc => `
-                    <tr><td>${acc.name}</td><td style="text-align:right">$${(acc.balance || 0).toLocaleString()}</td></tr>
-                  `).join('') || '<tr><td colspan="2">No accounts found</td></tr>'}
                   <tr style="font-weight:600; background:#f5f5f5;">
                     <td>Total Cash</td><td style="text-align:right">$${(cash.totalCash || 0).toLocaleString()}</td>
                   </tr>
@@ -3130,18 +3256,214 @@
               </table>
             </div>
           `,
+          revenue: `
+            <div style="padding: 16px 0;">
+              ${pl.isConsolidated ? (() => {
+                const breakdown = pl.entityBreakdown || [];
+                return `
+                  <div style="font-size: 28px; font-weight: 600; color: ${(pl.revenue || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
+                    $${(pl.revenue || 0).toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                    Total Revenue across ${breakdown.length} entities
+                  </div>
+                  ${breakdown.filter(e => e.revenue !== 0).map(e => `
+                    <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${e.entity} \u2014 $${e.revenue.toLocaleString()}</h3>
+                    <table class="data-table" style="margin-bottom: 12px;">
+                      <tbody>
+                        ${(e.revenueAccounts || []).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)).map(acc => `
+                          <tr>
+                            <td style="padding-left:12px; font-size:13px;">${acc.name}</td>
+                            <td style="text-align:right; font-size:13px; color: ${acc.amount >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${acc.amount.toLocaleString()}</td>
+                          </tr>
+                        `).join('') || '<tr><td colspan="2" style="font-size:13px; color: var(--color-text-muted);">No revenue accounts</td></tr>'}
+                      </tbody>
+                    </table>
+                  `).join('')}
+                  <table class="data-table" style="margin-top: 8px;">
+                    <tbody>
+                      <tr style="font-weight:600; background:#f5f5f5;">
+                        <td>Total Revenue</td><td style="text-align:right">$${(pl.revenue || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                `;
+              })() : (() => {
+                const accounts = (pl.revenueAccounts || []).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+                return `
+                  <div style="font-size: 28px; font-weight: 600; color: ${(pl.revenue || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
+                    $${(pl.revenue || 0).toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                    ${accounts.length} revenue accounts
+                  </div>
+                  <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Revenue Accounts</h3>
+                  <table class="data-table">
+                    <thead><tr><th>Account</th><th style="text-align:right">Amount</th></tr></thead>
+                    <tbody>
+                      ${accounts.map(acc => `
+                        <tr>
+                          <td style="font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px; color: ${acc.amount >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; font-weight:600;">$${acc.amount.toLocaleString()}</td>
+                        </tr>
+                      `).join('') || '<tr><td colspan="2">No revenue accounts found</td></tr>'}
+                      <tr style="font-weight:600; background:#f5f5f5; border-top: 2px solid #ddd;">
+                        <td>Total Revenue</td>
+                        <td style="text-align:right; color: ${(pl.revenue || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(pl.revenue || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                `;
+              })()}
+            </div>
+          `,
+          profit: (() => {
+            // Helper to render the P&L waterfall with COGS and OpEx line items
+            const renderPLWaterfall = (data, title) => {
+              const cogsItems = (data.cogsAccounts || []).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+              const opexItems = (data.expenseAccounts || []).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+              return `
+                ${title ? `<h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${title}</h3>` : ''}
+                <table class="data-table" style="margin-bottom: 16px;">
+                  <tbody>
+                    <tr style="background:#E6F4EA;">
+                      <td style="font-weight:600;">Revenue</td>
+                      <td style="text-align:right; font-weight:600; color: var(--color-positive);">$${(data.revenue || 0).toLocaleString()}</td>
+                    </tr>
+                    ${cogsItems.length > 0 ? `
+                      <tr style="background:#f9f9f9;"><td colspan="2" style="font-size:12px; font-weight:600; color: var(--color-text-muted); padding-top:8px;">COST OF GOODS SOLD</td></tr>
+                      ${cogsItems.map(acc => `
+                        <tr>
+                          <td style="padding-left:12px; font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px;">$${acc.amount.toLocaleString()}</td>
+                        </tr>
+                      `).join('')}
+                      <tr style="font-weight:600; background:#FFF4E5;">
+                        <td>Total COGS</td>
+                        <td style="text-align:right">$${(data.cogs || 0).toLocaleString()}</td>
+                      </tr>
+                    ` : ''}
+                    <tr style="font-weight:600; background:#E8F0FE;">
+                      <td>Gross Profit</td>
+                      <td style="text-align:right; color: var(--color-primary);">$${(data.gross || 0).toLocaleString()}</td>
+                    </tr>
+                    ${opexItems.length > 0 ? `
+                      <tr style="background:#f9f9f9;"><td colspan="2" style="font-size:12px; font-weight:600; color: var(--color-text-muted); padding-top:8px;">OPERATING EXPENSES</td></tr>
+                      ${opexItems.map(acc => `
+                        <tr>
+                          <td style="padding-left:12px; font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px;">$${acc.amount.toLocaleString()}</td>
+                        </tr>
+                      `).join('')}
+                      <tr style="font-weight:600; background:#FFF4E5;">
+                        <td>Total OpEx</td>
+                        <td style="text-align:right">$${(data.opex || 0).toLocaleString()}</td>
+                      </tr>
+                    ` : ''}
+                    <tr style="font-weight:700; background:#f5f5f5; border-top: 2px solid #ddd; font-size: 15px;">
+                      <td>Net Profit</td>
+                      <td style="text-align:right; color: ${(data.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(data.netProfit || 0).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              `;
+            };
+
+            if (pl.isConsolidated) {
+              const breakdown = pl.entityBreakdown || [];
+              return `
+                <div style="padding: 16px 0;">
+                  <div style="font-size: 28px; font-weight: 600; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
+                    $${(pl.netProfit || 0).toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                    Net Profit across ${breakdown.length} entities
+                  </div>
+                  ${breakdown.filter(e => e.revenue !== 0 || e.cogs !== 0 || e.opex !== 0).map(e => 
+                    renderPLWaterfall(e, `${e.entity} \u2014 Net: $${e.netProfit.toLocaleString()}`)
+                  ).join('')}
+                  <table class="data-table" style="margin-top: 8px;">
+                    <tbody>
+                      <tr style="font-weight:700; background:#f5f5f5; font-size: 15px;">
+                        <td>Consolidated Net Profit</td><td style="text-align:right; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(pl.netProfit || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              `;
+            } else {
+              return `
+                <div style="padding: 16px 0;">
+                  <div style="font-size: 28px; font-weight: 600; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
+                    $${(pl.netProfit || 0).toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                    Full P&L breakdown
+                  </div>
+                  ${renderPLWaterfall(pl)}
+                </div>
+              `;
+            }
+          })(),
           balance: `
             <div style="padding: 16px 0;">
-              <h3 style="margin-bottom: 16px; font-size: 15px;">Balance Sheet Summary</h3>
-              <table class="data-table">
-                <tbody>
-                  <tr><td>Total Assets</td><td style="text-align:right">$${(balance.totalAssets || 0).toLocaleString()}</td></tr>
-                  <tr><td>Total Liabilities</td><td style="text-align:right">$${(balance.totalLiabilities || 0).toLocaleString()}</td></tr>
-                  <tr style="font-weight:600; background:#f5f5f5;">
-                    <td>Net Equity</td><td style="text-align:right">$${(balance.totalEquity || 0).toLocaleString()}</td>
-                  </tr>
-                </tbody>
-              </table>
+              ${balance.isConsolidated ? (() => {
+                const breakdown = balance.entityBreakdown || [];
+                return `
+                  <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
+                    $${(balance.totalEquity || 0).toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                    Net Equity across ${breakdown.length} entities
+                  </div>
+                  <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Balance by Entity</h3>
+                  <table class="data-table" style="margin-bottom: 16px;">
+                    <thead><tr><th>Entity</th><th style="text-align:right">Assets</th><th style="text-align:right">Liabilities</th><th style="text-align:right">Equity</th></tr></thead>
+                    <tbody>
+                      ${breakdown.map(e => `
+                        <tr>
+                          <td style="font-size:13px;">${e.entity}</td>
+                          <td style="text-align:right; font-size:13px;">$${(e.assets || 0).toLocaleString()}</td>
+                          <td style="text-align:right; font-size:13px; color: var(--color-text-muted);">$${(e.liabilities || 0).toLocaleString()}</td>
+                          <td style="text-align:right; font-size:13px; color: ${(e.equity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; font-weight:600;">$${(e.equity || 0).toLocaleString()}</td>
+                        </tr>
+                      `).join('')}
+                      <tr style="font-weight:600; background:#f5f5f5; border-top: 2px solid #ddd;">
+                        <td>Total</td>
+                        <td style="text-align:right">$${(balance.totalAssets || 0).toLocaleString()}</td>
+                        <td style="text-align:right; color: var(--color-text-muted);">$${(balance.totalLiabilities || 0).toLocaleString()}</td>
+                        <td style="text-align:right; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(balance.totalEquity || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <h3 style="margin: 16px 0 12px; font-size: 14px; font-weight: 600;">Consolidated Summary</h3>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                    <div style="padding: 10px; background: #E8F0FE; border-radius: 6px;">
+                      <div style="font-size: 11px; color: var(--color-text-muted);">Total Assets</div>
+                      <div style="font-size: 16px; font-weight: 600; color: var(--color-primary);">$${(balance.totalAssets || 0).toLocaleString()}</div>
+                    </div>
+                    <div style="padding: 10px; background: #FFF4E5; border-radius: 6px;">
+                      <div style="font-size: 11px; color: var(--color-text-muted);">Liabilities</div>
+                      <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">$${(balance.totalLiabilities || 0).toLocaleString()}</div>
+                    </div>
+                    <div style="padding: 10px; background: ${(balance.totalEquity || 0) >= 0 ? '#E6F4EA' : '#FDECE9'}; border-radius: 6px;">
+                      <div style="font-size: 11px; color: var(--color-text-muted);">Net Equity</div>
+                      <div style="font-size: 16px; font-weight: 600; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(balance.totalEquity || 0).toLocaleString()}</div>
+                    </div>
+                  </div>
+                `;
+              })() : `
+                <h3 style="margin-bottom: 16px; font-size: 15px;">Balance Sheet Summary</h3>
+                <table class="data-table">
+                  <tbody>
+                    <tr><td>Total Assets</td><td style="text-align:right">$${(balance.totalAssets || 0).toLocaleString()}</td></tr>
+                    <tr><td>Total Liabilities</td><td style="text-align:right">$${(balance.totalLiabilities || 0).toLocaleString()}</td></tr>
+                    <tr style="font-weight:600; background:#f5f5f5;">
+                      <td>Net Equity</td><td style="text-align:right">$${(balance.totalEquity || 0).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              `}
             </div>
           `,
           aged: `
@@ -3175,7 +3497,7 @@
                 $${(receivables.total || 0).toLocaleString()}
               </div>
               <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
-                ${receivables.invoiceCount || 0} invoices â€¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
+                ${receivables.invoiceCount || 0} invoices Ã¢â‚¬Â¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
               </div>
               
               <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top Customers</h3>
