@@ -2393,7 +2393,15 @@
           });
           const data = await response.json();
           
-          window.dashboardData.balance = data.trialBalance?.totals || {};
+          // Store totals plus account arrays for sidecard detail
+          window.dashboardData.balance = {
+            totalAssets: data.trialBalance?.totals?.totalAssets || 0,
+            totalLiabilities: data.trialBalance?.totals?.totalLiabilities || 0,
+            totalEquity: data.trialBalance?.totals?.totalEquity || 0,
+            assets: data.trialBalance?.assets || [],
+            liabilities: data.trialBalance?.liabilities || [],
+            equity: data.trialBalance?.equity || []
+          };
           
         } catch (error) {
           console.error("Error loading trial balance:", error);
@@ -3452,18 +3460,67 @@
                     </div>
                   </div>
                 `;
-              })() : `
-                <h3 style="margin-bottom: 16px; font-size: 15px;">Balance Sheet Summary</h3>
-                <table class="data-table">
-                  <tbody>
-                    <tr><td>Total Assets</td><td style="text-align:right">$${(balance.totalAssets || 0).toLocaleString()}</td></tr>
-                    <tr><td>Total Liabilities</td><td style="text-align:right">$${(balance.totalLiabilities || 0).toLocaleString()}</td></tr>
-                    <tr style="font-weight:600; background:#f5f5f5;">
-                      <td>Net Equity</td><td style="text-align:right">$${(balance.totalEquity || 0).toLocaleString()}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              `}
+              })() : (() => {
+                const assetAccounts = (balance.assets || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+                const liabilityAccounts = (balance.liabilities || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+                const equityAccounts = (balance.equity || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+                return `
+                  <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
+                    $${(balance.totalEquity || 0).toLocaleString()}
+                  </div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                    Net Equity
+                  </div>
+
+                  <h3 style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-primary);">Assets</h3>
+                  <table class="data-table" style="margin-bottom: 16px;">
+                    <tbody>
+                      ${assetAccounts.map(acc => `
+                        <tr>
+                          <td style="font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td>
+                        </tr>
+                      `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No asset accounts</td></tr>'}
+                      <tr style="font-weight:600; background:#E8F0FE;">
+                        <td>Total Assets</td>
+                        <td style="text-align:right; color: var(--color-primary);">$${(balance.totalAssets || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <h3 style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-warning);">Liabilities</h3>
+                  <table class="data-table" style="margin-bottom: 16px;">
+                    <tbody>
+                      ${liabilityAccounts.map(acc => `
+                        <tr>
+                          <td style="font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td>
+                        </tr>
+                      `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No liability accounts</td></tr>'}
+                      <tr style="font-weight:600; background:#FFF4E5;">
+                        <td>Total Liabilities</td>
+                        <td style="text-align:right; color: var(--color-warning);">$${(balance.totalLiabilities || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <h3 style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-positive);">Equity</h3>
+                  <table class="data-table">
+                    <tbody>
+                      ${equityAccounts.map(acc => `
+                        <tr>
+                          <td style="font-size:13px;">${acc.name}</td>
+                          <td style="text-align:right; font-size:13px; color: ${(acc.balance || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(acc.balance || 0).toLocaleString()}</td>
+                        </tr>
+                      `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No equity accounts</td></tr>'}
+                      <tr style="font-weight:600; background:#E6F4EA;">
+                        <td>Net Equity</td>
+                        <td style="text-align:right; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(balance.totalEquity || 0).toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                `;
+              })()}
             </div>
           `,
           aged: `
