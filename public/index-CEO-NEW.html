@@ -1963,6 +1963,8 @@
         window.dashboardData.pl.opex = adjOpex;
         window.dashboardData.pl.gross = adjGross;
         window.dashboardData.pl.netProfit = adjNetProfit;
+        // totalExpenses used by budget bars and trend chart
+        window.dashboardData.pl.totalExpenses = adjCogs + adjOpex;
 
         document.getElementById("kpi-revenue").textContent = "$" + fmt(adjRevenue);
         document.getElementById("kpi-profit").textContent = "$" + fmt(adjNetProfit);
@@ -1989,6 +1991,9 @@
         // Also update financial ratios
         loadFinancialRatios();
         updateSummaryCards();
+        // Refresh charts with adjusted values
+        initTrendChart();
+        refreshBudgetBars();
       }
 
       function restoreOriginalPL() {
@@ -2001,6 +2006,7 @@
         window.dashboardData.pl.opex = origPL.opex;
         window.dashboardData.pl.gross = origPL.gross;
         window.dashboardData.pl.netProfit = origPL.netProfit;
+        window.dashboardData.pl.totalExpenses = origPL.totalExpenses;
 
         document.getElementById("kpi-revenue").textContent = "$" + fmt((origPL.revenue || 0));
         const netProfit = origPL.netProfit || 0;
@@ -2029,6 +2035,9 @@
         // Also update financial ratios
         loadFinancialRatios();
         updateSummaryCards();
+        // Refresh charts with original values
+        initTrendChart();
+        refreshBudgetBars();
       }
 
       function showReversalDrawer() {
@@ -2406,7 +2415,7 @@
         });
         const aggregatedExpenses = Object.values(allExpenseAccounts);
 
-        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, netProfit: netProfit, entityBreakdown: allEntityPL, expenseAccounts: aggregatedExpenses, isConsolidated: true };
+        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, totalExpenses: totalCogs + totalExpenses, netProfit: netProfit, entityBreakdown: allEntityPL, expenseAccounts: aggregatedExpenses, isConsolidated: true };
 
         // Store consolidated balance sheet for drawer
         window.dashboardData.balance = {
@@ -2581,23 +2590,36 @@
           const proRatedExpenses = Math.round(budget.expenses * quarterInfo.proRateFactor);
           const proRatedGrossProfit = proRatedRevenue - (proRatedExpenses * 0.55); // Approximate COGS
 
-          const actualRevenue = window.dashboardData.pl?.revenue || 0;
-          const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
-          const actualGross = window.dashboardData.pl?.gross || 0;
+          // Store budget targets for reversal refresh
+          window.dashboardData.budgetTargets = {
+            proRatedRevenue,
+            proRatedExpenses,
+            proRatedGrossProfit
+          };
 
-          // Calculate variances
-          const revVar = proRatedRevenue > 0 ? ((actualRevenue - proRatedRevenue) / proRatedRevenue) * 100 : 0;
-          const expVar = proRatedExpenses > 0 ? ((actualExpenses - proRatedExpenses) / proRatedExpenses) * 100 : 0;
-          const gpVar = proRatedGrossProfit > 0 ? ((actualGross - proRatedGrossProfit) / proRatedGrossProfit) * 100 : 0;
-
-          // Update horizontal budget bars
-          updateBudgetBar('rev', actualRevenue, proRatedRevenue, revVar);
-          updateBudgetBar('exp', actualExpenses, proRatedExpenses, expVar);
-          updateBudgetBar('gp', actualGross, proRatedGrossProfit, gpVar);
+          refreshBudgetBars();
 
         } catch (error) {
           console.error("Error loading budget:", error);
         }
+      }
+
+      // Refresh budget bars using current dashboardData.pl and stored targets
+      function refreshBudgetBars() {
+        const targets = window.dashboardData.budgetTargets;
+        if (!targets) return;
+
+        const actualRevenue = window.dashboardData.pl?.revenue || 0;
+        const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
+        const actualGross = window.dashboardData.pl?.gross || 0;
+
+        const revVar = targets.proRatedRevenue > 0 ? ((actualRevenue - targets.proRatedRevenue) / targets.proRatedRevenue) * 100 : 0;
+        const expVar = targets.proRatedExpenses > 0 ? ((actualExpenses - targets.proRatedExpenses) / targets.proRatedExpenses) * 100 : 0;
+        const gpVar = targets.proRatedGrossProfit > 0 ? ((actualGross - targets.proRatedGrossProfit) / targets.proRatedGrossProfit) * 100 : 0;
+
+        updateBudgetBar('rev', actualRevenue, targets.proRatedRevenue, revVar);
+        updateBudgetBar('exp', actualExpenses, targets.proRatedExpenses, expVar);
+        updateBudgetBar('gp', actualGross, targets.proRatedGrossProfit, gpVar);
       }
 
       function updateBudgetBar(type, actual, budget, variance) {
