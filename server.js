@@ -286,7 +286,7 @@ const tokenStorage = {
 };
 
 // Middleware
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
 app.use(express.json());
 
 // Initialize Xero client with reports scope
@@ -2890,20 +2890,17 @@ app.get("/api/debug/database", async (req, res) => {
   }
 });
 
-// Route configuration - CEO dashboard is default, connect for re-auth
-// CEO Visual Dashboard as default landing page
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index-CEO-NEW.html"));
-});
+// Route configuration
+// "/" = Connection Manager (clean utility page)
+// "/dashboard" = CEO2 Visual Dashboard (primary working view)
 
-// Connection Manager (for manual re-auth when refresh chain breaks)
-app.get("/connect", (req, res) => {
+app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login-manager.html"));
 });
 
-// Original Finance Dashboard (detailed view)
+// CEO2 Visual Dashboard - primary working view
 app.get("/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "index-CEO-NEW.html"));
 });
 
 // ==============================================================================

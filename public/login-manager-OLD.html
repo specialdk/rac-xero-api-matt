@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAC Multi-Company Login Manager</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .header p {
+        opacity: 0.9;
+        font-size: 1rem;
+      }
+
+      .content {
+        padding: 2rem;
+      }
+
+      .step-indicator {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+
+      .step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        background: #f8f9fa;
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0 0.5rem;
+      }
+
+      .step.active {
+        background: #667eea;
+        color: white;
+      }
+
+      .step.completed {
+        background: #28a745;
+        color: white;
+      }
+
+      .step-number {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+      }
+
+      /* Step 1: Company Selection */
+      .company-selection {
+        display: block;
+      }
+
+      .company-selection h2 {
+        color: #333;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+
+      .company-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .company-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        transition: background-color 0.2s;
+        cursor: pointer;
+      }
+
+      .company-item:hover {
+        background-color: #f8f9fa;
+      }
+
+      .company-item.all-companies {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: bold;
+        margin-bottom: 1rem;
+      }
+
+      .company-item.all-companies:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      }
+
+      .company-checkbox {
+        width: 18px;
+        height: 18px;
+        margin-right: 1rem;
+        cursor: pointer;
+      }
+
+      .company-name {
+        flex: 1;
+        font-size: 1rem;
+      }
+
+      .selection-summary {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+
+      .continue-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+        width: 100%;
+        transition: background 0.2s;
+      }
+
+      .continue-btn:hover {
+        background: #5a6fd8;
+      }
+
+      .continue-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      /* Step 2: OAuth Flow */
+      .oauth-flow {
+        display: none;
+        text-align: center;
+      }
+
+      .oauth-flow h2 {
+        color: #333;
+        margin-bottom: 2rem;
+      }
+
+      .current-connection {
+        background: #f8f9fa;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+      }
+
+      .current-connection h3 {
+        color: #667eea;
+        margin-bottom: 1rem;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+      }
+
+      .oauth-instruction {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+      }
+
+      .oauth-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin: 0.5rem;
+      }
+
+      .oauth-btn:hover {
+        background: #218838;
+      }
+
+      .oauth-btn.primary {
+        background: #667eea;
+      }
+
+      .oauth-btn.primary:hover {
+        background: #5a6fd8;
+      }
+
+      /* Step 3: Completion */
+      .completion {
+        display: none;
+        text-align: center;
+      }
+
+      .completion h2 {
+        color: #28a745;
+        margin-bottom: 2rem;
+      }
+
+      .connected-companies {
+        margin-bottom: 2rem;
+      }
+
+      .company-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border: 1px solid #28a745;
+        background: #f8fff9;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+      }
+
+      .status-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .status-icon {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #28a745;
+      }
+
+      .launch-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 1.5rem 3rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 1rem;
+      }
+
+      .launch-btn:hover {
+        background: #5a6fd8;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .error-box {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1rem 0;
+      }
+
+      .success-box {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1rem 0;
+      }
+
+      .countdown {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin: 1rem 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>RAC Multi-Company Login Manager</h1>
+        <p>Streamlined access to your Xero organisations</p>
+      </div>
+
+      <div class="content">
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+          <div class="step active" id="step1Indicator">
+            <div class="step-number">1</div>
+            <span>Select Companies</span>
+          </div>
+          <div class="step" id="step2Indicator">
+            <div class="step-number">2</div>
+            <span>OAuth Authentication</span>
+          </div>
+          <div class="step" id="step3Indicator">
+            <div class="step-number">3</div>
+            <span>Launch Dashboard</span>
+          </div>
+        </div>
+
+        <!-- Step 1: Company Selection -->
+        <div class="company-selection" id="step1">
+          <h2>Select Companies to Connect</h2>
+
+          <div class="company-list">
+            <!-- ALL Companies Option -->
+            <div
+              class="company-item all-companies"
+              onclick="toggleAllCompanies()"
+            >
+              <input
+                type="checkbox"
+                class="company-checkbox"
+                id="all-companies"
+              />
+              <div class="company-name">🚀 ALL COMPANIES (Quick Connect)</div>
+            </div>
+
+            <!-- Individual Companies -->
+            <div class="company-item" onclick="toggleCompany('rac', event)">
+              <input
+                type="checkbox"
+                class="company-checkbox"
+                id="company-rac"
+              />
+              <div class="company-name">
+                Rirratjingu Aboriginal Corporation 8538
+              </div>
+              <button
+                onclick="disconnectCompany('rac')"
+                style="
+                  margin-left: auto;
+                  background: #dc3545;
+                  color: white;
+                  border: none;
+                  padding: 4px 8px;
+                  border-radius: 4px;
+                  font-size: 0.8rem;
+                "
+              >
+                Disconnect
+              </button>
+            </div>
+
+            <div class="company-item" onclick="toggleCompany('mining')">
+              <input
+                type="checkbox"
+                class="company-checkbox"
+                id="company-mining"
+              />
+              <div class="company-name">Rirratjingu Mining Pty Ltd 7168</div>
+            </div>
+
+            <div class="company-item" onclick="toggleCompany('property')">
+              <input
+                type="checkbox"
+                class="company-checkbox"
+                id="company-property"
+              />
+              <div class="company-name">
+                Rirratjingu Property Management & Maintenance Services Pty Ltd
+              </div>
+            </div>
+
+            <div class="company-item" onclick="toggleCompany('enterprises')">
+              <input
+                type="checkbox"
+                class="company-checkbox"
+                id="company-enterprises"
+              />
+              <div class="company-name">Rirratjingu Enterprises Pty Ltd</div>
+            </div>
+
+            <div class="company-item" onclick="toggleCompany('invest')">
+              <input
+                type="checkbox"
+                class="company-checkbox"
+                id="company-invest"
+              />
+              <div class="company-name">
+                Rirratjingu Invest P/ L ATF Miliditjpi Trust
+              </div>
+            </div>
+
+            <div class="company-item" onclick="toggleCompany('ngarrkuwuy')">
+              <input
+                type="checkbox"
+                class="company-checkbox"
+                id="company-ngarrkuwuy"
+              />
+              <div class="company-name">Ngarrkuwuy Developments Pty Ltd</div>
+            </div>
+
+            <div class="company-item" onclick="toggleCompany('marrin')">
+              <input
+                type="checkbox"
+                class="company-checkbox"
+                id="company-marrin"
+              />
+              <div class="company-name">Marrin Square Developments Pty Ltd</div>
+            </div>
+          </div>
+
+          <div class="selection-summary" id="selectionSummary">
+            <strong>Selected: 0 companies</strong>
+          </div>
+
+          <button
+            class="continue-btn"
+            id="continueBtn"
+            onclick="startOAuthFlow()"
+            disabled
+          >
+            Continue with Selected Companies
+          </button>
+        </div>
+
+        <!-- Step 2: OAuth Flow -->
+        <div class="oauth-flow" id="step2">
+          <h2>Connecting to Your Companies</h2>
+
+          <div class="current-connection">
+            <h3 id="currentCompanyName">Ready to connect...</h3>
+
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                id="progressFill"
+                style="width: 0%"
+              ></div>
+            </div>
+
+            <div id="progressText">Preparing connections...</div>
+          </div>
+
+          <div class="oauth-instruction" id="oauthInstructions">
+            <strong>Ready to start:</strong> Click "Start OAuth Flow" to begin
+            connecting to your selected companies.
+          </div>
+
+          <div id="oauthButtons">
+            <button
+              class="oauth-btn primary"
+              onclick="startNextOAuth()"
+              id="startOAuthBtn"
+            >
+              🔗 Start OAuth Flow
+            </button>
+          </div>
+
+          <div id="waitingMessage" style="display: none">
+            <div class="success-box">
+              <strong>Waiting for OAuth completion...</strong><br />
+              Complete the Xero authorization in the popup window, then return
+              here.
+            </div>
+            <button class="oauth-btn" onclick="checkOAuthStatus()">
+              ✅ I've completed the OAuth - Continue
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Completion -->
+        <div class="completion" id="step3">
+          <h2>🎉 All Companies Connected!</h2>
+
+          <div class="connected-companies" id="connectedCompaniesList">
+            <!-- Connected companies will be populated here -->
+          </div>
+
+          <div class="success-box">
+            <strong>Ready to launch!</strong> All selected companies are now
+            connected and ready to use in your Financial Dashboard.
+          </div>
+
+          <button class="launch-btn" onclick="launchDashboard()">
+            🚀 Launch Financial Dashboard
+          </button>
+
+          <div class="countdown" id="launchCountdown" style="display: none">
+            Launching in <span id="countdownNumber">3</span> seconds...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Company data - matches your exact company list
+      const companies = {
+        rac: "Rirratjingu Aboriginal Corporation 8538",
+        mining: "Rirratjingu Mining Pty Ltd 7168",
+        property:
+          "Rirratjingu Property Management & Maintenance Services Pty Ltd",
+        enterprises: "Rirratjingu Enterprises Pty Ltd",
+        invest: "Rirratjingu Invest P/ L ATF Miliditjpi Trust",
+        ngarrkuwuy: "Ngarrkuwuy Developments Pty Ltd",
+        marrin: "Marrin Square Developments Pty Ltd",
+      };
+
+      let selectedCompanies = [];
+      let currentStep = 1;
+      let oauthProgress = 0;
+      let connectedCompanies = [];
+      let isOAuthInProgress = false;
+
+      // Load saved preferences
+      function loadSavedPreferences() {
+        const saved = localStorage.getItem("racCompanyPreferences");
+        if (saved) {
+          try {
+            selectedCompanies = JSON.parse(saved);
+            selectedCompanies.forEach((companyId) => {
+              const checkbox = document.getElementById(`company-${companyId}`);
+              if (checkbox) checkbox.checked = true;
+            });
+            updateSelectionSummary();
+          } catch (error) {
+            console.log("No valid saved preferences");
+          }
+        }
+      }
+
+      // Save preferences
+      function savePreferences() {
+        localStorage.setItem(
+          "racCompanyPreferences",
+          JSON.stringify(selectedCompanies)
+        );
+      }
+
+      // Toggle individual company
+      function toggleCompany(companyId) {
+        const checkbox = document.getElementById(`company-${companyId}`);
+        checkbox.checked = !checkbox.checked;
+
+        if (checkbox.checked) {
+          if (!selectedCompanies.includes(companyId)) {
+            selectedCompanies.push(companyId);
+          }
+        } else {
+          selectedCompanies = selectedCompanies.filter(
+            (id) => id !== companyId
+          );
+          // Uncheck ALL if individual company unchecked
+          document.getElementById("all-companies").checked = false;
+        }
+
+        updateSelectionSummary();
+        savePreferences();
+      }
+
+      // Toggle all companies
+      function toggleAllCompanies() {
+        const allCheckbox = document.getElementById("all-companies");
+        allCheckbox.checked = !allCheckbox.checked;
+
+        if (allCheckbox.checked) {
+          selectedCompanies = Object.keys(companies);
+          Object.keys(companies).forEach((companyId) => {
+            document.getElementById(`company-${companyId}`).checked = true;
+          });
+        } else {
+          selectedCompanies = [];
+          Object.keys(companies).forEach((companyId) => {
+            document.getElementById(`company-${companyId}`).checked = false;
+          });
+        }
+
+        updateSelectionSummary();
+        savePreferences();
+      }
+
+      // Update selection summary
+      function updateSelectionSummary() {
+        const summary = document.getElementById("selectionSummary");
+        const continueBtn = document.getElementById("continueBtn");
+
+        summary.innerHTML = `<strong>Selected: ${selectedCompanies.length} companies</strong>`;
+
+        if (selectedCompanies.length > 0) {
+          const companyNames = selectedCompanies.map((id) => companies[id]);
+          summary.innerHTML += `<br><small>${companyNames.join(", ")}</small>`;
+          continueBtn.disabled = false;
+        } else {
+          continueBtn.disabled = true;
+        }
+      }
+
+      // Start OAuth flow
+      function startOAuthFlow() {
+        if (selectedCompanies.length === 0) {
+          alert("Please select at least one company to continue.");
+          return;
+        }
+
+        currentStep = 2;
+        document.getElementById("step1").style.display = "none";
+        document.getElementById("step2").style.display = "block";
+
+        // Update step indicators
+        document.getElementById("step1Indicator").classList.add("completed");
+        document.getElementById("step1Indicator").classList.remove("active");
+        document.getElementById("step2Indicator").classList.add("active");
+
+        oauthProgress = 0;
+        connectedCompanies = [];
+
+        // Store companies in localStorage for the OAuth process
+        localStorage.setItem(
+          "oauthCompanies",
+          JSON.stringify(selectedCompanies)
+        );
+        localStorage.setItem("oauthProgress", "0");
+        localStorage.setItem("connectedCompanies", JSON.stringify([]));
+
+        updateOAuthProgress();
+      }
+
+      // Update OAuth progress display
+      function updateOAuthProgress() {
+        const currentCompanyName =
+          document.getElementById("currentCompanyName");
+        const progressFill = document.getElementById("progressFill");
+        const progressText = document.getElementById("progressText");
+
+        if (oauthProgress < selectedCompanies.length) {
+          const companyId = selectedCompanies[oauthProgress];
+          const companyName = companies[companyId];
+
+          currentCompanyName.textContent = `Ready to connect: ${companyName} (${
+            oauthProgress + 1
+          }/${selectedCompanies.length})`;
+
+          const progressPercent =
+            (oauthProgress / selectedCompanies.length) * 100;
+          progressFill.style.width = progressPercent + "%";
+          progressText.textContent = `Step ${oauthProgress + 1} of ${
+            selectedCompanies.length
+          }`;
+
+          // Update instructions
+          document.getElementById("oauthInstructions").innerHTML = `
+                    <strong>Next Company:</strong> ${companyName}<br>
+                    <small>When the Xero login opens, select "${companyName}" from the dropdown and authorize access.</small>
+                `;
+        } else {
+          // All companies processed
+          currentCompanyName.textContent = "All companies processed!";
+          progressFill.style.width = "100%";
+          progressText.textContent = "OAuth flow complete";
+        }
+      }
+
+      // Start next OAuth - opens your existing /auth endpoint
+      function startNextOAuth() {
+        if (oauthProgress >= selectedCompanies.length) {
+          showCompletion();
+          return;
+        }
+
+        if (isOAuthInProgress) {
+          alert(
+            "OAuth is already in progress. Please complete the current authorization first."
+          );
+          return;
+        }
+
+        const companyId = selectedCompanies[oauthProgress];
+        const companyName = companies[companyId];
+
+        console.log(`🔗 Starting OAuth for: ${companyName}`);
+
+        // Store current company for the OAuth callback to know which company we're connecting
+        localStorage.setItem("currentOAuthCompany", companyId);
+        localStorage.setItem("currentOAuthCompanyName", companyName);
+
+        isOAuthInProgress = true;
+
+        // Update UI to waiting state
+        document.getElementById("startOAuthBtn").style.display = "none";
+        document.getElementById("waitingMessage").style.display = "block";
+
+        // Open OAuth in same window (your existing flow)
+        window.location.href = "/auth";
+      }
+
+      // Check OAuth status (called when user returns from OAuth)
+      async function checkOAuthStatus() {
+        try {
+          console.log("🔍 Checking OAuth status...");
+
+          // Check if we have a successful connection
+          const response = await fetch("/api/connection-status");
+          const connections = await response.json();
+
+          const currentCompanyName = localStorage.getItem(
+            "currentOAuthCompanyName"
+          );
+          const currentCompanyId = localStorage.getItem("currentOAuthCompany");
+
+          // Look for the company we just connected
+          const newConnection = connections.find(
+            (conn) => conn.tenantName === currentCompanyName && conn.connected
+          );
+
+          if (newConnection) {
+            console.log(`✅ Successfully connected: ${currentCompanyName}`);
+
+            // Add to connected companies
+            connectedCompanies.push({
+              id: currentCompanyId,
+              name: currentCompanyName,
+              tenantId: newConnection.tenantId,
+            });
+
+            // Update progress
+            oauthProgress++;
+
+            // Save progress
+            localStorage.setItem("oauthProgress", oauthProgress.toString());
+            localStorage.setItem(
+              "connectedCompanies",
+              JSON.stringify(connectedCompanies)
+            );
+
+            // Reset OAuth state
+            isOAuthInProgress = false;
+            document.getElementById("startOAuthBtn").style.display =
+              "inline-block";
+            document.getElementById("waitingMessage").style.display = "none";
+
+            // Check if we need to continue with more companies
+            if (oauthProgress < selectedCompanies.length) {
+              updateOAuthProgress();
+              // Auto-continue to next company after short delay
+              setTimeout(() => {
+                document.getElementById(
+                  "startOAuthBtn"
+                ).textContent = `🔗 Connect Next Company (${
+                  oauthProgress + 1
+                }/${selectedCompanies.length})`;
+              }, 1000);
+            } else {
+              // All companies connected!
+              showCompletion();
+            }
+          } else {
+            console.log(`❌ Connection not found for: ${currentCompanyName}`);
+            alert(
+              `❌ Failed to connect ${currentCompanyName}. Please try again.`
+            );
+
+            // Reset OAuth state so user can retry
+            isOAuthInProgress = false;
+            document.getElementById("startOAuthBtn").style.display =
+              "inline-block";
+            document.getElementById("waitingMessage").style.display = "none";
+          }
+        } catch (error) {
+          console.error("❌ Error checking OAuth status:", error);
+          alert("❌ Error checking connection status. Please try again.");
+
+          // Reset OAuth state
+          isOAuthInProgress = false;
+          document.getElementById("startOAuthBtn").style.display =
+            "inline-block";
+          document.getElementById("waitingMessage").style.display = "none";
+        }
+      }
+
+      // Show completion step
+      function showCompletion() {
+        currentStep = 3;
+        document.getElementById("step2").style.display = "none";
+        document.getElementById("step3").style.display = "block";
+
+        // Update step indicators
+        document.getElementById("step2Indicator").classList.add("completed");
+        document.getElementById("step2Indicator").classList.remove("active");
+        document.getElementById("step3Indicator").classList.add("active");
+
+        // Show connected companies
+        const connectedList = document.getElementById("connectedCompaniesList");
+        connectedList.innerHTML = connectedCompanies
+          .map(
+            (company) => `
+                <div class="company-status">
+                    <div class="status-info">
+                        <div class="status-icon"></div>
+                        <strong>${company.name}</strong>
+                    </div>
+                    <div style="color: #28a745; font-size: 0.9rem;">✅ Connected</div>
+                </div>
+            `
+          )
+          .join("");
+
+        // Auto-launch after 3 seconds
+        startLaunchCountdown();
+      }
+
+      // Launch dashboard
+      function launchDashboard() {
+        console.log(
+          "🚀 Launching Financial Dashboard with connected companies:",
+          connectedCompanies
+        );
+
+        // Clear the OAuth process data
+        localStorage.removeItem("oauthCompanies");
+        localStorage.removeItem("oauthProgress");
+        localStorage.removeItem("currentOAuthCompany");
+        localStorage.removeItem("currentOAuthCompanyName");
+
+        // Navigate to dashboard
+        window.location.href = "/dashboard";
+      }
+
+      // Start launch countdown
+      function startLaunchCountdown() {
+        const countdownDiv = document.getElementById("launchCountdown");
+        const countdownNumber = document.getElementById("countdownNumber");
+        const launchBtn = document.querySelector(".launch-btn");
+
+        countdownDiv.style.display = "block";
+        launchBtn.style.opacity = "0.7";
+
+        let count = 3;
+        countdownNumber.textContent = count;
+
+        const countdown = setInterval(() => {
+          count--;
+          countdownNumber.textContent = count;
+
+          if (count <= 0) {
+            clearInterval(countdown);
+            launchDashboard();
+          }
+        }, 1000);
+
+        // Allow user to click to launch immediately
+        launchBtn.onclick = () => {
+          clearInterval(countdown);
+          launchDashboard();
+        };
+      }
+
+      // Handle returning from OAuth
+      function handleOAuthReturn() {
+        // Check if we're returning from an OAuth flow
+        const urlParams = new URLSearchParams(window.location.search);
+        const isSuccess = urlParams.has("success");
+        const isError = urlParams.has("error");
+
+        // Check if we have OAuth process data
+        const oauthCompanies = localStorage.getItem("oauthCompanies");
+        const savedProgress = localStorage.getItem("oauthProgress");
+        const savedConnected = localStorage.getItem("connectedCompanies");
+
+        if (isSuccess && oauthCompanies) {
+          console.log("🔄 Resuming OAuth flow after successful authentication");
+
+          // Restore state
+          selectedCompanies = JSON.parse(oauthCompanies);
+          oauthProgress = parseInt(savedProgress) || 0;
+          connectedCompanies = savedConnected ? JSON.parse(savedConnected) : [];
+
+          // Show OAuth step
+          currentStep = 2;
+          document.getElementById("step1").style.display = "none";
+          document.getElementById("step2").style.display = "block";
+          document.getElementById("step1Indicator").classList.add("completed");
+          document.getElementById("step1Indicator").classList.remove("active");
+          document.getElementById("step2Indicator").classList.add("active");
+
+          // Check the OAuth status
+          setTimeout(() => {
+            checkOAuthStatus();
+          }, 1000);
+        } else if (isError && oauthCompanies) {
+          console.log("❌ OAuth error detected");
+
+          // Show error and allow retry
+          currentStep = 2;
+          document.getElementById("step1").style.display = "none";
+          document.getElementById("step2").style.display = "block";
+
+          document.getElementById("oauthInstructions").innerHTML = `
+                    <div class="error-box">
+                        ❌ OAuth failed. Please try connecting again.
+                    </div>
+                `;
+
+          isOAuthInProgress = false;
+          document.getElementById("startOAuthBtn").style.display =
+            "inline-block";
+          document.getElementById("waitingMessage").style.display = "none";
+        }
+
+        // Clean up URL parameters
+        if (isSuccess || isError) {
+          history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
+      // Initialize on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("🚀 RAC Multi-Company Login Manager initialized");
+
+        // Handle OAuth return first
+        handleOAuthReturn();
+
+        // Load saved preferences if not returning from OAuth
+        if (!localStorage.getItem("oauthCompanies")) {
+          loadSavedPreferences();
+        }
+      });
+
+      // Handle browser back/forward buttons
+      window.addEventListener("popstate", function (event) {
+        handleOAuthReturn();
+      });
+    </script>
+  </body>
+</html>
