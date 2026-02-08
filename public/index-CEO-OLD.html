@@ -110,6 +110,58 @@
 
       .status-dot.warning { background: var(--color-warning); }
       .status-dot.critical { background: var(--color-negative); }
+      .status-dot.pulse { animation: pulse 2s infinite; }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+      .conn-status-detail {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin-top: 6px;
+        background: var(--bg-header);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        padding: 12px;
+        min-width: 280px;
+        z-index: 1000;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      }
+      .header-status { position: relative; cursor: pointer; }
+      .header-status:hover .conn-status-detail { display: block; }
+      .conn-entity-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+        font-size: 11px;
+        color: rgba(255,255,255,0.8);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      .conn-entity-row:last-child { border-bottom: none; }
+      .conn-entity-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        display: inline-block; margin-right: 6px;
+      }
+      .conn-entity-dot.ok { background: var(--color-positive); }
+      .conn-entity-dot.warn { background: var(--color-warning); }
+      .conn-entity-dot.dead { background: var(--color-negative); }
+      .conn-footer {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255,255,255,0.15);
+        display: flex;
+        gap: 8px;
+      }
+      .conn-footer a {
+        font-size: 11px;
+        color: #60A5FA;
+        text-decoration: none;
+        padding: 3px 8px;
+        border-radius: 4px;
+        background: rgba(96,165,250,0.1);
+      }
+      .conn-footer a:hover { background: rgba(96,165,250,0.25); }
 
       .header-right {
         display: flex;
@@ -1262,9 +1314,16 @@
     <header class="header">
       <div class="header-left">
         <h1>&#x26CF;&#xFE0F; RAC Mining - Executive Dashboard</h1>
-        <div class="header-status">
+        <div class="header-status" id="connStatusBar">
           <span class="status-dot" id="healthDot"></span>
-          <span id="healthStatus">Loading...</span>
+          <span id="healthStatus">Connecting...</span>
+          <div class="conn-status-detail" id="connDetail">
+            <div id="connEntityList">Loading...</div>
+            <div class="conn-footer">
+              <a href="/" title="Manual re-authentication">&#x1F512; Connection Manager</a>
+              <a href="/dashboard" title="Reload dashboard">&#x1F504; Reload</a>
+            </div>
+          </div>
         </div>
       </div>
       <div class="header-right">
@@ -1328,7 +1387,7 @@
         <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
-        <button class="btn-dashboard" onclick="window.location.href='index.html'">&#x1F4CA; Full Dashboard</button>
+        <button class="btn-dashboard" onclick="window.location.href='/'">&#x1F512; Connections</button>
       </div>
     </header>
 
@@ -3030,22 +3089,71 @@
         document.getElementById('aged-subtitle').textContent = (receivables.invoiceCount || 0) + ' invoices outstanding';
       }
 
-      // ========== HEALTH STATUS ==========
-      function updateHealthStatus() {
-        const pl = window.dashboardData.pl;
+      // ========== CONNECTION & HEALTH STATUS ==========
+      async function checkConnectionHealth() {
         const dot = document.getElementById("healthDot");
         const status = document.getElementById("healthStatus");
-
-        if (pl.netProfit < 0) {
+        const entityList = document.getElementById("connEntityList");
+        
+        try {
+          const response = await fetch(`${API_BASE}/api/health-check`);
+          const health = await response.json();
+          
+          window.connectionHealth = health;
+          
+          if (health.status === 'all-connected') {
+            dot.className = "status-dot";
+            status.textContent = `${health.connected}/${health.total} Connected`;
+          } else if (health.status === 'partial') {
+            dot.className = "status-dot warning pulse";
+            status.textContent = `${health.connected}/${health.total} Connected`;
+          } else {
+            dot.className = "status-dot critical pulse";
+            status.textContent = `Disconnected`;
+          }
+          
+          // Build entity detail list
+          if (health.entities && health.entities.length > 0) {
+            const shortName = (name) => {
+              if (name.includes('Mining')) return 'Mining';
+              if (name.includes('Aboriginal')) return 'Aboriginal Corp';
+              if (name.includes('Enterprises')) return 'Enterprises';
+              if (name.includes('Property')) return 'Property Mgmt';
+              if (name.includes('Ngarrkuwuy')) return 'Ngarrkuwuy';
+              if (name.includes('Invest') || name.includes('Miliditjpi')) return 'Miliditjpi Trust';
+              if (name.includes('Marrin')) return 'Marrin Square';
+              return name.substring(0, 20);
+            };
+            
+            entityList.innerHTML = health.entities.map(e => {
+              const dotClass = e.connected 
+                ? (e.minutesRemaining < 10 ? 'warn' : 'ok')
+                : 'dead';
+              const timeLabel = e.connected 
+                ? `${e.minutesRemaining}m remaining`
+                : 'Expired - will auto-refresh';
+              return `<div class="conn-entity-row">
+                <span><span class="conn-entity-dot ${dotClass}"></span>${shortName(e.name)}</span>
+                <span style="color: rgba(255,255,255,0.5);">${timeLabel}</span>
+              </div>`;
+            }).join('');
+          }
+        } catch (error) {
           dot.className = "status-dot critical";
-          status.textContent = "Attention Required";
-        } else if (pl.netProfit < 10000) {
-          dot.className = "status-dot warning";
-          status.textContent = "Monitor";
-        } else {
-          dot.className = "status-dot";
-          status.textContent = "Healthy";
+          status.textContent = "API Offline";
+          entityList.innerHTML = '<div style="color: #EF4444; font-size: 11px;">Cannot reach server</div>';
         }
+      }
+      
+      // Update P&L health indicator (separate from connection health)
+      function updateHealthStatus() {
+        // Connection health is handled by checkConnectionHealth()
+        // This just updates based on P&L data as a secondary indicator
+        const pl = window.dashboardData.pl;
+        if (!pl) return;
+        
+        // We could add a secondary indicator here if needed
+        // For now, connection health takes priority in the header
       }
 
       // ========== LOAD HISTORICAL DATA FROM SNAPSHOTS ==========
@@ -4168,7 +4276,12 @@
 
       // ========== INITIALIZE ==========
       document.addEventListener('DOMContentLoaded', () => {
+        // Check connection health first, then load dashboard
+        checkConnectionHealth();
         loadDashboard();
+        
+        // Re-check connection health every 2 minutes
+        setInterval(checkConnectionHealth, 2 * 60 * 1000);
       });
     </script>
   </body>
