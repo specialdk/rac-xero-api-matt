@@ -576,7 +576,7 @@
       /* ========== CHART ROW (Full Width) ========== */
       .chart-row {
         display: grid;
-        grid-template-columns: 2fr 1fr;
+        grid-template-columns: 2fr 1fr 1fr;
         gap: var(--spacing-md);
         min-height: 200px;
       }
@@ -742,6 +742,75 @@
         font-size: 9px;
         color: var(--color-text-muted);
         white-space: nowrap;
+      }
+
+      /* ========== PRODUCTION CARD ========== */
+      .production-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .production-table thead th {
+        font-size: 10px;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        font-weight: 600;
+        padding: 4px 6px;
+        text-align: right;
+        border-bottom: 1px solid var(--color-border);
+        white-space: nowrap;
+      }
+
+      .production-table thead th:first-child {
+        text-align: left;
+      }
+
+      .production-table tbody td {
+        padding: 5px 6px;
+        text-align: right;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+      }
+
+      .production-table tbody td:first-child {
+        text-align: left;
+        font-weight: 500;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .production-table tfoot td {
+        padding: 6px;
+        text-align: right;
+        font-weight: 700;
+        border-top: 2px solid var(--color-border);
+        font-size: 12px;
+      }
+
+      .production-table tfoot td:first-child {
+        text-align: left;
+      }
+
+      .prod-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 2px;
+        vertical-align: middle;
+      }
+
+      .prod-indicator.green { background: var(--color-positive); }
+      .prod-indicator.amber { background: #F59E0B; }
+      .prod-indicator.red { background: var(--color-negative); }
+      .prod-indicator.grey { background: #D1D5DB; }
+
+      .production-scroll {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
       }
 
       /* ========== SUMMARY ROW (Bottom) ========== */
@@ -1521,6 +1590,34 @@
               </div>
             </div>
           </div>
+
+          <!-- Production Overview (Mining only) -->
+          <div class="chart-card" id="production-card" onclick="openDrawer('production')" style="cursor: pointer; display: none;">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">&#x2692;&#xFE0F; Production</div>
+                <div class="chart-subtitle" id="production-period">QTD overview</div>
+              </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">&#x203A;</span>
+            </div>
+            <div class="production-scroll">
+              <table class="production-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>SOH</th>
+                    <th>Produced</th>
+                    <th>Demand</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="productionBody">
+                  <tr><td colspan="5" style="text-align:center; color: var(--color-text-muted); padding: 20px;">Loading...</td></tr>
+                </tbody>
+                <tfoot id="productionFoot"></tfoot>
+              </table>
+            </div>
+          </div>
         </div>
 
         <!-- Summary Row - Detail Cards -->
@@ -2150,16 +2247,22 @@
         console.log("Loading dashboard for:", entity, period, quarterInfo);
 
         // Toggle Inventory vs Top Expenses card based on entity
-        // Mining shows Inventory (the quarry operation)
+        // Mining shows Inventory (the quarry operation) + Production card
         // ALL and other individual entities show Top Expenses
         const inventoryCard = document.getElementById('inventory-card');
         const expensesCard = document.getElementById('expenses-card');
+        const productionCard = document.getElementById('production-card');
+        const chartRow = document.querySelector('.chart-row');
         if (entity === 'Mining') {
           inventoryCard.style.display = 'block';
           expensesCard.style.display = 'none';
+          productionCard.style.display = 'flex';
+          chartRow.style.gridTemplateColumns = '2fr 1fr 1fr';
         } else {
           inventoryCard.style.display = 'none';
           expensesCard.style.display = 'block';
+          productionCard.style.display = 'none';
+          chartRow.style.gridTemplateColumns = '2fr 1fr';
         }
 
         // Update header title based on selection
@@ -2207,6 +2310,11 @@
 
         // Load top customers after receivables data is available
         await loadTopCustomers(quarterInfo);
+
+        // Load production card (Mining only, needs inventory data first)
+        if (entity === 'Mining') {
+          await loadProduction(quarterInfo);
+        }
 
         // Load budget after P&L (needs P&L data)
         await loadBudget(quarterInfo);
@@ -2781,6 +2889,154 @@
           document.getElementById("kpi-inventory-trend").innerHTML = "\u26a0 Inventory API unavailable";
           document.getElementById("kpi-inventory-trend").className = "kpi-trend neutral";
           window.inventoryLive = null;
+        }
+      }
+
+      // ========== PRODUCTION OVERVIEW (LIVE from Quarry APP API) ==========
+      async function loadProduction(quarterInfo) {
+        const tbody = document.getElementById('productionBody');
+        const tfoot = document.getElementById('productionFoot');
+
+        try {
+          // Calculate days since quarter start for sub-endpoint queries
+          const qStart = new Date(quarterInfo.startDate);
+          const today = new Date();
+          const daysSinceQStart = Math.max(1, Math.ceil((today - qStart) / (1000 * 60 * 60 * 24)));
+
+          // Update period subtitle
+          document.getElementById('production-period').textContent =
+            `${quarterInfo.quarterCode} FY25/26 \u00b7 ${daysSinceQStart} days`;
+
+          // Fetch QTD production and sales from sub-endpoints
+          const [prodRes, salesRes] = await Promise.all([
+            fetch(`${INVENTORY_API}/production?days=${daysSinceQStart}`).then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch(`${INVENTORY_API}/sales?days=${daysSinceQStart}`).then(r => r.ok ? r.json() : null).catch(() => null),
+          ]);
+
+          // Aggregate production by product
+          const qtdProduction = {};
+          if (prodRes && Array.isArray(prodRes.production)) {
+            prodRes.production.forEach(row => {
+              const key = row.productName || row.product || row.name || 'Unknown';
+              qtdProduction[key] = (qtdProduction[key] || 0) + (row.tonnes || row.quantity || 0);
+            });
+          }
+
+          // Aggregate sales by product (tonnes shipped = demand fulfilled)
+          const qtdSales = {};
+          if (salesRes && Array.isArray(salesRes.sales)) {
+            salesRes.sales.forEach(row => {
+              const key = row.productName || row.product || row.name || 'Unknown';
+              qtdSales[key] = (qtdSales[key] || 0) + (row.tonnes || row.quantity || 0);
+            });
+          }
+
+          // Get SOH and forward orders from main inventory data
+          const inv = window.inventoryLive;
+          const products = inv ? (inv.products || []) : [];
+
+          // Build merged product list
+          const productMap = {};
+
+          // Start with products from main inventory (has SOH and forward orders)
+          products.forEach(p => {
+            productMap[p.name] = {
+              name: p.name,
+              group: p.group,
+              soh: p.sohTonnes || 0,
+              produced: qtdProduction[p.name] || 0,
+              demand: (qtdSales[p.name] || 0) + (p.demandTonnes || 0),
+              forwardOrders: p.demandTonnes || 0,
+              salesQtd: qtdSales[p.name] || 0,
+              mtdProd: p.mtdProduction || 0,
+              mtdSales: p.mtdSales || 0,
+            };
+          });
+
+          // Add any products from sub-endpoints not in main inventory
+          Object.keys(qtdProduction).forEach(name => {
+            if (!productMap[name]) {
+              productMap[name] = {
+                name, group: '', soh: 0,
+                produced: qtdProduction[name] || 0,
+                demand: qtdSales[name] || 0,
+                forwardOrders: 0, salesQtd: qtdSales[name] || 0,
+                mtdProd: 0, mtdSales: 0,
+              };
+            }
+          });
+
+          // Filter: ONLY products with demand OR production activity
+          let active = Object.values(productMap).filter(p =>
+            p.produced > 0 || p.demand > 0 || p.mtdProd > 0 || p.mtdSales > 0 || p.forwardOrders > 0
+          );
+
+          // If sub-endpoints returned no data, fall back to MTD from main endpoint
+          const hasQtdData = Object.keys(qtdProduction).length > 0 || Object.keys(qtdSales).length > 0;
+          if (!hasQtdData) {
+            // Use MTD figures as best available
+            active = Object.values(productMap).filter(p =>
+              p.mtdProd > 0 || p.mtdSales > 0 || p.forwardOrders > 0
+            );
+            active.forEach(p => {
+              p.produced = p.mtdProd;
+              p.demand = p.mtdSales + p.forwardOrders;
+            });
+            document.getElementById('production-period').textContent =
+              `${quarterInfo.quarterCode} FY25/26 \u00b7 MTD data`;
+          }
+
+          // Sort: products with highest demand gap first
+          active.sort((a, b) => (b.demand - b.produced) - (a.demand - a.produced));
+
+          // Store for drawer
+          window.productionData = { active, hasQtdData, quarterInfo };
+
+          // Render table
+          if (active.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--color-text-muted); padding: 16px; font-size: 12px;">No production or demand activity this period</td></tr>';
+            tfoot.innerHTML = '';
+            return;
+          }
+
+          tbody.innerHTML = active.map(p => {
+            // Traffic light: green = produced >= demand, amber = producing but behind, red = demand with no production, grey = no demand
+            let indicator = 'grey';
+            let tooltip = 'No demand';
+            if (p.demand > 0) {
+              const ratio = p.produced / p.demand;
+              if (ratio >= 0.9) { indicator = 'green'; tooltip = 'On track'; }
+              else if (ratio >= 0.3 || p.produced > 0) { indicator = 'amber'; tooltip = 'Behind'; }
+              else { indicator = 'red'; tooltip = 'At risk'; }
+            } else if (p.produced > 0) {
+              indicator = 'green'; tooltip = 'Building stock';
+            }
+
+            return `<tr>
+              <td title="${p.name}">${p.name}</td>
+              <td>${Math.round(p.soh).toLocaleString()}</td>
+              <td>${Math.round(p.produced).toLocaleString()}</td>
+              <td>${Math.round(p.demand).toLocaleString()}</td>
+              <td title="${tooltip}"><span class="prod-indicator ${indicator}"></span></td>
+            </tr>`;
+          }).join('');
+
+          // Totals row
+          const totProd = active.reduce((s, p) => s + p.produced, 0);
+          const totDemand = active.reduce((s, p) => s + p.demand, 0);
+          const totSoh = active.reduce((s, p) => s + p.soh, 0);
+          tfoot.innerHTML = `<tr>
+            <td>TOTAL</td>
+            <td>${Math.round(totSoh).toLocaleString()}</td>
+            <td>${Math.round(totProd).toLocaleString()}</td>
+            <td>${Math.round(totDemand).toLocaleString()}</td>
+            <td></td>
+          </tr>`;
+
+        } catch (error) {
+          console.error("Error loading production:", error);
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--color-text-muted); padding: 16px; font-size: 12px;">\u26a0 Production data unavailable</td></tr>';
+          tfoot.innerHTML = '';
         }
       }
 
@@ -3446,6 +3702,7 @@
           profit: 'Profit & Loss Detail',
           receivables: 'Aged Receivables',
           inventory: 'Inventory Detail',
+          production: 'Production Overview',
           expenses: 'Top Expenses',
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
@@ -4039,6 +4296,92 @@
 
                 <div style="margin-top: 16px; font-size: 11px; color: var(--color-text-muted); text-align: right;">
                   Live data from RAC Inventory System \u00b7 ${new Date(inv.timestamp).toLocaleString()}
+                </div>
+              </div>
+            `;
+          })(),
+          production: (() => {
+            const pd = window.productionData;
+            if (!pd || !pd.active) return '<p style="color: var(--color-text-muted);">Production data unavailable.</p>';
+            const active = pd.active;
+            const qi = pd.quarterInfo;
+            const totProd = active.reduce((s, p) => s + p.produced, 0);
+            const totDemand = active.reduce((s, p) => s + p.demand, 0);
+            const totSoh = active.reduce((s, p) => s + p.soh, 0);
+            const coveragePct = totDemand > 0 ? Math.round((totProd / totDemand) * 100) : 0;
+            const coverageColor = coveragePct >= 90 ? 'var(--color-positive)' : (coveragePct >= 50 ? '#F59E0B' : 'var(--color-negative)');
+
+            return `
+              <div style="padding: 16px 0;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                  <div style="padding: 12px; background: #E8F0FE; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">QTD Production</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #1967D2;">${Math.round(totProd).toLocaleString()}t</div>
+                  </div>
+                  <div style="padding: 12px; background: #FFF4E5; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">QTD Demand</div>
+                    <div style="font-size: 20px; font-weight: 700; color: var(--color-warning);">${Math.round(totDemand).toLocaleString()}t</div>
+                  </div>
+                  <div style="padding: 12px; background: ${coveragePct >= 90 ? '#E6F4EA' : (coveragePct >= 50 ? '#FFF4E5' : '#FDECE9')}; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">Coverage</div>
+                    <div style="font-size: 20px; font-weight: 700; color: ${coverageColor};">${coveragePct}%</div>
+                  </div>
+                </div>
+
+                <h3 style="margin: 0 0 10px; font-size: 14px; font-weight: 600;">Active Products</h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th style="text-align:right">SOH (t)</th>
+                      <th style="text-align:right">Produced</th>
+                      <th style="text-align:right">Demand</th>
+                      <th style="text-align:right">Gap</th>
+                      <th style="text-align:center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${active.map(p => {
+                      const gap = p.produced - p.demand;
+                      let status = '\u2705';
+                      if (p.demand > 0) {
+                        const ratio = p.produced / p.demand;
+                        if (ratio < 0.3 && p.produced === 0) { status = '\u{1F534}'; }
+                        else if (ratio < 0.9) { status = '\u{1F7E1}'; }
+                      }
+                      return '<tr>' +
+                        '<td style="font-size: 12px;">' + p.name + '</td>' +
+                        '<td style="text-align:right">' + Math.round(p.soh).toLocaleString() + '</td>' +
+                        '<td style="text-align:right">' + Math.round(p.produced).toLocaleString() + '</td>' +
+                        '<td style="text-align:right">' + Math.round(p.demand).toLocaleString() + '</td>' +
+                        '<td style="text-align:right; color: ' + (gap >= 0 ? 'var(--color-positive)' : 'var(--color-negative)') + '; font-weight: 600;">' +
+                          (gap >= 0 ? '+' : '') + Math.round(gap).toLocaleString() +
+                        '</td>' +
+                        '<td style="text-align:center">' + status + '</td>' +
+                      '</tr>';
+                    }).join('')}
+                    <tr style="font-weight:600; background:#f5f5f5;">
+                      <td>TOTAL</td>
+                      <td style="text-align:right">${Math.round(totSoh).toLocaleString()}</td>
+                      <td style="text-align:right">${Math.round(totProd).toLocaleString()}</td>
+                      <td style="text-align:right">${Math.round(totDemand).toLocaleString()}</td>
+                      <td style="text-align:right; color: ${(totProd - totDemand) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; font-weight: 700;">
+                        ${(totProd - totDemand) >= 0 ? '+' : ''}${Math.round(totProd - totDemand).toLocaleString()}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div style="margin-top: 16px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 12px;">
+                  <strong>Legend:</strong>
+                  <span style="margin-left: 8px;">\u2705 On track (\u226590% of demand)</span>
+                  <span style="margin-left: 8px;">\u{1F7E1} Behind (producing but below target)</span>
+                  <span style="margin-left: 8px;">\u{1F534} At risk (demand with no production)</span>
+                </div>
+
+                <div style="margin-top: 12px; font-size: 11px; color: var(--color-text-muted); text-align: right;">
+                  ${qi.quarterCode} FY25/26 \u00b7 ${pd.hasQtdData ? 'QTD' : 'MTD'} data from RAC Inventory System
                 </div>
               </div>
             `;

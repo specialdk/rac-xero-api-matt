@@ -110,58 +110,6 @@
 
       .status-dot.warning { background: var(--color-warning); }
       .status-dot.critical { background: var(--color-negative); }
-      .status-dot.pulse { animation: pulse 2s infinite; }
-      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-      .conn-status-detail {
-        display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        margin-top: 6px;
-        background: var(--bg-header);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 8px;
-        padding: 12px;
-        min-width: 280px;
-        z-index: 1000;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-      }
-      .header-status { position: relative; cursor: pointer; }
-      .header-status:hover .conn-status-detail { display: block; }
-      .conn-entity-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 4px 0;
-        font-size: 11px;
-        color: rgba(255,255,255,0.8);
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-      }
-      .conn-entity-row:last-child { border-bottom: none; }
-      .conn-entity-dot {
-        width: 6px; height: 6px; border-radius: 50%;
-        display: inline-block; margin-right: 6px;
-      }
-      .conn-entity-dot.ok { background: var(--color-positive); }
-      .conn-entity-dot.warn { background: var(--color-warning); }
-      .conn-entity-dot.dead { background: var(--color-negative); }
-      .conn-footer {
-        margin-top: 8px;
-        padding-top: 8px;
-        border-top: 1px solid rgba(255,255,255,0.15);
-        display: flex;
-        gap: 8px;
-      }
-      .conn-footer a {
-        font-size: 11px;
-        color: #60A5FA;
-        text-decoration: none;
-        padding: 3px 8px;
-        border-radius: 4px;
-        background: rgba(96,165,250,0.1);
-      }
-      .conn-footer a:hover { background: rgba(96,165,250,0.25); }
 
       .header-right {
         display: flex;
@@ -520,9 +468,9 @@
       .dashboard {
         flex: 1;
         padding: var(--spacing-md);
-        overflow: hidden;
-        display: grid;
-        grid-template-rows: 0.85fr 1fr 1.15fr;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
         gap: var(--spacing-md);
       }
 
@@ -630,6 +578,7 @@
         display: grid;
         grid-template-columns: 2fr 1fr;
         gap: var(--spacing-md);
+        min-height: 200px;
       }
 
       .chart-card {
@@ -639,7 +588,6 @@
         box-shadow: var(--shadow-card);
         display: flex;
         flex-direction: column;
-        overflow: hidden;
       }
 
       .chart-header {
@@ -682,17 +630,15 @@
       .chart-container {
         flex: 1;
         position: relative;
-        min-height: 0;
+        min-height: 150px;
       }
 
       /* ========== BUDGET HORIZONTAL BARS ========== */
       .budget-bars-container {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-xs) 0;
-        flex: 1;
-        overflow: hidden;
+        gap: var(--spacing-md);
+        padding: var(--spacing-sm) 0;
       }
 
       .budget-bar-item {
@@ -803,12 +749,14 @@
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         gap: var(--spacing-md);
+        flex: 1;
+        min-height: 0;
       }
 
       .summary-card {
         background: var(--bg-card);
         border-radius: 10px;
-        padding: 12px var(--spacing-md);
+        padding: var(--spacing-md);
         box-shadow: var(--shadow-card);
         display: flex;
         flex-direction: column;
@@ -819,7 +767,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: var(--spacing-xs);
+        margin-bottom: var(--spacing-sm);
       }
 
       .card-title {
@@ -844,8 +792,8 @@
       .budget-item {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        padding: 6px 0;
+        gap: 6px;
+        padding: 10px 0;
         border-bottom: 1px solid var(--color-border);
       }
 
@@ -860,7 +808,7 @@
       }
 
       .budget-item-label {
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 600;
         color: var(--color-text-primary);
       }
@@ -1002,31 +950,29 @@
       .customer-list {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        overflow-y: auto;
+        gap: 8px;
       }
 
       .customer-item {
         display: flex;
         align-items: center;
         gap: var(--spacing-sm);
-        padding: 6px 8px;
+        padding: 10px;
         background: var(--bg-page);
-        border-radius: 6px;
+        border-radius: 8px;
       }
 
       .customer-rank {
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: var(--color-primary);
         color: white;
         border-radius: 50%;
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 600;
-        flex-shrink: 0;
       }
 
       .customer-info {
@@ -1049,7 +995,7 @@
       }
 
       .customer-value {
-        font-size: var(--font-size-kpi);
+        font-size: 26px;
         font-weight: 600;
         color: var(--color-text-primary);
       }
@@ -1314,16 +1260,9 @@
     <header class="header">
       <div class="header-left">
         <h1>&#x26CF;&#xFE0F; RAC Mining - Executive Dashboard</h1>
-        <div class="header-status" id="connStatusBar">
+        <div class="header-status">
           <span class="status-dot" id="healthDot"></span>
-          <span id="healthStatus">Connecting...</span>
-          <div class="conn-status-detail" id="connDetail">
-            <div id="connEntityList">Loading...</div>
-            <div class="conn-footer">
-              <a href="/" title="Manual re-authentication">&#x1F512; Connection Manager</a>
-              <a href="/dashboard" title="Reload dashboard">&#x1F504; Reload</a>
-            </div>
-          </div>
+          <span id="healthStatus">Loading...</span>
         </div>
       </div>
       <div class="header-right">
@@ -1387,7 +1326,7 @@
         <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
-        <button class="btn-dashboard" onclick="window.location.href='/'">&#x1F512; Connections</button>
+        <button class="btn-dashboard" onclick="window.location.href='index.html'">&#x1F4CA; Full Dashboard</button>
       </div>
     </header>
 
@@ -1525,7 +1464,7 @@
           </div>
 
           <!-- Budget vs Actual - Horizontal Bars -->
-          <div class="chart-card" onclick="openDrawer('budget')" style="cursor: pointer;">
+          <div class="chart-card">
             <div class="chart-header">
               <div>
                 <div class="chart-title">Budget vs Actual</div>
@@ -1552,7 +1491,7 @@
               <!-- Expenses Bar -->
               <div class="budget-bar-item">
                 <div class="budget-bar-header">
-                  <span class="budget-bar-label">OpEx</span>
+                  <span class="budget-bar-label">Expenses</span>
                   <div class="budget-bar-values">
                     <span class="budget-bar-actual" id="bar-exp-actual">$0</span>
                     <span class="budget-bar-target" id="bar-exp-target">of $0</span>
@@ -1609,7 +1548,7 @@
                   <span class="budget-actual" id="pl-cogs">$0</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #FFFBEB; margin: 0 -16px; padding: 6px 16px;">
+              <div class="budget-item" style="background: #FFFBEB; margin: 0 -16px; padding: 10px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label">Gross Profit</span>
                   <span class="budget-actual" id="pl-gross">$0</span>
@@ -1668,7 +1607,7 @@
                   <span class="budget-actual" id="bs-liabilities">$0</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #E8F5E9; margin: 0 -16px; padding: 6px 16px;">
+              <div class="budget-item" style="background: #E8F5E9; margin: 0 -16px; padding: 10px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label">Net Equity</span>
                   <span class="budget-actual" id="bs-equity">$0</span>
@@ -1741,7 +1680,7 @@
                   <span class="budget-actual" id="aged-61-90">$0</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #FDECE9; margin: 0 -16px; padding: 6px 16px;">
+              <div class="budget-item" style="background: #FDECE9; margin: 0 -16px; padding: 10px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label">90+ days</span>
                   <span class="budget-actual" id="aged-90plus">$0</span>
@@ -1802,11 +1741,6 @@
     <script>
       // ========== CONFIGURATION ==========
       const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
-      
-      // ========== CURRENCY FORMATTER (2 decimal places) ==========
-      function fmt(n) {
-        return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      }
       
       // ========== ENTITY PICKER (Radio Buttons) ==========
       function getSelectedEntity() {
@@ -2022,22 +1956,20 @@
         window.dashboardData.pl.opex = adjOpex;
         window.dashboardData.pl.gross = adjGross;
         window.dashboardData.pl.netProfit = adjNetProfit;
-        // totalExpenses used by budget bars and trend chart
-        window.dashboardData.pl.totalExpenses = adjCogs + adjOpex;
 
-        document.getElementById("kpi-revenue").textContent = "$" + fmt(adjRevenue);
-        document.getElementById("kpi-profit").textContent = "$" + fmt(adjNetProfit);
+        document.getElementById("kpi-revenue").textContent = "$" + adjRevenue.toLocaleString();
+        document.getElementById("kpi-profit").textContent = "$" + adjNetProfit.toLocaleString();
 
         const plRevEl = document.getElementById("pl-revenue");
         const plCogsEl = document.getElementById("pl-cogs");
         const plGrossEl = document.getElementById("pl-gross");
         const plOpexEl = document.getElementById("pl-opex");
         const plNetEl = document.getElementById("pl-net");
-        if (plRevEl) plRevEl.textContent = "$" + fmt(adjRevenue);
-        if (plCogsEl) plCogsEl.textContent = "$" + fmt(adjCogs);
-        if (plGrossEl) plGrossEl.textContent = "$" + fmt(adjGross);
-        if (plOpexEl) plOpexEl.textContent = "$" + fmt(adjOpex);
-        if (plNetEl) plNetEl.textContent = "$" + fmt(adjNetProfit);
+        if (plRevEl) plRevEl.textContent = "$" + adjRevenue.toLocaleString();
+        if (plCogsEl) plCogsEl.textContent = "$" + adjCogs.toLocaleString();
+        if (plGrossEl) plGrossEl.textContent = "$" + adjGross.toLocaleString();
+        if (plOpexEl) plOpexEl.textContent = "$" + adjOpex.toLocaleString();
+        if (plNetEl) plNetEl.textContent = "$" + adjNetProfit.toLocaleString();
 
         document.getElementById("kpi-profit-trend").innerHTML =
           adjNetProfit >= 0 ? '<span>\u2191</span> Profitable (excl. reversals)' : '<span>\u2193</span> Loss (excl. reversals)';
@@ -2050,9 +1982,6 @@
         // Also update financial ratios
         loadFinancialRatios();
         updateSummaryCards();
-        // Refresh charts with adjusted values
-        initTrendChart();
-        refreshBudgetBars();
       }
 
       function restoreOriginalPL() {
@@ -2065,22 +1994,21 @@
         window.dashboardData.pl.opex = origPL.opex;
         window.dashboardData.pl.gross = origPL.gross;
         window.dashboardData.pl.netProfit = origPL.netProfit;
-        window.dashboardData.pl.totalExpenses = origPL.totalExpenses;
 
-        document.getElementById("kpi-revenue").textContent = "$" + fmt((origPL.revenue || 0));
+        document.getElementById("kpi-revenue").textContent = "$" + (origPL.revenue || 0).toLocaleString();
         const netProfit = origPL.netProfit || 0;
-        document.getElementById("kpi-profit").textContent = "$" + fmt(netProfit);
+        document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
 
         const plRevEl = document.getElementById("pl-revenue");
         const plCogsEl = document.getElementById("pl-cogs");
         const plGrossEl = document.getElementById("pl-gross");
         const plOpexEl = document.getElementById("pl-opex");
         const plNetEl = document.getElementById("pl-net");
-        if (plRevEl) plRevEl.textContent = "$" + fmt((origPL.revenue || 0));
-        if (plCogsEl) plCogsEl.textContent = "$" + fmt((origPL.cogs || 0));
-        if (plGrossEl) plGrossEl.textContent = "$" + fmt((origPL.gross || 0));
-        if (plOpexEl) plOpexEl.textContent = "$" + fmt((origPL.opex || 0));
-        if (plNetEl) plNetEl.textContent = "$" + fmt(netProfit);
+        if (plRevEl) plRevEl.textContent = "$" + (origPL.revenue || 0).toLocaleString();
+        if (plCogsEl) plCogsEl.textContent = "$" + (origPL.cogs || 0).toLocaleString();
+        if (plGrossEl) plGrossEl.textContent = "$" + (origPL.gross || 0).toLocaleString();
+        if (plOpexEl) plOpexEl.textContent = "$" + (origPL.opex || 0).toLocaleString();
+        if (plNetEl) plNetEl.textContent = "$" + netProfit.toLocaleString();
 
         document.getElementById("kpi-profit-trend").innerHTML =
           netProfit >= 0 ? '<span>\u2191</span> Profitable' : '<span>\u2193</span> Loss position';
@@ -2094,9 +2022,6 @@
         // Also update financial ratios
         loadFinancialRatios();
         updateSummaryCards();
-        // Refresh charts with original values
-        initTrendChart();
-        refreshBudgetBars();
       }
 
       function showReversalDrawer() {
@@ -2110,25 +2035,25 @@
               <div class="reversal-summary-item" style="grid-column: span 2;">
                 <span class="label">Revenue Impact</span>
                 <span class="value" style="color: ${adj.revenueAdjustment >= 0 ? '#059669' : '#DC2626'}">
-                  ${adj.revenueAdjustment >= 0 ? '+' : ''}${fmt(adj.revenueAdjustment)}
+                  ${adj.revenueAdjustment >= 0 ? '+' : ''}$${adj.revenueAdjustment.toLocaleString()}
                 </span>
               </div>
               <div class="reversal-summary-item" style="grid-column: span 2;">
                 <span class="label">COGS Impact</span>
                 <span class="value" style="color: ${adj.cogsAdjustment <= 0 ? '#059669' : '#DC2626'}">
-                  ${adj.cogsAdjustment > 0 ? '-' : '+'}${fmt(Math.abs(adj.cogsAdjustment))}
+                  ${adj.cogsAdjustment > 0 ? '-' : '+'}$${Math.abs(adj.cogsAdjustment).toLocaleString()}
                 </span>
               </div>
               <div class="reversal-summary-item" style="grid-column: span 2;">
                 <span class="label">Expense Impact</span>
                 <span class="value" style="color: ${adj.expenseAdjustment <= 0 ? '#059669' : '#DC2626'}">
-                  ${adj.expenseAdjustment > 0 ? '-' : '+'}${fmt(Math.abs(adj.expenseAdjustment))}
+                  ${adj.expenseAdjustment > 0 ? '-' : '+'}$${Math.abs(adj.expenseAdjustment).toLocaleString()}
                 </span>
               </div>
               <div class="reversal-summary-item" style="grid-column: span 2; border-top: 1px solid #FECACA; padding-top: 8px; margin-top: 4px;">
                 <span class="label" style="font-weight: 600;">Net Profit Impact</span>
                 <span class="value" style="color: ${adj.netProfitAdjustment >= 0 ? '#059669' : '#DC2626'}; font-size: 15px;">
-                  ${adj.netProfitAdjustment >= 0 ? '+' : ''}${fmt(adj.netProfitAdjustment)}
+                  ${adj.netProfitAdjustment >= 0 ? '+' : ''}$${adj.netProfitAdjustment.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -2149,7 +2074,7 @@
                   <span class="journal-ref">${journal.reference || 'Journal #' + (journal.journalNumber || 'N/A')}${entityTag}</span>
                   <div class="journal-date">${journalDate}</div>
                 </div>
-                <span class="journal-amount">${fmt(totalAmount)}</span>
+                <span class="journal-amount">$${totalAmount.toLocaleString()}</span>
               </div>
               <div class="journal-desc">${description.length > 150 ? description.substring(0, 150) + '...' : description}</div>
               <div class="journal-lines">
@@ -2162,7 +2087,7 @@
               <div class="journal-line">
                 <span class="line-account" title="${line.accountName}">${line.accountName}</span>
                 <span class="line-amount ${isDebit ? 'debit' : 'credit'}">
-                  ${isDebit ? 'Dr' : 'Cr'} ${fmt(amount)}
+                  ${isDebit ? 'Dr' : 'Cr'} $${amount.toLocaleString()}
                 </span>
               </div>
             `;
@@ -2418,7 +2343,7 @@
         }
 
         // Update consolidated KPIs
-        document.getElementById("kpi-cash").textContent = "$" + fmt(totalCash);
+        document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
         document.getElementById("kpi-cash-trend").innerHTML = `&#x1F4B0; ${successCount} entities`;
         document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
 
@@ -2427,14 +2352,14 @@
 
         const grossProfit = totalRevenue - totalCogs;
         const netProfit = grossProfit - totalExpenses;
-        document.getElementById("kpi-revenue").textContent = "$" + fmt(totalRevenue);
+        document.getElementById("kpi-revenue").textContent = "$" + totalRevenue.toLocaleString();
         document.getElementById("kpi-revenue-trend").textContent = "\u{1F4CA} Consolidated";
         
-        document.getElementById("kpi-profit").textContent = "$" + fmt(netProfit);
+        document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
         document.getElementById("kpi-profit-trend").textContent = netProfit < 0 ? "\u26A0 Loss position" : "\u2714 Profitable";
         document.getElementById("kpi-profit-trend").className = netProfit < 0 ? "kpi-trend negative" : "kpi-trend positive";
 
-        document.getElementById("kpi-receivables").textContent = "$" + fmt(totalReceivables);
+        document.getElementById("kpi-receivables").textContent = "$" + totalReceivables.toLocaleString();
         document.getElementById("kpi-receivables-trend").textContent = `${allInvoices.length} invoices across all entities`;
 
         // Store consolidated receivables for drawer (calculate aging from allInvoices)
@@ -2474,7 +2399,7 @@
         });
         const aggregatedExpenses = Object.values(allExpenseAccounts);
 
-        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, totalExpenses: totalCogs + totalExpenses, netProfit: netProfit, entityBreakdown: allEntityPL, expenseAccounts: aggregatedExpenses, isConsolidated: true };
+        window.dashboardData.pl = { revenue: totalRevenue, cogs: totalCogs, gross: grossProfit, opex: totalExpenses, netProfit: netProfit, entityBreakdown: allEntityPL, expenseAccounts: aggregatedExpenses, isConsolidated: true };
 
         // Store consolidated balance sheet for drawer
         window.dashboardData.balance = {
@@ -2486,23 +2411,22 @@
         };
 
         // Update Balance Sheet card
-        document.getElementById('bs-assets').textContent = '$' + fmt(totalAssets);
-        document.getElementById('bs-liabilities').textContent = '$' + fmt(totalLiabilities);
-        document.getElementById('bs-equity').textContent = '$' + fmt(totalEquity);
+        document.getElementById('bs-assets').textContent = '$' + totalAssets.toLocaleString();
+        document.getElementById('bs-liabilities').textContent = '$' + totalLiabilities.toLocaleString();
+        document.getElementById('bs-equity').textContent = '$' + totalEquity.toLocaleString();
 
         // Update P&L Summary card
-        document.getElementById("pl-revenue").textContent = "$" + fmt(totalRevenue);
-        document.getElementById("pl-cogs").textContent = "$" + fmt(totalCogs);
-        document.getElementById("pl-gross").textContent = "$" + fmt(grossProfit);
-        document.getElementById("pl-opex").textContent = "$" + fmt(totalExpenses);
-        document.getElementById("pl-net").innerHTML = "<strong>$" + fmt(netProfit) + "</strong>";
+        document.getElementById("pl-revenue").textContent = "$" + totalRevenue.toLocaleString();
+        document.getElementById("pl-cogs").textContent = "$" + totalCogs.toLocaleString();
+        document.getElementById("pl-gross").textContent = "$" + grossProfit.toLocaleString();
+        document.getElementById("pl-opex").textContent = "$" + totalExpenses.toLocaleString();
+        document.getElementById("pl-net").innerHTML = "<strong>$" + netProfit.toLocaleString() + "</strong>";
 
         // Update Operating Expenses card to match P&L OpEx exactly
-        document.getElementById("kpi-top-expense").textContent = "$" + fmt(totalExpenses);
+        document.getElementById("kpi-top-expense").textContent = "$" + totalExpenses.toLocaleString();
 
-        // Inventory stays the same
-        document.getElementById("kpi-inventory").textContent = "$3.5M";
-        document.getElementById("kpi-inventory-trend").innerHTML = "\u2714 Stock levels healthy";
+        // Load live inventory data for Mining's quarry operation
+        await loadInventory();
 
         // Load Top Customers from aggregated invoices
         await loadTopCustomers(quarterInfo);
@@ -2528,7 +2452,7 @@
           const totalCash = data.totalCash || 0;
           window.dashboardData.cash = data;
 
-          document.getElementById("kpi-cash").textContent = "$" + fmt(totalCash);
+          document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
           document.getElementById("kpi-cash-trend").innerHTML = 
             `<span>&#x1F4B0;</span> ${data.bankAccounts?.length || 0} accounts`;
           document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
@@ -2596,7 +2520,7 @@
           window.dashboardData.pl = { revenue, totalExpenses, cogs, opex, gross, netProfit, revenueAccounts: data.summary?.revenueAccounts || [], cogsAccounts: data.summary?.cogsAccounts || [], expenseAccounts: data.summary?.expenseAccounts || [] };
 
           // Update KPI cards
-          document.getElementById("kpi-revenue").textContent = "$" + fmt(revenue);
+          document.getElementById("kpi-revenue").textContent = "$" + revenue.toLocaleString();
           document.getElementById("kpi-revenue-trend").innerHTML = 
             revenue >= 0 ? `<span>\u2191</span> Period revenue` : `<span>\u2193</span> Negative revenue`;
           document.getElementById("kpi-revenue-trend").className = 
@@ -2604,7 +2528,7 @@
           document.getElementById("kpi-revenue-status").className = 
             revenue >= 0 ? "kpi-status-bar healthy" : "kpi-status-bar warning";
 
-          document.getElementById("kpi-profit").textContent = "$" + fmt(netProfit);
+          document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
           document.getElementById("kpi-profit-trend").innerHTML = 
             netProfit >= 0 ? `<span>\u2191</span> Profitable` : `<span>\u2193</span> Loss position`;
           document.getElementById("kpi-profit-trend").className = 
@@ -2613,15 +2537,15 @@
             netProfit >= 0 ? "kpi-status-bar healthy" : "kpi-status-bar critical";
 
           // Update P&L summary card
-          document.getElementById("pl-revenue").textContent = "$" + fmt(revenue);
-          document.getElementById("pl-cogs").textContent = "$" + fmt(cogs);
-          document.getElementById("pl-gross").textContent = "$" + fmt(gross);
-          document.getElementById("pl-opex").textContent = "$" + fmt(opex);
-          document.getElementById("pl-net").textContent = "$" + fmt(netProfit);
+          document.getElementById("pl-revenue").textContent = "$" + revenue.toLocaleString();
+          document.getElementById("pl-cogs").textContent = "$" + cogs.toLocaleString();
+          document.getElementById("pl-gross").textContent = "$" + gross.toLocaleString();
+          document.getElementById("pl-opex").textContent = "$" + opex.toLocaleString();
+          document.getElementById("pl-net").textContent = "$" + netProfit.toLocaleString();
 
           // Update Operating Expenses card to match P&L OpEx (for non-Mining entities)
           const expCard = document.getElementById("kpi-top-expense");
-          if (expCard) expCard.textContent = "$" + fmt(opex);
+          if (expCard) expCard.textContent = "$" + opex.toLocaleString();
 
         } catch (error) {
           console.error("Error loading P&L:", error);
@@ -2647,43 +2571,25 @@
           console.log("Parsed budget:", budget);
           const proRatedRevenue = Math.round(budget.revenue * quarterInfo.proRateFactor);
           const proRatedExpenses = Math.round(budget.expenses * quarterInfo.proRateFactor);
-          const proRatedCogs = Math.round(budget.cogs * quarterInfo.proRateFactor);
-          const proRatedGrossProfit = proRatedRevenue - proRatedCogs;
+          const proRatedGrossProfit = proRatedRevenue - (proRatedExpenses * 0.55); // Approximate COGS
 
-          // Store budget targets and detail for reversal refresh + sidecard
-          window.dashboardData.budgetTargets = {
-            proRatedRevenue,
-            proRatedExpenses,
-            proRatedCogs,
-            proRatedGrossProfit,
-            rawBudget: budget,
-            proRateFactor: quarterInfo.proRateFactor,
-            quarterLabel: quarterInfo.label || `Q${quarterInfo.quarter} FY${quarterInfo.fiscalYear}`
-          };
+          const actualRevenue = window.dashboardData.pl?.revenue || 0;
+          const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
+          const actualGross = window.dashboardData.pl?.gross || 0;
 
-          refreshBudgetBars();
+          // Calculate variances
+          const revVar = proRatedRevenue > 0 ? ((actualRevenue - proRatedRevenue) / proRatedRevenue) * 100 : 0;
+          const expVar = proRatedExpenses > 0 ? ((actualExpenses - proRatedExpenses) / proRatedExpenses) * 100 : 0;
+          const gpVar = proRatedGrossProfit > 0 ? ((actualGross - proRatedGrossProfit) / proRatedGrossProfit) * 100 : 0;
+
+          // Update horizontal budget bars
+          updateBudgetBar('rev', actualRevenue, proRatedRevenue, revVar);
+          updateBudgetBar('exp', actualExpenses, proRatedExpenses, expVar);
+          updateBudgetBar('gp', actualGross, proRatedGrossProfit, gpVar);
 
         } catch (error) {
           console.error("Error loading budget:", error);
         }
-      }
-
-      // Refresh budget bars using current dashboardData.pl and stored targets
-      function refreshBudgetBars() {
-        const targets = window.dashboardData.budgetTargets;
-        if (!targets) return;
-
-        const actualRevenue = window.dashboardData.pl?.revenue || 0;
-        const actualExpenses = window.dashboardData.pl?.opex || 0;
-        const actualGross = window.dashboardData.pl?.gross || 0;
-
-        const revVar = targets.proRatedRevenue > 0 ? ((actualRevenue - targets.proRatedRevenue) / targets.proRatedRevenue) * 100 : 0;
-        const expVar = targets.proRatedExpenses > 0 ? ((actualExpenses - targets.proRatedExpenses) / targets.proRatedExpenses) * 100 : 0;
-        const gpVar = targets.proRatedGrossProfit > 0 ? ((actualGross - targets.proRatedGrossProfit) / targets.proRatedGrossProfit) * 100 : 0;
-
-        updateBudgetBar('rev', actualRevenue, targets.proRatedRevenue, revVar);
-        updateBudgetBar('exp', actualExpenses, targets.proRatedExpenses, expVar);
-        updateBudgetBar('gp', actualGross, targets.proRatedGrossProfit, gpVar);
       }
 
       function updateBudgetBar(type, actual, budget, variance) {
@@ -2691,8 +2597,8 @@
         const fillPct = budget > 0 ? Math.min(Math.abs(actual) / maxVal * 100, 100) : 0;
         const markerPct = budget > 0 ? Math.min(budget / maxVal * 100, 100) : 0;
 
-        document.getElementById(`bar-${type}-actual`).textContent = "$" + fmt(actual);
-        document.getElementById(`bar-${type}-target`).textContent = "of $" + fmt(budget);
+        document.getElementById(`bar-${type}-actual`).textContent = "$" + actual.toLocaleString();
+        document.getElementById(`bar-${type}-target`).textContent = "of $" + budget.toLocaleString();
         
         const varEl = document.getElementById(`bar-${type}-var`);
         varEl.textContent = (variance >= 0 ? "+" : "") + variance.toFixed(1) + "%";
@@ -2717,8 +2623,6 @@
       function parseBudgetFromReport(report) {
         let revenue = 0;
         let expenses = 0;
-        let cogs = 0;
-        const lineItems = [];
 
         // Railway API returns: { rows: [...] } with camelCase properties
         const rows = report?.rows || report?.Reports?.[0]?.Rows || [];
@@ -2739,13 +2643,8 @@
                 const m3 = parseFloat(cells[3]?.value || cells[3]?.Value) || 0;
                 const total = m1 + m2 + m3;
 
-                lineItems.push({ label: cells[0]?.value || cells[0]?.Value || '', total, section: title });
-
                 if (label.includes("total income") || label.includes("total revenue")) {
                   if (total > revenue) revenue = total;
-                }
-                if (label.includes("total cost of") || label.includes("total cogs") || label.includes("total direct costs")) {
-                  cogs = total;
                 }
                 if (label.includes("total operating expenses") || label.includes("total expenses")) {
                   if (total > expenses) expenses = total;
@@ -2754,7 +2653,7 @@
             }
           }
         }
-        return { revenue, expenses, cogs, lineItems };
+        return { revenue, expenses };
       }
 
       // ========== AGED RECEIVABLES (via Outstanding Invoices) ==========
@@ -2807,7 +2706,7 @@
             invoices: invoices
           };
 
-          document.getElementById("kpi-receivables").textContent = "$" + fmt(total);
+          document.getElementById("kpi-receivables").textContent = "$" + total.toLocaleString();
           
           const currentPct = total > 0 ? Math.round(current / total * 100) : 0;
           const overduePct = 100 - currentPct;
@@ -2826,41 +2725,63 @@
         }
       }
 
-      // ========== INVENTORY ==========
+      // ========== INVENTORY (LIVE from Quarry APP API) ==========
+      const INVENTORY_API = "https://rac-inventory-production.up.railway.app/api/inventory-summary";
+
       async function loadInventory() {
-        // Static data for now - would come from inventory system
-        const inventoryData = [
-          { product: "Roadbase", current: "8,000t", value: 563840, status: "at-target" },
-          { product: "Type E (500-700)", current: "4,510t", value: 377848, status: "below" },
-          { product: "20mm Minus", current: "12,118t", value: 1088923, status: "above" },
-          { product: "Crusher Dust", current: "2,000t", value: 69420, status: "at-target" },
-          { product: "Sand", current: "19,084t", value: 600000, status: "above" },
-          { product: "Other Rock", current: "10,000t", value: 800000, status: "adequate" },
-        ];
+        try {
+          const res = await fetch(INVENTORY_API);
+          if (!res.ok) throw new Error(`Inventory API ${res.status}`);
+          const data = await res.json();
 
-        const totalValue = inventoryData.reduce((sum, item) => sum + item.value, 0);
+          // Store globally for drawer + sparkline access
+          window.inventoryLive = data;
 
-        document.getElementById("kpi-inventory").textContent = "$" + (totalValue / 1000000).toFixed(1) + "M";
-        document.getElementById("kpi-inventory-trend").innerHTML = `<span>\u2714</span> Stock levels healthy`;
-        document.getElementById("kpi-inventory-trend").className = "kpi-trend positive";
+          const totalValue = data.totals.inventoryValue || 0;
+          const totalTonnes = data.totals.sohTonnes || 0;
+          const forwardOrders = data.totals.forwardOrders || {};
 
-        // TODO: Restore when Inventory Status card returns (currently replaced by Key Ratios)
-        // Will connect to Quarry APP API for real inventory data
-        /*
-        document.getElementById("inv-total-value").textContent = "$" + fmt(totalValue);
+          // KPI value
+          if (totalValue >= 1000000) {
+            document.getElementById("kpi-inventory").textContent = "$" + (totalValue / 1000000).toFixed(2) + "M";
+          } else {
+            document.getElementById("kpi-inventory").textContent = "$" + Math.round(totalValue).toLocaleString();
+          }
 
-        const statusList = document.getElementById("inventoryStatusList");
-        statusList.innerHTML = inventoryData.slice(0, 4).map(item => `
-          <div class="inventory-status-item">
-            <span>${item.product}</span>
-            <span class="status-badge ${item.status}">${
-              item.status === "at-target" ? "At Target" :
-              item.status === "below" ? "Below" :
-              item.status === "above" ? "Above" : "OK"
-            }</span>
-          </div>
-        `).join("");
-        */
+          // Trend line — SOH tonnes + forward order pipeline
+          const trendParts = [];
+          trendParts.push(`${Math.round(totalTonnes).toLocaleString()}t on hand`);
+          if (forwardOrders.orderCount > 0) {
+            trendParts.push(`${forwardOrders.orderCount} order${forwardOrders.orderCount > 1 ? 's' : ''} pending (${Math.round(forwardOrders.tonnes).toLocaleString()}t)`);
+          }
+          document.getElementById("kpi-inventory-trend").innerHTML =
+            `<span>\u2714</span> ${trendParts.join(' \u00b7 ')}`;
+          document.getElementById("kpi-inventory-trend").className = "kpi-trend positive";
+
+          // Status bar
+          const statusBar = document.getElementById("kpi-inventory-status");
+          statusBar.className = "kpi-status-bar " + (totalValue >= 500000 ? "healthy" : (totalValue >= 100000 ? "warning" : "critical"));
+
+          // Rescale sparkline to anchor at real value
+          const sparkCanvas = document.getElementById('sparkInventory');
+          if (sparkCanvas && sparkCanvas.chart) {
+            const chart = sparkCanvas.chart;
+            const points = chart.data.datasets[0].data;
+            if (points.length > 0) {
+              const oldLast = points[points.length - 1];
+              const scale = oldLast > 0 ? totalValue / oldLast : 1;
+              chart.data.datasets[0].data = points.map(v => Math.round(v * scale));
+              chart.update('none');
+            }
+          }
+
+        } catch (error) {
+          console.error("Error loading inventory:", error);
+          document.getElementById("kpi-inventory").textContent = "Offline";
+          document.getElementById("kpi-inventory-trend").innerHTML = "\u26a0 Inventory API unavailable";
+          document.getElementById("kpi-inventory-trend").className = "kpi-trend neutral";
+          window.inventoryLive = null;
+        }
       }
 
       // ========== TOP EXPENSES ==========
@@ -2885,7 +2806,7 @@
         }
 
         // Show Total Operating Expenses as the main value
-        document.getElementById("kpi-top-expense").textContent = "$" + fmt(totalExpenses);
+        document.getElementById("kpi-top-expense").textContent = "$" + totalExpenses.toLocaleString();
         
         // Show #1 expense as the subtitle
         const topExpense = topExpenses[0];
@@ -2999,7 +2920,7 @@
                 <div class="customer-bar-fill" style="width: ${(c.value / maxValue) * 100}%"></div>
               </div>
             </div>
-            <span class="customer-value">${fmt(c.value)}</span>
+            <span class="customer-value">$${c.value.toLocaleString()}</span>
           </div>
         `).join("");
       }
@@ -3045,9 +2966,9 @@
         const receivables = window.dashboardData.receivables;
 
         // Balance Sheet card
-        document.getElementById('bs-assets').textContent = '$' + fmt((balance.totalAssets || 0));
-        document.getElementById('bs-liabilities').textContent = '$' + fmt((balance.totalLiabilities || 0));
-        document.getElementById('bs-equity').textContent = '$' + fmt((balance.totalEquity || 0));
+        document.getElementById('bs-assets').textContent = '$' + (balance.totalAssets || 0).toLocaleString();
+        document.getElementById('bs-liabilities').textContent = '$' + (balance.totalLiabilities || 0).toLocaleString();
+        document.getElementById('bs-equity').textContent = '$' + (balance.totalEquity || 0).toLocaleString();
 
         // Key Ratios card
         const pl = window.dashboardData.pl || {};
@@ -3081,79 +3002,30 @@
         document.getElementById('ratio-debt-equity').textContent = debtEquity;
 
         // Aged Debtors card
-        document.getElementById('aged-current').textContent = '$' + fmt((receivables.aged30Days || 0));
-        document.getElementById('aged-31-60').textContent = '$' + fmt((receivables.aged60Days || 0));
-        document.getElementById('aged-61-90').textContent = '$' + fmt((receivables.aged90Days || 0));
-        document.getElementById('aged-90plus').textContent = '$' + fmt((receivables.agedOver120Days || 0));
-        document.getElementById('aged-total').textContent = '$' + fmt((receivables.total || 0));
+        document.getElementById('aged-current').textContent = '$' + (receivables.aged30Days || 0).toLocaleString();
+        document.getElementById('aged-31-60').textContent = '$' + (receivables.aged60Days || 0).toLocaleString();
+        document.getElementById('aged-61-90').textContent = '$' + (receivables.aged90Days || 0).toLocaleString();
+        document.getElementById('aged-90plus').textContent = '$' + (receivables.agedOver120Days || 0).toLocaleString();
+        document.getElementById('aged-total').textContent = '$' + (receivables.total || 0).toLocaleString();
         document.getElementById('aged-subtitle').textContent = (receivables.invoiceCount || 0) + ' invoices outstanding';
       }
 
-      // ========== CONNECTION & HEALTH STATUS ==========
-      async function checkConnectionHealth() {
+      // ========== HEALTH STATUS ==========
+      function updateHealthStatus() {
+        const pl = window.dashboardData.pl;
         const dot = document.getElementById("healthDot");
         const status = document.getElementById("healthStatus");
-        const entityList = document.getElementById("connEntityList");
-        
-        try {
-          const response = await fetch(`${API_BASE}/api/health-check`);
-          const health = await response.json();
-          
-          window.connectionHealth = health;
-          
-          if (health.status === 'all-connected') {
-            dot.className = "status-dot";
-            status.textContent = `${health.connected}/${health.total} Connected`;
-          } else if (health.status === 'partial') {
-            dot.className = "status-dot warning pulse";
-            status.textContent = `${health.connected}/${health.total} Connected`;
-          } else {
-            dot.className = "status-dot critical pulse";
-            status.textContent = `Disconnected`;
-          }
-          
-          // Build entity detail list
-          if (health.entities && health.entities.length > 0) {
-            const shortName = (name) => {
-              if (name.includes('Mining')) return 'Mining';
-              if (name.includes('Aboriginal')) return 'Aboriginal Corp';
-              if (name.includes('Enterprises')) return 'Enterprises';
-              if (name.includes('Property')) return 'Property Mgmt';
-              if (name.includes('Ngarrkuwuy')) return 'Ngarrkuwuy';
-              if (name.includes('Invest') || name.includes('Miliditjpi')) return 'Miliditjpi Trust';
-              if (name.includes('Marrin')) return 'Marrin Square';
-              return name.substring(0, 20);
-            };
-            
-            entityList.innerHTML = health.entities.map(e => {
-              const dotClass = e.connected 
-                ? (e.minutesRemaining < 10 ? 'warn' : 'ok')
-                : 'dead';
-              const timeLabel = e.connected 
-                ? `${e.minutesRemaining}m remaining`
-                : 'Expired - will auto-refresh';
-              return `<div class="conn-entity-row">
-                <span><span class="conn-entity-dot ${dotClass}"></span>${shortName(e.name)}</span>
-                <span style="color: rgba(255,255,255,0.5);">${timeLabel}</span>
-              </div>`;
-            }).join('');
-          }
-        } catch (error) {
+
+        if (pl.netProfit < 0) {
           dot.className = "status-dot critical";
-          status.textContent = "API Offline";
-          entityList.innerHTML = '<div style="color: #EF4444; font-size: 11px;">Cannot reach server</div>';
+          status.textContent = "Attention Required";
+        } else if (pl.netProfit < 10000) {
+          dot.className = "status-dot warning";
+          status.textContent = "Monitor";
+        } else {
+          dot.className = "status-dot";
+          status.textContent = "Healthy";
         }
-      }
-      
-      // Update P&L health indicator (separate from connection health)
-      function updateHealthStatus() {
-        // Connection health is handled by checkConnectionHealth()
-        // This just updates based on P&L data as a secondary indicator
-        const pl = window.dashboardData.pl;
-        if (!pl) return;
-        
-        // We could add a secondary indicator here if needed
-        // For now, connection health takes priority in the header
       }
 
       // ========== LOAD HISTORICAL DATA FROM SNAPSHOTS ==========
@@ -3201,7 +3073,7 @@
                 enabled: true,
                 callbacks: {
                   label: function(context) {
-                    return '$' + fmt(context.raw);
+                    return '$' + context.raw.toLocaleString();
                   }
                 }
               } 
@@ -3419,11 +3291,11 @@
         const totalYtdExp = ytdExpenses[ytdExpenses.length - 1] || 0;
         const totalYtdProf = ytdProfit[ytdProfit.length - 1] || 0;
         
-        document.getElementById('ytd-revenue').textContent = '$' + fmt(totalYtdRev);
-        document.getElementById('ytd-expenses').textContent = '$' + fmt(totalYtdExp);
+        document.getElementById('ytd-revenue').textContent = '$' + totalYtdRev.toLocaleString();
+        document.getElementById('ytd-expenses').textContent = '$' + totalYtdExp.toLocaleString();
         
         const ytdProfEl = document.getElementById('ytd-profit');
-        ytdProfEl.textContent = (totalYtdProf < 0 ? '-$' : '$') + fmt(Math.abs(totalYtdProf));
+        ytdProfEl.textContent = (totalYtdProf < 0 ? '-$' : '$') + Math.abs(totalYtdProf).toLocaleString();
         ytdProfEl.style.color = totalYtdProf >= 0 ? '#107C10' : '#D13438';
         
         // Destroy if exists
@@ -3551,7 +3423,7 @@
               tooltip: {
                 callbacks: {
                   label: function(context) {
-                    return context.dataset.label + ': $' + fmt(context.raw);
+                    return context.dataset.label + ': $' + context.raw.toLocaleString();
                   }
                 }
               }
@@ -3577,8 +3449,7 @@
           expenses: 'Top Expenses',
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
-          ratios: 'Key Financial Ratios',
-          budget: 'Budget vs Actual Detail'
+          ratios: 'Key Financial Ratios'
         };
 
         title.textContent = titles[type] || 'Detail View';
@@ -3610,11 +3481,11 @@
                   grouped[acc.entity].subtotal += acc.balance || 0;
                 });
                 return Object.entries(grouped).map(([entity, data]) => `
-                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} Ã¢â‚¬â€ ${fmt(data.subtotal)}</h3>
+                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} Ã¢â‚¬â€ $${data.subtotal.toLocaleString()}</h3>
                   <table class="data-table" style="margin-bottom: 12px;">
                     <tbody>
                       ${data.accounts.map(acc => `
-                        <tr><td style="padding-left:12px; font-size:13px;">${acc.name}</td><td style="text-align:right; font-size:13px;">${fmt((acc.balance || 0))}</td></tr>
+                        <tr><td style="padding-left:12px; font-size:13px;">${acc.name}</td><td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td></tr>
                       `).join('')}
                     </tbody>
                   </table>
@@ -3625,7 +3496,7 @@
                   <thead><tr><th>Account</th><th style="text-align:right">Balance</th></tr></thead>
                   <tbody>
                     ${(cash.bankAccounts || []).map(acc => `
-                      <tr><td>${acc.name}</td><td style="text-align:right">${fmt((acc.balance || 0))}</td></tr>
+                      <tr><td>${acc.name}</td><td style="text-align:right">$${(acc.balance || 0).toLocaleString()}</td></tr>
                     `).join('') || '<tr><td colspan="2">No accounts found</td></tr>'}
                   </tbody>
                 </table>
@@ -3633,7 +3504,7 @@
               <table class="data-table" style="margin-top: 8px;">
                 <tbody>
                   <tr style="font-weight:600; background:#f5f5f5;">
-                    <td>Total Cash</td><td style="text-align:right">${fmt((cash.totalCash || 0))}</td>
+                    <td>Total Cash</td><td style="text-align:right">$${(cash.totalCash || 0).toLocaleString()}</td>
                   </tr>
                 </tbody>
               </table>
@@ -3645,19 +3516,19 @@
                 const breakdown = pl.entityBreakdown || [];
                 return `
                   <div style="font-size: 28px; font-weight: 600; color: ${(pl.revenue || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
-                    ${fmt((pl.revenue || 0))}
+                    $${(pl.revenue || 0).toLocaleString()}
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                     Total Revenue across ${breakdown.length} entities
                   </div>
                   ${breakdown.filter(e => e.revenue !== 0).map(e => `
-                    <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${e.entity} \u2014 ${fmt(e.revenue)}</h3>
+                    <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${e.entity} \u2014 $${e.revenue.toLocaleString()}</h3>
                     <table class="data-table" style="margin-bottom: 12px;">
                       <tbody>
                         ${(e.revenueAccounts || []).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)).map(acc => `
                           <tr>
                             <td style="padding-left:12px; font-size:13px;">${acc.name}</td>
-                            <td style="text-align:right; font-size:13px; color: ${acc.amount >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">${fmt(acc.amount)}</td>
+                            <td style="text-align:right; font-size:13px; color: ${acc.amount >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${acc.amount.toLocaleString()}</td>
                           </tr>
                         `).join('') || '<tr><td colspan="2" style="font-size:13px; color: var(--color-text-muted);">No revenue accounts</td></tr>'}
                       </tbody>
@@ -3666,7 +3537,7 @@
                   <table class="data-table" style="margin-top: 8px;">
                     <tbody>
                       <tr style="font-weight:600; background:#f5f5f5;">
-                        <td>Total Revenue</td><td style="text-align:right">${fmt((pl.revenue || 0))}</td>
+                        <td>Total Revenue</td><td style="text-align:right">$${(pl.revenue || 0).toLocaleString()}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3675,7 +3546,7 @@
                 const accounts = (pl.revenueAccounts || []).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
                 return `
                   <div style="font-size: 28px; font-weight: 600; color: ${(pl.revenue || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
-                    ${fmt((pl.revenue || 0))}
+                    $${(pl.revenue || 0).toLocaleString()}
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                     ${accounts.length} revenue accounts
@@ -3687,12 +3558,12 @@
                       ${accounts.map(acc => `
                         <tr>
                           <td style="font-size:13px;">${acc.name}</td>
-                          <td style="text-align:right; font-size:13px; color: ${acc.amount >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; font-weight:600;">${fmt(acc.amount)}</td>
+                          <td style="text-align:right; font-size:13px; color: ${acc.amount >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; font-weight:600;">$${acc.amount.toLocaleString()}</td>
                         </tr>
                       `).join('') || '<tr><td colspan="2">No revenue accounts found</td></tr>'}
                       <tr style="font-weight:600; background:#f5f5f5; border-top: 2px solid #ddd;">
                         <td>Total Revenue</td>
-                        <td style="text-align:right; color: ${(pl.revenue || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">${fmt((pl.revenue || 0))}</td>
+                        <td style="text-align:right; color: ${(pl.revenue || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(pl.revenue || 0).toLocaleString()}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3711,41 +3582,41 @@
                   <tbody>
                     <tr style="background:#E6F4EA;">
                       <td style="font-weight:600;">Revenue</td>
-                      <td style="text-align:right; font-weight:600; color: var(--color-positive);">${fmt((data.revenue || 0))}</td>
+                      <td style="text-align:right; font-weight:600; color: var(--color-positive);">$${(data.revenue || 0).toLocaleString()}</td>
                     </tr>
                     ${cogsItems.length > 0 ? `
                       <tr style="background:#f9f9f9;"><td colspan="2" style="font-size:12px; font-weight:600; color: var(--color-text-muted); padding-top:8px;">COST OF GOODS SOLD</td></tr>
                       ${cogsItems.map(acc => `
                         <tr>
                           <td style="padding-left:12px; font-size:13px;">${acc.name}</td>
-                          <td style="text-align:right; font-size:13px;">${fmt(acc.amount)}</td>
+                          <td style="text-align:right; font-size:13px;">$${acc.amount.toLocaleString()}</td>
                         </tr>
                       `).join('')}
                       <tr style="font-weight:600; background:#FFF4E5;">
                         <td>Total COGS</td>
-                        <td style="text-align:right">${fmt((data.cogs || 0))}</td>
+                        <td style="text-align:right">$${(data.cogs || 0).toLocaleString()}</td>
                       </tr>
                     ` : ''}
                     <tr style="font-weight:600; background:#E8F0FE;">
                       <td>Gross Profit</td>
-                      <td style="text-align:right; color: var(--color-primary);">${fmt((data.gross || 0))}</td>
+                      <td style="text-align:right; color: var(--color-primary);">$${(data.gross || 0).toLocaleString()}</td>
                     </tr>
                     ${opexItems.length > 0 ? `
                       <tr style="background:#f9f9f9;"><td colspan="2" style="font-size:12px; font-weight:600; color: var(--color-text-muted); padding-top:8px;">OPERATING EXPENSES</td></tr>
                       ${opexItems.map(acc => `
                         <tr>
                           <td style="padding-left:12px; font-size:13px;">${acc.name}</td>
-                          <td style="text-align:right; font-size:13px;">${fmt(acc.amount)}</td>
+                          <td style="text-align:right; font-size:13px;">$${acc.amount.toLocaleString()}</td>
                         </tr>
                       `).join('')}
                       <tr style="font-weight:600; background:#FFF4E5;">
                         <td>Total OpEx</td>
-                        <td style="text-align:right">${fmt((data.opex || 0))}</td>
+                        <td style="text-align:right">$${(data.opex || 0).toLocaleString()}</td>
                       </tr>
                     ` : ''}
                     <tr style="font-weight:700; background:#f5f5f5; border-top: 2px solid #ddd; font-size: 15px;">
                       <td>Net Profit</td>
-                      <td style="text-align:right; color: ${(data.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">${fmt((data.netProfit || 0))}</td>
+                      <td style="text-align:right; color: ${(data.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(data.netProfit || 0).toLocaleString()}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -3757,18 +3628,18 @@
               return `
                 <div style="padding: 16px 0;">
                   <div style="font-size: 28px; font-weight: 600; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
-                    ${fmt((pl.netProfit || 0))}
+                    $${(pl.netProfit || 0).toLocaleString()}
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                     Net Profit across ${breakdown.length} entities
                   </div>
                   ${breakdown.filter(e => e.revenue !== 0 || e.cogs !== 0 || e.opex !== 0).map(e => 
-                    renderPLWaterfall(e, `${e.entity} \u2014 Net: ${fmt(e.netProfit)}`)
+                    renderPLWaterfall(e, `${e.entity} \u2014 Net: $${e.netProfit.toLocaleString()}`)
                   ).join('')}
                   <table class="data-table" style="margin-top: 8px;">
                     <tbody>
                       <tr style="font-weight:700; background:#f5f5f5; font-size: 15px;">
-                        <td>Consolidated Net Profit</td><td style="text-align:right; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">${fmt((pl.netProfit || 0))}</td>
+                        <td>Consolidated Net Profit</td><td style="text-align:right; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(pl.netProfit || 0).toLocaleString()}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3778,7 +3649,7 @@
               return `
                 <div style="padding: 16px 0;">
                   <div style="font-size: 28px; font-weight: 600; color: ${(pl.netProfit || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; margin-bottom: 4px;">
-                    ${fmt((pl.netProfit || 0))}
+                    $${(pl.netProfit || 0).toLocaleString()}
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                     Full P&L breakdown
@@ -3794,7 +3665,7 @@
                 const breakdown = balance.entityBreakdown || [];
                 return `
                   <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
-                    ${fmt((balance.totalEquity || 0))}
+                    $${(balance.totalEquity || 0).toLocaleString()}
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                     Net Equity across ${breakdown.length} entities
@@ -3806,16 +3677,16 @@
                       ${breakdown.map(e => `
                         <tr>
                           <td style="font-size:13px;">${e.entity}</td>
-                          <td style="text-align:right; font-size:13px;">${fmt((e.assets || 0))}</td>
-                          <td style="text-align:right; font-size:13px; color: var(--color-text-muted);">${fmt((e.liabilities || 0))}</td>
-                          <td style="text-align:right; font-size:13px; color: ${(e.equity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; font-weight:600;">${fmt((e.equity || 0))}</td>
+                          <td style="text-align:right; font-size:13px;">$${(e.assets || 0).toLocaleString()}</td>
+                          <td style="text-align:right; font-size:13px; color: var(--color-text-muted);">$${(e.liabilities || 0).toLocaleString()}</td>
+                          <td style="text-align:right; font-size:13px; color: ${(e.equity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; font-weight:600;">$${(e.equity || 0).toLocaleString()}</td>
                         </tr>
                       `).join('')}
                       <tr style="font-weight:600; background:#f5f5f5; border-top: 2px solid #ddd;">
                         <td>Total</td>
-                        <td style="text-align:right">${fmt((balance.totalAssets || 0))}</td>
-                        <td style="text-align:right; color: var(--color-text-muted);">${fmt((balance.totalLiabilities || 0))}</td>
-                        <td style="text-align:right; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">${fmt((balance.totalEquity || 0))}</td>
+                        <td style="text-align:right">$${(balance.totalAssets || 0).toLocaleString()}</td>
+                        <td style="text-align:right; color: var(--color-text-muted);">$${(balance.totalLiabilities || 0).toLocaleString()}</td>
+                        <td style="text-align:right; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(balance.totalEquity || 0).toLocaleString()}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3823,15 +3694,15 @@
                   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
                     <div style="padding: 10px; background: #E8F0FE; border-radius: 6px;">
                       <div style="font-size: 11px; color: var(--color-text-muted);">Total Assets</div>
-                      <div style="font-size: 16px; font-weight: 600; color: var(--color-primary);">${fmt((balance.totalAssets || 0))}</div>
+                      <div style="font-size: 16px; font-weight: 600; color: var(--color-primary);">$${(balance.totalAssets || 0).toLocaleString()}</div>
                     </div>
                     <div style="padding: 10px; background: #FFF4E5; border-radius: 6px;">
                       <div style="font-size: 11px; color: var(--color-text-muted);">Liabilities</div>
-                      <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">${fmt((balance.totalLiabilities || 0))}</div>
+                      <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">$${(balance.totalLiabilities || 0).toLocaleString()}</div>
                     </div>
                     <div style="padding: 10px; background: ${(balance.totalEquity || 0) >= 0 ? '#E6F4EA' : '#FDECE9'}; border-radius: 6px;">
                       <div style="font-size: 11px; color: var(--color-text-muted);">Net Equity</div>
-                      <div style="font-size: 16px; font-weight: 600; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">${fmt((balance.totalEquity || 0))}</div>
+                      <div style="font-size: 16px; font-weight: 600; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(balance.totalEquity || 0).toLocaleString()}</div>
                     </div>
                   </div>
                 `;
@@ -3841,7 +3712,7 @@
                 const equityAccounts = (balance.equity || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
                 return `
                   <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
-                    ${fmt((balance.totalEquity || 0))}
+                    $${(balance.totalEquity || 0).toLocaleString()}
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                     Net Equity
@@ -3853,12 +3724,12 @@
                       ${assetAccounts.map(acc => `
                         <tr>
                           <td style="font-size:13px;">${acc.name}</td>
-                          <td style="text-align:right; font-size:13px;">${fmt((acc.balance || 0))}</td>
+                          <td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td>
                         </tr>
                       `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No asset accounts</td></tr>'}
                       <tr style="font-weight:600; background:#E8F0FE;">
                         <td>Total Assets</td>
-                        <td style="text-align:right; color: var(--color-primary);">${fmt((balance.totalAssets || 0))}</td>
+                        <td style="text-align:right; color: var(--color-primary);">$${(balance.totalAssets || 0).toLocaleString()}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3869,12 +3740,12 @@
                       ${liabilityAccounts.map(acc => `
                         <tr>
                           <td style="font-size:13px;">${acc.name}</td>
-                          <td style="text-align:right; font-size:13px;">${fmt((acc.balance || 0))}</td>
+                          <td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td>
                         </tr>
                       `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No liability accounts</td></tr>'}
                       <tr style="font-weight:600; background:#FFF4E5;">
                         <td>Total Liabilities</td>
-                        <td style="text-align:right; color: var(--color-warning);">${fmt((balance.totalLiabilities || 0))}</td>
+                        <td style="text-align:right; color: var(--color-warning);">$${(balance.totalLiabilities || 0).toLocaleString()}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3885,12 +3756,12 @@
                       ${equityAccounts.map(acc => `
                         <tr>
                           <td style="font-size:13px;">${acc.name}</td>
-                          <td style="text-align:right; font-size:13px; color: ${(acc.balance || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">${fmt((acc.balance || 0))}</td>
+                          <td style="text-align:right; font-size:13px; color: ${(acc.balance || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(acc.balance || 0).toLocaleString()}</td>
                         </tr>
                       `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No equity accounts</td></tr>'}
                       <tr style="font-weight:600; background:#E6F4EA;">
                         <td>Net Equity</td>
-                        <td style="text-align:right; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">${fmt((balance.totalEquity || 0))}</td>
+                        <td style="text-align:right; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(balance.totalEquity || 0).toLocaleString()}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3923,7 +3794,7 @@
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
                     = Total Assets Ã· Total Liabilities<br>
-                    = ${fmt(assets)} Ã· ${fmt(liabilities)}
+                    = $${assets.toLocaleString()} Ã· $${liabilities.toLocaleString()}
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
                     ${parseFloat(currentRatio) >= 1.5 ? 'âœ“ Strong liquidity' : parseFloat(currentRatio) >= 1 ? 'âš  Adequate liquidity' : 'âš  Low liquidity'}
@@ -3938,7 +3809,7 @@
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
                     = Gross Profit Ã· Revenue Ã— 100<br>
-                    = ${fmt(grossProfit)} Ã· ${fmt(revenue)} Ã— 100
+                    = $${grossProfit.toLocaleString()} Ã· $${revenue.toLocaleString()} Ã— 100
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
                     Profit after direct costs
@@ -3953,7 +3824,7 @@
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
                     = Net Profit Ã· Revenue Ã— 100<br>
-                    = ${fmt(netProfit)} Ã· ${fmt(revenue)} Ã— 100
+                    = $${netProfit.toLocaleString()} Ã· $${revenue.toLocaleString()} Ã— 100
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
                     ${parseFloat(netMargin) >= 10 ? 'âœ“ Healthy profitability' : parseFloat(netMargin) >= 0 ? 'âš  Marginal profit' : 'âš  Operating at a loss'}
@@ -3968,7 +3839,7 @@
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
                     = Total Liabilities Ã· Total Equity<br>
-                    = ${fmt(liabilities)} Ã· ${fmt(equity)}
+                    = $${liabilities.toLocaleString()} Ã· $${equity.toLocaleString()}
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
                     ${parseFloat(debtEquity) <= 1 ? 'âœ“ Low leverage' : parseFloat(debtEquity) <= 2 ? 'âš  Moderate leverage' : 'âš  High leverage'}
@@ -3992,7 +3863,7 @@
             return `
               <div style="padding: 16px 0;">
                 <div style="font-size: 28px; font-weight: 600; color: var(--color-warning); margin-bottom: 4px;">
-                  ${fmt(totalOpex)}
+                  $${totalOpex.toLocaleString()}
                 </div>
                 <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                   Total Operating Expenses
@@ -4011,7 +3882,7 @@
                             <span style="display: inline-block; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: ${i === 0 ? '#D13438' : i === 1 ? '#FF8C00' : '#FFC300'}; color: white; font-size: 11px; margin-right: 8px;">${i + 1}</span>
                             ${exp.name || 'Unknown'}
                           </td>
-                          <td style="text-align:right; font-size:13px; font-weight: 600;">${fmt(amount)}</td>
+                          <td style="text-align:right; font-size:13px; font-weight: 600;">$${amount.toLocaleString()}</td>
                           <td style="text-align:right; font-size:13px; color: var(--color-text-muted);">${pct}%</td>
                         </tr>
                       `;
@@ -4028,7 +3899,7 @@
                       <div style="margin-bottom: 12px;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                           <span style="font-size: 12px;">${exp.name || 'Unknown'}</span>
-                          <span style="font-size: 12px; font-weight: 600;">${fmt(amount)}</span>
+                          <span style="font-size: 12px; font-weight: 600;">$${amount.toLocaleString()}</span>
                         </div>
                         <div style="height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden;">
                           <div style="height: 100%; width: ${pct}%; background: ${i === 0 ? '#D13438' : i === 1 ? '#FF8C00' : '#FFC300'}; border-radius: 4px;"></div>
@@ -4043,7 +3914,7 @@
           receivables: `
             <div style="padding: 16px 0;">
               <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
-                ${fmt((receivables.total || 0))}
+                $${(receivables.total || 0).toLocaleString()}
               </div>
               <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                 ${receivables.invoiceCount || 0} invoices ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
@@ -4069,7 +3940,7 @@
                         <tr>
                           <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</td>
                           <td style="text-align:center; color: var(--color-text-muted);">${data.count}</td>
-                          <td style="text-align:right; font-weight: 600;">${fmt(data.amount)}</td>
+                          <td style="text-align:right; font-weight: 600;">$${data.amount.toLocaleString()}</td>
                         </tr>
                       `).join('');
                   })()}
@@ -4080,109 +3951,94 @@
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                 <div style="padding: 10px; background: #E6F4EA; border-radius: 6px;">
                   <div style="font-size: 11px; color: var(--color-text-muted);">Current (0-30)</div>
-                  <div style="font-size: 16px; font-weight: 600; color: var(--color-positive);">${fmt((receivables.aged30Days || 0))}</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-positive);">$${(receivables.aged30Days || 0).toLocaleString()}</div>
                 </div>
                 <div style="padding: 10px; background: #FFF4E5; border-radius: 6px;">
                   <div style="font-size: 11px; color: var(--color-text-muted);">31-60 days</div>
-                  <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">${fmt((receivables.aged60Days || 0))}</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">$${(receivables.aged60Days || 0).toLocaleString()}</div>
                 </div>
                 <div style="padding: 10px; background: #FFF4E5; border-radius: 6px;">
                   <div style="font-size: 11px; color: var(--color-text-muted);">61-90 days</div>
-                  <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">${fmt((receivables.aged90Days || 0))}</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-warning);">$${(receivables.aged90Days || 0).toLocaleString()}</div>
                 </div>
                 <div style="padding: 10px; background: #FDECE9; border-radius: 6px;">
                   <div style="font-size: 11px; color: var(--color-text-muted);">90+ days</div>
-                  <div style="font-size: 16px; font-weight: 600; color: var(--color-negative);">${fmt((receivables.agedOver120Days || 0))}</div>
+                  <div style="font-size: 16px; font-weight: 600; color: var(--color-negative);">$${(receivables.agedOver120Days || 0).toLocaleString()}</div>
                 </div>
               </div>
             </div>
           `,
-          budget: (() => {
-            const targets = window.dashboardData.budgetTargets;
-            if (!targets) return '<div style="padding: 40px; text-align: center; color: var(--color-text-muted);">No budget data loaded</div>';
-
-            const actualRevenue = pl.revenue || 0;
-            const actualCogs = pl.cogs || 0;
-            const actualGross = pl.gross || 0;
-            const actualOpex = pl.opex || 0;
-            const actualNetProfit = pl.netProfit || 0;
-
-            const budgetRevenue = targets.proRatedRevenue;
-            const budgetCogs = targets.proRatedCogs;
-            const budgetExpenses = targets.proRatedExpenses;
-            const budgetGross = targets.proRatedGrossProfit;
-            const budgetNetProfit = budgetGross - budgetExpenses;
-
-            const pct = (actual, budget) => budget !== 0 ? ((actual - budget) / Math.abs(budget) * 100).toFixed(1) : 'N/A';
-            const varColor = (actual, budget, lowerIsBetter) => {
-              if (budget === 0) return 'var(--color-text-muted)';
-              const diff = actual - budget;
-              if (lowerIsBetter) return diff <= 0 ? 'var(--color-positive)' : 'var(--color-negative)';
-              return diff >= 0 ? 'var(--color-positive)' : 'var(--color-negative)';
-            };
-            const varBg = (actual, budget, lowerIsBetter) => {
-              if (budget === 0) return '#f8f9fa';
-              const diff = actual - budget;
-              if (lowerIsBetter) return diff <= 0 ? '#E6F4EA' : '#FDECE9';
-              return diff >= 0 ? '#E6F4EA' : '#FDECE9';
-            };
-
-            const proRatePct = (targets.proRateFactor * 100).toFixed(0);
-            const isReversals = window.reversalState?.active;
-
-            function budgetRow(label, actual, budget, lowerIsBetter, highlight) {
-              const variance = actual - budget;
-              const pctVal = pct(actual, budget);
-              const bgStyle = highlight ? `background: ${highlight}; margin: 0 -16px; padding: 14px 16px;` : 'padding: 14px 0;';
-              return `
-                <div style="${bgStyle} border-bottom: 1px solid var(--color-border);">
-                  <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px;">${label}</div>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                    <div>
-                      <div style="font-size: 11px; color: var(--color-text-muted);">Actual</div>
-                      <div style="font-size: 16px; font-weight: 600;">$${fmt(actual)}</div>
-                    </div>
-                    <div>
-                      <div style="font-size: 11px; color: var(--color-text-muted);">Budget</div>
-                      <div style="font-size: 16px; font-weight: 600; color: var(--color-text-secondary);">$${fmt(budget)}</div>
-                    </div>
-                    <div>
-                      <div style="font-size: 11px; color: var(--color-text-muted);">Variance</div>
-                      <div style="font-size: 16px; font-weight: 600; color: ${varColor(actual, budget, lowerIsBetter)};">
-                        ${variance >= 0 ? '+' : ''}$${fmt(variance)}
-                      </div>
-                      <span style="display: inline-block; margin-top: 2px; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; background: ${varBg(actual, budget, lowerIsBetter)}; color: ${varColor(actual, budget, lowerIsBetter)};">
-                        ${pctVal !== 'N/A' ? (parseFloat(pctVal) >= 0 ? '+' : '') + pctVal + '%' : 'N/A'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              `;
-            }
-
+          inventory: (() => {
+            const inv = window.inventoryLive;
+            if (!inv) return '<p style="color: var(--color-text-muted);">Inventory data unavailable. The Quarry API may be offline.</p>';
+            const t = inv.totals;
+            const groups = inv.familyGroups || [];
+            const products = inv.products || [];
+            const fwd = t.forwardOrders || {};
             return `
               <div style="padding: 16px 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                  <div>
-                    <div style="font-size: 13px; color: var(--color-text-muted);">Pro-rated to ${proRatePct}% of quarter</div>
-                    ${isReversals ? '<div style="font-size: 12px; color: #DC2626; margin-top: 4px;">&#x1F504; Reversals excluded from actuals</div>' : ''}
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                  <div style="padding: 12px; background: #E6F4EA; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">Total Stock Value</div>
+                    <div style="font-size: 20px; font-weight: 700; color: var(--color-positive);">$${Math.round(t.inventoryValue).toLocaleString()}</div>
+                  </div>
+                  <div style="padding: 12px; background: #E8F0FE; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">Stock on Hand</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #1967D2;">${Math.round(t.sohTonnes).toLocaleString()}t</div>
+                  </div>
+                  <div style="padding: 12px; background: #FFF4E5; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">Forward Orders</div>
+                    <div style="font-size: 20px; font-weight: 700; color: var(--color-warning);">${fwd.orderCount || 0} (${Math.round(fwd.tonnes || 0).toLocaleString()}t)</div>
                   </div>
                 </div>
 
-                ${budgetRow('Revenue', actualRevenue, budgetRevenue, false, null)}
-                ${budgetRow('COGS', actualCogs, budgetCogs, true, null)}
-                ${budgetRow('Gross Profit', actualGross, budgetGross, false, '#FFFBEB')}
-                ${budgetRow('Operating Expenses', actualOpex, budgetExpenses, true, null)}
-                ${budgetRow('Net Profit', actualNetProfit, budgetNetProfit, false, '#E8F5E9')}
-
-                <div style="margin-top: 20px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
-                  <h4 style="font-size: 13px; margin-bottom: 8px;">Budget Notes</h4>
-                  <div style="font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;">
-                    <div>\u2022 Full quarter budget: Revenue $${fmt(targets.rawBudget?.revenue || 0)}, Expenses $${fmt(targets.rawBudget?.expenses || 0)}</div>
-                    <div>\u2022 Pro-rated at ${proRatePct}% (${proRatePct}% through the quarter)</div>
-                    <div>\u2022 Expense budget bar shows <strong>Operating Expenses only</strong> (excludes COGS)</div>
-                    ${targets.rawBudget?.cogs ? '<div>\u2022 COGS budget: $' + fmt(targets.rawBudget.cogs) + ' (full quarter)</div>' : '<div>\u2022 No separate COGS budget found in Xero</div>'}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                  <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">MTD Sales Revenue</div>
+                    <div style="font-size: 16px; font-weight: 600;">$${Math.round(t.mtd?.salesRevenue || 0).toLocaleString()}</div>
                   </div>
+                  <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">MTD Gross Margin</div>
+                    <div style="font-size: 16px; font-weight: 600; color: ${((t.mtd?.salesRevenue || 0) - (t.mtd?.salesCost || 0)) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${Math.round((t.mtd?.salesRevenue || 0) - (t.mtd?.salesCost || 0)).toLocaleString()}</div>
+                  </div>
+                </div>
+
+                <h3 style="margin: 0 0 10px; font-size: 14px; font-weight: 600;">Stock by Category</h3>
+                <table class="data-table">
+                  <thead><tr><th>Category</th><th style="text-align:right">Tonnes</th><th style="text-align:right">Value</th></tr></thead>
+                  <tbody>
+                    ${groups.map(g => `
+                      <tr>
+                        <td>${g.group.replace(/_/g, ' ')}</td>
+                        <td style="text-align:right">${Math.round(g.totalTonnes).toLocaleString()}</td>
+                        <td style="text-align:right">$${Math.round(g.totalValue).toLocaleString()}</td>
+                      </tr>
+                    `).join('')}
+                    <tr style="font-weight:600; background:#f5f5f5;">
+                      <td>TOTAL</td>
+                      <td style="text-align:right">${Math.round(t.sohTonnes).toLocaleString()}</td>
+                      <td style="text-align:right">$${Math.round(t.inventoryValue).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <h3 style="margin: 20px 0 10px; font-size: 14px; font-weight: 600;">All Products</h3>
+                <table class="data-table">
+                  <thead><tr><th>Product</th><th style="text-align:right">SOH (t)</th><th style="text-align:right">Avg Cost</th><th style="text-align:right">Value</th></tr></thead>
+                  <tbody>
+                    ${products.map(p => `
+                      <tr>
+                        <td style="font-size: 12px;">${p.name}</td>
+                        <td style="text-align:right">${Math.round(p.sohTonnes).toLocaleString()}</td>
+                        <td style="text-align:right">$${(p.avgCost || 0).toFixed(2)}</td>
+                        <td style="text-align:right">$${Math.round(p.stockValue).toLocaleString()}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+
+                <div style="margin-top: 16px; font-size: 11px; color: var(--color-text-muted); text-align: right;">
+                  Live data from RAC Inventory System \u00b7 ${new Date(inv.timestamp).toLocaleString()}
                 </div>
               </div>
             `;
@@ -4276,12 +4132,7 @@
 
       // ========== INITIALIZE ==========
       document.addEventListener('DOMContentLoaded', () => {
-        // Check connection health first, then load dashboard
-        checkConnectionHealth();
         loadDashboard();
-        
-        // Re-check connection health every 2 minutes
-        setInterval(checkConnectionHealth, 2 * 60 * 1000);
       });
     </script>
   </body>
