@@ -5221,6 +5221,164 @@ app.post("/api/reversal-journals", async (req, res) => {
   }
 });
 
+  // ========== INVOICES DETAIL (with line items) ==========
+// GET endpoint - fetches all sales invoices with line items for a date range
+app.get("/api/invoices-detail/:tenantId", async (req, res) => {
+  try {
+    const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
+    if (!tokenData) {
+      return res.status(404).json({ error: "Tenant not found or token expired" });
+    }
+
+    await xero.setTokenSet(tokenData);
+
+    const dateFrom = req.query.dateFrom || "2024-01-01";
+    const dateTo = req.query.dateTo || new Date().toISOString().split("T")[0];
+    const statusFilter = req.query.status; // Optional: PAID, AUTHORISED, DRAFT, VOIDED, DELETED
+
+    console.log(`📋 Fetching detailed invoices for ${tokenData.tenantName} from ${dateFrom} to ${dateTo}`);
+
+    // Build where clause for ACCREC (sales) invoices in date range
+    let whereClause = `Type=="ACCREC" AND Date >= DateTime(${dateFrom.replace(/-/g, ",")}) AND Date <= DateTime(${dateTo.replace(/-/g, ",")})`;
+    if (statusFilter) {
+      whereClause += ` AND Status=="${statusFilter}"`;
+    }
+
+    // Xero returns line items ONLY when using page parameter
+    // Each page returns up to 100 invoices with full line item detail
+    let allInvoices = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = await xero.accountingApi.getInvoices(
+        req.params.tenantId,
+        null,           // ifModifiedSince
+        whereClause,    // where
+        "Date DESC",    // order
+        null,           // ids
+        null,           // invoiceNumbers
+        null,           // contactIDs
+        null,           // statuses
+        page,           // page (THIS is what triggers line items)
+        false,          // includeArchived
+        null,           // createdByMyApp
+        4,              // unitdp (4 decimal places)
+        false           // summaryOnly - MUST be false
+      );
+
+      const invoices = response.body.invoices || [];
+      console.log(`  Page ${page}: ${invoices.length} invoices`);
+
+      if (invoices.length === 0) {
+        hasMore = false;
+      } else {
+        allInvoices = allInvoices.concat(invoices);
+        page++;
+        // Safety limit - 50 pages = 5000 invoices max
+        if (page > 50) {
+          console.warn("⚠️ Hit 50 page limit, stopping pagination");
+          hasMore = false;
+        }
+      }
+    }
+
+    console.log(`✅ Total invoices found: ${allInvoices.length}`);
+
+    // Map to clean response with line items
+    const result = allInvoices.map((inv) => ({
+      invoiceID: inv.invoiceID,
+      invoiceNumber: inv.invoiceNumber,
+      reference: inv.reference || "",
+      contact: inv.contact?.name || "Unknown",
+      contactID: inv.contact?.contactID || "",
+      status: inv.status,
+      date: inv.date,
+      dueDate: inv.dueDate,
+      subTotal: parseFloat(inv.subTotal) || 0,
+      totalTax: parseFloat(inv.totalTax) || 0,
+      total: parseFloat(inv.total) || 0,
+      amountDue: parseFloat(inv.amountDue) || 0,
+      amountPaid: parseFloat(inv.amountPaid) || 0,
+      currencyCode: inv.currencyCode || "AUD",
+      lineItems: (inv.lineItems || []).map((line) => ({
+        lineItemID: line.lineItemID,
+        description: line.description || "",
+        quantity: parseFloat(line.quantity) || 0,
+        unitAmount: parseFloat(line.unitAmount) || 0,
+        lineAmount: parseFloat(line.lineAmount) || 0,
+        accountCode: line.accountCode || "",
+        accountName: line.accountCode || "",
+        taxType: line.taxType || "",
+        taxAmount: parseFloat(line.taxAmount) || 0,
+        itemCode: line.itemCode || "",
+        discountRate: parseFloat(line.discountRate) || 0,
+      })),
+    }));
+
+    // Summary stats
+    const totalRevenue = result.reduce((sum, inv) => sum + inv.total, 0);
+    const totalPaid = result.reduce((sum, inv) => sum + inv.amountPaid, 0);
+    const totalOutstanding = result.reduce((sum, inv) => sum + inv.amountDue, 0);
+
+    res.json({
+      tenantId: req.params.tenantId,
+      tenantName: tokenData.tenantName,
+      dateFrom,
+      dateTo,
+      statusFilter: statusFilter || "ALL",
+      totalInvoices: result.length,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      totalPaid: Math.round(totalPaid * 100) / 100,
+      totalOutstanding: Math.round(totalOutstanding * 100) / 100,
+      invoices: result,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("❌ Error getting invoice details:", error);
+    res.status(500).json({ error: "Failed to get invoice details", details: error.message });
+  }
+});
+
+// POST endpoint - organization name lookup wrapper
+app.post("/api/invoices-detail", async (req, res) => {
+  try {
+    const { organizationName, tenantId, dateFrom, dateTo, status } = req.body;
+
+    if (!organizationName && !tenantId) {
+      return res.status(400).json({ error: "Organization name or tenant ID required" });
+    }
+
+    let actualTenantId = tenantId;
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
+
+    const params = new URLSearchParams();
+    if (dateFrom) params.append("dateFrom", dateFrom);
+    if (dateTo) params.append("dateTo", dateTo);
+    if (status) params.append("status", status);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+
+    const url = `${req.protocol}://${req.get("host")}/api/invoices-detail/${actualTenantId}${qs}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    res.json(result);
+  } catch (error) {
+    console.error("Invoices detail POST error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 // Initialize database and start server
 async function startServer() {
   try {

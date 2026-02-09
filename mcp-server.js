@@ -538,6 +538,41 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
         },
       },
+      {
+        name: "get_invoices_detail",
+        description:
+          "Get detailed invoices with line items for date range - analyze sales by product, customer trends, and revenue patterns",
+        inputSchema: {
+          type: "object",
+          properties: {
+            tenantId: {
+              type: "string",
+              description:
+                "Xero tenant ID (optional if organizationName provided)",
+            },
+            organizationName: {
+              type: "string",
+              description:
+                "Organization name (e.g., 'Mining', 'Enterprises', 'Aboriginal Corporation')",
+            },
+            dateFrom: {
+              type: "string",
+              description:
+                "Start date in YYYY-MM-DD format (e.g., '2025-07-01')",
+            },
+            dateTo: {
+              type: "string",
+              description:
+                "End date in YYYY-MM-DD format (e.g., '2025-10-31')",
+            },
+            status: {
+              type: "string",
+              description:
+                "Optional: Filter by status (PAID, AUTHORISED, DRAFT, VOIDED, DELETED)",
+            },
+          },
+        },
+      },
     ],
   };
 });
@@ -1661,6 +1696,71 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result += `• Total Equity: $${ratiosData.dataSource.totalEquity.toLocaleString()}\n`;
       result += `• Revenue: $${ratiosData.dataSource.totalRevenue.toLocaleString()}\n`;
       result += `• Net Profit: $${ratiosData.dataSource.netProfit.toLocaleString()}\n`;
+
+      return { content: [{ type: "text", text: result }] };
+    }
+
+    if (name === "get_invoices_detail") {
+      const { tenantId, organizationName, dateFrom, dateTo, status } = args;
+
+      let actualTenantId = tenantId;
+      if (!actualTenantId && organizationName) {
+        actualTenantId = await getTenantIdFromName(organizationName);
+      }
+      if (!actualTenantId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "❌ Error: Must provide either tenantId or organizationName",
+            },
+          ],
+        };
+      }
+
+      const params = new URLSearchParams();
+      if (dateFrom) params.append("dateFrom", dateFrom);
+      if (dateTo) params.append("dateTo", dateTo);
+      if (status) params.append("status", status);
+      const queryParams = params.toString() ? "?" + params.toString() : "";
+
+      const data = await callRailwayAPI(
+        `/api/invoices-detail/${actualTenantId}${queryParams}`
+      );
+
+      let result = `📋 DETAILED INVOICES\n\n`;
+      result += `Organization: ${data.tenantName}\n`;
+      result += `Period: ${data.dateFrom} to ${data.dateTo}\n`;
+      result += `Status Filter: ${data.statusFilter}\n`;
+      result += `Total Invoices: ${data.totalInvoices}\n`;
+      result += `Total Revenue: $${data.totalRevenue.toLocaleString()}\n`;
+      result += `Total Paid: $${data.totalPaid.toLocaleString()}\n`;
+      result += `Total Outstanding: $${data.totalOutstanding.toLocaleString()}\n\n`;
+
+      // Show invoices with line item detail
+      const invoices = data.invoices || [];
+      invoices.forEach((inv, idx) => {
+        result += `─────────────────────────────────\n`;
+        result += `Invoice: ${inv.invoiceNumber} | ${inv.status}\n`;
+        result += `Customer: ${inv.contact}\n`;
+        result += `Date: ${inv.date ? inv.date.split("T")[0] : "N/A"}\n`;
+        result += `Reference: ${inv.reference || "—"}\n`;
+        result += `Total: $${inv.total.toLocaleString()} | Paid: $${inv.amountPaid.toLocaleString()} | Due: $${inv.amountDue.toLocaleString()}\n`;
+
+        if (inv.lineItems && inv.lineItems.length > 0) {
+          result += `Line Items:\n`;
+          inv.lineItems.forEach((line) => {
+            const desc = line.description || "(no description)";
+            const qty = line.quantity;
+            const unit = line.unitAmount;
+            const amount = line.lineAmount;
+            const itemCode = line.itemCode ? ` [${line.itemCode}]` : "";
+            result += `  • ${desc}${itemCode}\n`;
+            result += `    Qty: ${qty} × $${unit.toLocaleString()} = $${amount.toLocaleString()} (Acct: ${line.accountCode})\n`;
+          });
+        }
+        result += `\n`;
+      });
 
       return { content: [{ type: "text", text: result }] };
     }
