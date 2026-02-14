@@ -5378,6 +5378,105 @@ app.post("/api/invoices-detail", async (req, res) => {
   }
 });
 
+// ============================================================================
+// AI CHAT ENDPOINT - Proxy to Anthropic API for CEO Dashboard Chat Panel
+// ADD THIS BLOCK BEFORE: async function startServer() {
+// ============================================================================
+
+app.post("/api/ai-chat", async (req, res) => {
+  try {
+    const { message, context, history } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+
+    if (!ANTHROPIC_API_KEY) {
+      // Fallback if no API key configured
+      return res.json({
+        response: "AI chat is not configured yet. Please add ANTHROPIC_API_KEY to your Railway environment variables.",
+        fallback: true,
+      });
+    }
+
+    // Build system prompt with financial context
+    const entityName = context?.entity || "Unknown Entity";
+    const period = context?.period || "Current";
+    const metrics = context?.metrics || {};
+
+    const systemPrompt = `You are an AI financial analyst assistant for the RAC (Rirratjingu Aboriginal Corporation) CEO Dashboard. 
+You help the CEO understand financial data across 7 RAC entities.
+
+CURRENT CONTEXT:
+- Entity being viewed: ${entityName}
+- Period: ${period}
+- Dashboard metrics: ${JSON.stringify(metrics, null, 2)}
+
+GUIDELINES:
+- Be concise and executive-level in your responses
+- Reference specific numbers from the dashboard when available
+- Highlight trends, risks, and opportunities
+- Use Australian dollar formatting ($X,XXX)
+- Keep responses to 2-3 paragraphs maximum
+- If you don't have enough data to answer, say so clearly
+- You can suggest the user look at specific dashboard cards for more detail`;
+
+    // Build messages array with history
+    const messages = [];
+    if (history && Array.isArray(history)) {
+      history.slice(-6).forEach((msg) => {
+        messages.push({
+          role: msg.role,
+          content: msg.content,
+        });
+      });
+    }
+    messages.push({ role: "user", content: message });
+
+    // Call Anthropic API
+    const anthropicResponse = await fetch(
+      "https://api.anthropic.com/v1/messages",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: messages,
+        }),
+      }
+    );
+
+    if (!anthropicResponse.ok) {
+      const errorBody = await anthropicResponse.text();
+      console.error("Anthropic API error:", anthropicResponse.status, errorBody);
+      throw new Error(`Anthropic API returned ${anthropicResponse.status}`);
+    }
+
+    const data = await anthropicResponse.json();
+    const responseText =
+      data.content?.[0]?.text || "Sorry, I couldn't generate a response.";
+
+    res.json({ response: responseText });
+  } catch (error) {
+    console.error("AI Chat error:", error);
+    res.status(500).json({
+      response: "Sorry, I encountered an error. Please try again.",
+      error: error.message,
+    });
+  }
+});
+
+// ============================================================================
+// END AI CHAT ENDPOINT
+// ============================================================================
 
 // Initialize database and start server
 async function startServer() {

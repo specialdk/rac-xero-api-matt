@@ -1159,7 +1159,7 @@
         overflow-y: auto;
       }
 
-      /* ========== AI CHAT PANEL ========== */
+       /* ========== AI CHAT PANEL ========== */
       .chat-panel {
         width: 450px;
         min-width: 450px;
@@ -1168,6 +1168,11 @@
         display: flex;
         flex-direction: column;
         z-index: 50;
+      }
+
+      .chat-panel.expanded {
+        width: 600px;
+        min-width: 600px;
       }
 
       .chat-header {
@@ -1185,6 +1190,57 @@
         font-weight: 600;
       }
 
+      .chat-header-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .chat-header-actions button {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .chat-header-actions button:hover {
+        background: rgba(255,255,255,0.3);
+      }
+
+      .chat-context {
+        padding: 6px 12px;
+        background: rgba(102, 126, 234, 0.08);
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--color-text-secondary);
+      }
+
+      .chat-context .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        margin-left: auto;
+      }
+
+      .chat-context .status-dot.live {
+        animation: pulse-dot 2s infinite;
+      }
+
+      @keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+
       .chat-messages {
         flex: 1;
         padding: var(--spacing-md);
@@ -1199,7 +1255,7 @@
         padding: 10px 14px;
         border-radius: 12px;
         font-size: 13px;
-        line-height: 1.4;
+        line-height: 1.5;
       }
 
       .chat-message.assistant {
@@ -1214,6 +1270,64 @@
         color: white;
         align-self: flex-end;
         border-bottom-right-radius: 4px;
+      }
+
+      .message-content strong {
+        font-weight: 600;
+      }
+
+      .message-meta {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 4px;
+        font-size: 10px;
+        color: var(--color-text-muted);
+      }
+
+      .chat-message.user .message-meta {
+        color: rgba(255,255,255,0.6);
+        justify-content: flex-end;
+      }
+
+      .copy-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 12px;
+        padding: 0;
+        opacity: 0.5;
+      }
+
+      .copy-btn:hover {
+        opacity: 1;
+      }
+
+      /* Typing indicator */
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px 16px !important;
+        align-self: flex-start;
+        background: var(--bg-page);
+        border-radius: 12px;
+        border-bottom-left-radius: 4px;
+      }
+
+      .typing-indicator .dot {
+        width: 8px;
+        height: 8px;
+        background: var(--color-text-secondary);
+        border-radius: 50%;
+        animation: typing-bounce 1.4s infinite ease-in-out;
+      }
+
+      .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+      .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+
+      @keyframes typing-bounce {
+        0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+        40% { transform: translateY(-6px); opacity: 1; }
       }
 
       .chat-suggestions {
@@ -1270,6 +1384,8 @@
         cursor: pointer;
         font-size: 16px;
       }
+
+      
 
       /* ========== DATA TABLE (for drawers) ========== */
       .data-table {
@@ -1799,27 +1915,37 @@
       <div class="chat-panel" id="chatPanel">
         <div class="chat-header">
           <h3>&#x1F4AC; Ask about your finances</h3>
+          <div class="chat-header-actions">
+            <button onclick="toggleChatExpand()" title="Expand/Collapse">&#x2922;</button>
+            <button onclick="clearChat()" title="Clear chat">&#x1F5D1;</button>
+            <button onclick="toggleChat()" title="Close">&#x2715;</button>
+          </div>
+        </div>
+        <div class="chat-context" id="chatContext">
+          <span>&#x1F4CA; Loading...</span>
+          <span>&#x1F4C5; Current</span>
+          <span class="status-dot live"></span>
         </div>
         <div class="chat-messages" id="chatMessages">
           <div class="chat-message assistant">
-            Hi! I can help you understand your Mining financial data. Try asking me things like:
+            Hi! I'm your AI financial analyst. I can help you understand your dashboard data in real time.
             <br><br>
-            &bull; "What's driving our revenue decline?"<br>
-            &bull; "Show me our biggest expenses"<br>
-            &bull; "Compare to last year"
+            &#x2022; "What's driving our revenue?"<br>
+            &#x2022; "Summarise our cash position"<br>
+            &#x2022; "Any concerns I should know about?"
           </div>
         </div>
-        <div class="chat-suggestions">
+        <div class="chat-suggestions" id="chatSuggestions">
           <span class="suggestion-chip" onclick="sendSuggestion('Top 3 expenses?')">Top expenses</span>
-          <span class="suggestion-chip" onclick="sendSuggestion('Why profit negative?')">Profit analysis</span>
-          <span class="suggestion-chip" onclick="sendSuggestion('Cash forecast')">Cash forecast</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('How is revenue tracking?')">Revenue trend</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('What is our cash position?')">Cash position</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('Any concerns?')">Risk check</span>
         </div>
         <div class="chat-input-area">
-          <input type="text" class="chat-input" id="chatInput" placeholder="Ask a question..." onkeypress="handleChatKeypress(event)">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ask about your finances..." onkeypress="handleChatKeypress(event)">
           <button class="chat-send" onclick="sendChat()">&#x27A4;</button>
         </div>
       </div>
-    </div>
 
     <!-- ========== DRAWER OVERLAY ========== -->
     <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
@@ -2333,6 +2459,8 @@
         // Initialize charts
         initSparklines();
         initTrendChart();
+        updateChatContext();
+        updateSuggestions();
       }
 
       // ========== CONSOLIDATED DASHBOARD (All Entities) ==========
@@ -4393,21 +4521,144 @@
       }
 
       // ========== CHAT FUNCTIONS ==========
+      let chatHistory = [];
+
       function toggleChat() {
         document.getElementById('chatPanel').classList.toggle('active');
       }
 
-      function sendChat() {
+      function toggleChatExpand() {
+        document.getElementById('chatPanel').classList.toggle('expanded');
+      }
+
+      function clearChat() {
+        chatHistory = [];
+        const messages = document.getElementById('chatMessages');
+        messages.innerHTML = `
+          <div class="chat-message assistant">
+            Chat cleared. Ask me anything about your financial data!
+          </div>`;
+        updateSuggestions();
+      }
+
+      function updateChatContext() {
+        const contextBar = document.getElementById('chatContext');
+        if (!contextBar) return;
+        const entity = getSelectedEntity();
+        const period = document.getElementById('periodSelector')?.value || 'Current';
+        contextBar.innerHTML = `<span>\u{1F4CA} ${entity}</span><span>\u{1F4C5} ${period}</span><span class="status-dot live"></span>`;
+      }
+
+      function getDashboardMetrics() {
+        const metrics = {};
+        try {
+          // Grab visible KPI values from the dashboard cards
+          document.querySelectorAll('.metric-value, .kpi-value, [data-metric]').forEach(el => {
+            const card = el.closest('.card, .metric-card, .grid-card');
+            const label = card?.querySelector('.metric-label, .card-title, h3, .card-header');
+            if (label && el.textContent.trim()) {
+              metrics[label.textContent.trim()] = el.textContent.trim();
+            }
+          });
+        } catch (e) { /* metrics are optional context */ }
+        return metrics;
+      }
+
+      function updateSuggestions() {
+        const entity = getSelectedEntity();
+        const suggestions = document.getElementById('chatSuggestions');
+        if (!suggestions) return;
+
+        const isMining = entity.toLowerCase().includes('mining');
+        const isConsolidated = entity.toLowerCase().includes('all') || entity.toLowerCase().includes('consolidated');
+
+        let chips;
+        if (isConsolidated) {
+          chips = [
+            { text: 'Which entity has the most cash?', label: 'Cash comparison' },
+            { text: 'Total group revenue?', label: 'Group revenue' },
+            { text: 'Any entities losing money?', label: 'Loss check' },
+            { text: 'Group financial health?', label: 'Health check' },
+          ];
+        } else if (isMining) {
+          chips = [
+            { text: 'Top 3 expenses?', label: 'Top expenses' },
+            { text: 'How is revenue tracking?', label: 'Revenue trend' },
+            { text: 'What is our cash position?', label: 'Cash position' },
+            { text: 'Compare to last quarter', label: 'QoQ compare' },
+          ];
+        } else {
+          chips = [
+            { text: 'Summarise this entity', label: 'Summary' },
+            { text: 'Any concerns?', label: 'Risk check' },
+            { text: 'Cash position?', label: 'Cash position' },
+            { text: 'What are the key metrics?', label: 'Key metrics' },
+          ];
+        }
+
+        suggestions.innerHTML = chips
+          .map(c => `<span class="suggestion-chip" onclick="sendSuggestion('${c.text}')">${c.label}</span>`)
+          .join('');
+      }
+
+      function showTypingIndicator() {
+        const messages = document.getElementById('chatMessages');
+        const typing = document.createElement('div');
+        typing.className = 'typing-indicator';
+        typing.id = 'typingIndicator';
+        typing.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+        messages.appendChild(typing);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      function hideTypingIndicator() {
+        const el = document.getElementById('typingIndicator');
+        if (el) el.remove();
+      }
+
+      async function sendChat() {
         const input = document.getElementById('chatInput');
         const message = input.value.trim();
         if (!message) return;
 
+        // Add user message
         addChatMessage(message, 'user');
+        chatHistory.push({ role: 'user', content: message });
         input.value = '';
 
-        setTimeout(() => {
-          addChatMessage("I'm analyzing your Mining financial data... This would connect to your MCP tools for real-time analysis.", 'assistant');
-        }, 1000);
+        // Show typing animation
+        showTypingIndicator();
+
+        try {
+          const entity = getSelectedEntity();
+          const period = document.getElementById('periodSelector')?.value || 'Current';
+          const metrics = getDashboardMetrics();
+
+          const response = await fetch(`${API_BASE}/api/ai-chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message,
+              context: { entity, period, metrics },
+              history: chatHistory.slice(-6),
+            }),
+          });
+
+          hideTypingIndicator();
+
+          if (!response.ok) throw new Error(`Server returned ${response.status}`);
+
+          const data = await response.json();
+          const reply = data.response || 'Sorry, I couldn\'t generate a response.';
+
+          addChatMessage(reply, 'assistant');
+          chatHistory.push({ role: 'assistant', content: reply });
+
+        } catch (error) {
+          hideTypingIndicator();
+          addChatMessage('Sorry, I couldn\'t connect to the AI service. Check that the server is running and ANTHROPIC_API_KEY is set in Railway.', 'assistant');
+          console.error('Chat error:', error);
+        }
       }
 
       function sendSuggestion(text) {
@@ -4419,15 +4670,38 @@
         const messages = document.getElementById('chatMessages');
         const div = document.createElement('div');
         div.className = `chat-message ${type}`;
-        div.textContent = text;
+
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+
+        // Simple markdown: **bold** and newlines
+        const formatted = text
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>');
+
+        div.innerHTML = `
+          <div class="message-content">${formatted}</div>
+          <div class="message-meta">
+            <span class="message-time">${timeStr}</span>
+            ${type === 'assistant' ? '<button class="copy-btn" onclick="copyMessage(this)" title="Copy">\u{1F4CB}</button>' : ''}
+          </div>`;
+
         messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
+      }
+
+      function copyMessage(btn) {
+        const content = btn.closest('.chat-message').querySelector('.message-content').textContent;
+        navigator.clipboard.writeText(content).then(() => {
+          btn.textContent = '\u2713';
+          setTimeout(() => btn.textContent = '\u{1F4CB}', 1500);
+        });
       }
 
       function handleChatKeypress(event) {
         if (event.key === 'Enter') sendChat();
       }
-
+      
 // ========== SNAPSHOT FUNCTIONS ==========
       async function runDailySnapshot() {
         const btn = document.getElementById('snapshotBtn');
@@ -4474,7 +4748,6 @@
         }
       }
 
-      
 
       // ========== INITIALIZE ==========
       document.addEventListener('DOMContentLoaded', () => {
