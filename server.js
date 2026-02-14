@@ -5450,14 +5450,22 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `\n`;
     }
 
-    // P&L Summary
-    if (plData && !plData.error) {
-      financialContext += `📈 PROFIT & LOSS (${plData.periodMonths || 3} month period):\n`;
-      if (plData.revenue !== undefined) financialContext += `  Revenue: $${Number(plData.revenue || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
-      if (plData.costOfSales !== undefined) financialContext += `  Cost of Sales: $${Number(plData.costOfSales || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
-      if (plData.grossProfit !== undefined) financialContext += `  Gross Profit: $${Number(plData.grossProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
-      if (plData.operatingExpenses !== undefined) financialContext += `  Operating Expenses: $${Number(plData.operatingExpenses || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
-      if (plData.netProfit !== undefined) financialContext += `  Net Profit: $${Number(plData.netProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+    // P&L Summary - data is nested under plData.summary
+    if (plData && !plData.error && plData.summary) {
+      const pl = plData.summary;
+      const periodDesc = plData.period?.description || "3 month period";
+      financialContext += `📈 PROFIT & LOSS (${periodDesc}):\n`;
+      financialContext += `  Revenue: $${Number(pl.totalRevenue || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  Cost of Sales (COGS): $${Number(pl.totalCOGS || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  Gross Profit: $${Number(pl.grossProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  Operating Expenses: $${Number(pl.totalExpenses || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  Net Profit: $${Number(pl.netProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      if (pl.revenueAccounts && pl.revenueAccounts.length > 0) {
+        financialContext += `  Revenue breakdown:\n`;
+        pl.revenueAccounts.slice(0, 5).forEach((acc) => {
+          financialContext += `    - ${acc.name}: $${Number(acc.amount || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+        });
+      }
       financialContext += `\n`;
     }
 
@@ -5473,7 +5481,7 @@ app.post("/api/ai-chat", async (req, res) => {
         const sorted = [...invoices].sort((a, b) => (b.amountDue || b.AmountDue || 0) - (a.amountDue || a.AmountDue || 0));
         financialContext += `  Largest Outstanding:\n`;
         sorted.slice(0, 5).forEach((inv) => {
-          const name = inv.contact?.name || inv.Contact?.Name || "Unknown";
+          const name = inv.contact || inv.Contact?.Name || "Unknown";
           const amount = inv.amountDue || inv.AmountDue || 0;
           financialContext += `    - ${name}: $${amount.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
         });
@@ -5481,39 +5489,49 @@ app.post("/api/ai-chat", async (req, res) => {
       }
     }
 
-    // Expense Analysis
-    if (expenseData && !expenseData.error) {
-      const categories = expenseData.categories || expenseData.expenses || [];
-      if (Array.isArray(categories) && categories.length > 0) {
-        financialContext += `💸 TOP EXPENSES:\n`;
-        const sorted = [...categories].sort((a, b) => Math.abs(b.amount || b.total || 0) - Math.abs(a.amount || a.total || 0));
-        sorted.slice(0, 10).forEach((cat, i) => {
-          const name = cat.name || cat.account || cat.category || "Unknown";
-          const amount = Math.abs(cat.amount || cat.total || 0);
+    // Expense Analysis - data is nested under expenseData.analysis
+    if (expenseData && !expenseData.error && expenseData.analysis) {
+      const expenses = expenseData.analysis.topExpenses || expenseData.analysis.expenseCategories || [];
+      if (Array.isArray(expenses) && expenses.length > 0) {
+        financialContext += `💸 TOP EXPENSES (${expenseData.period?.months || 3} month period, total: $${Number(expenseData.analysis.totalExpenses || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}):\n`;
+        expenses.slice(0, 10).forEach((cat, i) => {
+          const name = cat.accountName || cat.name || "Unknown";
+          const amount = Math.abs(cat.amount || 0);
           financialContext += `  ${i + 1}. ${name}: $${amount.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
         });
         financialContext += `\n`;
       }
     }
 
-    // Financial Ratios
-    if (ratiosData && !ratiosData.error) {
+    // Financial Ratios - data is nested under ratiosData.ratios
+    if (ratiosData && !ratiosData.error && ratiosData.ratios) {
+      const r = ratiosData.ratios;
       financialContext += `📐 FINANCIAL RATIOS:\n`;
-      if (ratiosData.currentRatio !== undefined) financialContext += `  Current Ratio: ${ratiosData.currentRatio}\n`;
-      if (ratiosData.debtToEquity !== undefined) financialContext += `  Debt to Equity: ${ratiosData.debtToEquity}\n`;
-      if (ratiosData.grossMargin !== undefined) financialContext += `  Gross Margin: ${ratiosData.grossMargin}%\n`;
-      if (ratiosData.netMargin !== undefined) financialContext += `  Net Margin: ${ratiosData.netMargin}%\n`;
-      if (ratiosData.returnOnEquity !== undefined) financialContext += `  Return on Equity: ${ratiosData.returnOnEquity}%\n`;
+      if (r.liquidity) {
+        financialContext += `  Current Ratio: ${Number(r.liquidity.currentRatio || 0).toFixed(2)}\n`;
+        financialContext += `  Working Capital: $${Number(r.liquidity.workingCapital || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      }
+      if (r.leverage) {
+        financialContext += `  Debt to Equity: ${Number(r.leverage.debtToEquity || 0).toFixed(2)}\n`;
+      }
+      if (r.profitability) {
+        financialContext += `  Net Profit Margin: ${Number(r.profitability.netProfitMargin || 0).toFixed(1)}%\n`;
+        financialContext += `  Return on Equity: ${Number(r.profitability.returnOnEquity || 0).toFixed(1)}%\n`;
+        financialContext += `  Return on Assets: ${Number(r.profitability.returnOnAssets || 0).toFixed(1)}%\n`;
+      }
+      if (ratiosData.interpretations) {
+        financialContext += `  Health Assessment: Liquidity=${ratiosData.interpretations.currentRatio}, Leverage=${ratiosData.interpretations.debtToEquity}, Profitability=${ratiosData.interpretations.profitability}\n`;
+      }
       financialContext += `\n`;
     }
 
     // Note what data was unavailable
     const unavailable = [];
     if (!cashData || cashData.error) unavailable.push("cash position");
-    if (!plData || plData.error) unavailable.push("P&L");
+    if (!plData || plData.error || !plData.summary) unavailable.push("P&L");
     if (!invoicesData || invoicesData.error) unavailable.push("invoices");
-    if (!expenseData || expenseData.error) unavailable.push("expenses");
-    if (!ratiosData || ratiosData.error) unavailable.push("financial ratios");
+    if (!expenseData || expenseData.error || !expenseData.analysis) unavailable.push("expenses");
+    if (!ratiosData || ratiosData.error || !ratiosData.ratios) unavailable.push("financial ratios");
     if (unavailable.length > 0) {
       financialContext += `⚠️ Data not available: ${unavailable.join(", ")}\n`;
     }
