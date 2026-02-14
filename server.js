@@ -5380,7 +5380,9 @@ app.post("/api/invoices-detail", async (req, res) => {
 
 // ============================================================================
 // AI CHAT ENDPOINT - Proxy to Anthropic API for CEO Dashboard Chat Panel
-// ADD THIS BLOCK BEFORE: async function startServer() {
+// This version fetches REAL financial data from internal APIs before responding
+// ============================================================================
+// REPLACE the existing /api/ai-chat endpoint in server.js (lines 5381-5479)
 // ============================================================================
 
 app.post("/api/ai-chat", async (req, res) => {
@@ -5394,43 +5396,158 @@ app.post("/api/ai-chat", async (req, res) => {
     const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
     if (!ANTHROPIC_API_KEY) {
-      // Fallback if no API key configured
       return res.json({
         response: "AI chat is not configured yet. Please add ANTHROPIC_API_KEY to your Railway environment variables.",
         fallback: true,
       });
     }
 
-    // Build system prompt with financial context
     const entityName = context?.entity || "Unknown Entity";
     const period = context?.period || "Current";
-    const metrics = context?.metrics || {};
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
 
-    const systemPrompt = `You are an AI financial analyst assistant for the RAC (Rirratjingu Aboriginal Corporation) CEO Dashboard. 
-You help the CEO understand financial data across 7 RAC entities.
+    // ── Fetch REAL financial data from our own API endpoints ──
+    console.log(`🤖 AI Chat: Fetching live data for "${entityName}"...`);
 
-CURRENT CONTEXT:
-- Entity being viewed: ${entityName}
-- Period: ${period}
-- Dashboard metrics: ${JSON.stringify(metrics, null, 2)}
+    const fetchInternal = async (endpoint, body) => {
+      try {
+        const resp = await fetch(`${baseUrl}${endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!resp.ok) return null;
+        return await resp.json();
+      } catch (e) {
+        console.warn(`AI Chat: Failed to fetch ${endpoint}:`, e.message);
+        return null;
+      }
+    };
 
-GUIDELINES:
-- Be concise and executive-level in your responses
-- Reference specific numbers from the dashboard when available
-- Highlight trends, risks, and opportunities
+    // Fetch all data sources in parallel (don't let one failure block others)
+    const [cashData, plData, invoicesData, expenseData, ratiosData] = await Promise.all([
+      fetchInternal("/api/cash-position", { organizationName: entityName }),
+      fetchInternal("/api/profit-loss-summary", { organizationName: entityName, periodMonths: 3 }),
+      fetchInternal("/api/outstanding-invoices", { organizationName: entityName }),
+      fetchInternal("/api/expense-analysis", { organizationName: entityName, periodMonths: 3 }),
+      fetchInternal("/api/financial-ratios", { organizationName: entityName }),
+    ]);
+
+    // ── Build rich financial context for the AI ──
+    let financialContext = `\n📊 LIVE FINANCIAL DATA FOR: ${entityName}\n`;
+    financialContext += `Period: ${period}\n`;
+    financialContext += `Data fetched: ${new Date().toLocaleString("en-AU", { timeZone: "Australia/Darwin" })}\n\n`;
+
+    // Cash Position
+    if (cashData && !cashData.error) {
+      financialContext += `💰 CASH POSITION:\n`;
+      financialContext += `Total Cash: $${(cashData.totalCash || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      if (cashData.bankAccounts) {
+        cashData.bankAccounts.forEach((acc) => {
+          financialContext += `  • ${acc.name}: $${(acc.balance || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+        });
+      }
+      financialContext += `\n`;
+    }
+
+    // P&L Summary
+    if (plData && !plData.error) {
+      financialContext += `📈 PROFIT & LOSS (${plData.periodMonths || 3} month period):\n`;
+      if (plData.revenue !== undefined) financialContext += `  Revenue: $${Number(plData.revenue || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      if (plData.costOfSales !== undefined) financialContext += `  Cost of Sales: $${Number(plData.costOfSales || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      if (plData.grossProfit !== undefined) financialContext += `  Gross Profit: $${Number(plData.grossProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      if (plData.operatingExpenses !== undefined) financialContext += `  Operating Expenses: $${Number(plData.operatingExpenses || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      if (plData.netProfit !== undefined) financialContext += `  Net Profit: $${Number(plData.netProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `\n`;
+    }
+
+    // Outstanding Invoices
+    if (invoicesData && !invoicesData.error) {
+      const invoices = invoicesData.invoices || invoicesData;
+      if (Array.isArray(invoices) && invoices.length > 0) {
+        const totalOwed = invoices.reduce((sum, inv) => sum + (inv.amountDue || inv.AmountDue || 0), 0);
+        financialContext += `📋 OUTSTANDING INVOICES:\n`;
+        financialContext += `  Total Outstanding: $${totalOwed.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+        financialContext += `  Number of Invoices: ${invoices.length}\n`;
+        // Show top 5 by amount
+        const sorted = [...invoices].sort((a, b) => (b.amountDue || b.AmountDue || 0) - (a.amountDue || a.AmountDue || 0));
+        financialContext += `  Largest Outstanding:\n`;
+        sorted.slice(0, 5).forEach((inv) => {
+          const name = inv.contact?.name || inv.Contact?.Name || "Unknown";
+          const amount = inv.amountDue || inv.AmountDue || 0;
+          financialContext += `    - ${name}: $${amount.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+        });
+        financialContext += `\n`;
+      }
+    }
+
+    // Expense Analysis
+    if (expenseData && !expenseData.error) {
+      const categories = expenseData.categories || expenseData.expenses || [];
+      if (Array.isArray(categories) && categories.length > 0) {
+        financialContext += `💸 TOP EXPENSES:\n`;
+        const sorted = [...categories].sort((a, b) => Math.abs(b.amount || b.total || 0) - Math.abs(a.amount || a.total || 0));
+        sorted.slice(0, 10).forEach((cat, i) => {
+          const name = cat.name || cat.account || cat.category || "Unknown";
+          const amount = Math.abs(cat.amount || cat.total || 0);
+          financialContext += `  ${i + 1}. ${name}: $${amount.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+        });
+        financialContext += `\n`;
+      }
+    }
+
+    // Financial Ratios
+    if (ratiosData && !ratiosData.error) {
+      financialContext += `📐 FINANCIAL RATIOS:\n`;
+      if (ratiosData.currentRatio !== undefined) financialContext += `  Current Ratio: ${ratiosData.currentRatio}\n`;
+      if (ratiosData.debtToEquity !== undefined) financialContext += `  Debt to Equity: ${ratiosData.debtToEquity}\n`;
+      if (ratiosData.grossMargin !== undefined) financialContext += `  Gross Margin: ${ratiosData.grossMargin}%\n`;
+      if (ratiosData.netMargin !== undefined) financialContext += `  Net Margin: ${ratiosData.netMargin}%\n`;
+      if (ratiosData.returnOnEquity !== undefined) financialContext += `  Return on Equity: ${ratiosData.returnOnEquity}%\n`;
+      financialContext += `\n`;
+    }
+
+    // Note what data was unavailable
+    const unavailable = [];
+    if (!cashData || cashData.error) unavailable.push("cash position");
+    if (!plData || plData.error) unavailable.push("P&L");
+    if (!invoicesData || invoicesData.error) unavailable.push("invoices");
+    if (!expenseData || expenseData.error) unavailable.push("expenses");
+    if (!ratiosData || ratiosData.error) unavailable.push("financial ratios");
+    if (unavailable.length > 0) {
+      financialContext += `⚠️ Data not available: ${unavailable.join(", ")}\n`;
+    }
+
+    console.log(`🤖 AI Chat: Data fetched. Building prompt...`);
+
+    // ── Build system prompt with REAL data ──
+    const systemPrompt = `You are an AI financial analyst embedded in the RAC (Rirratjingu Aboriginal Corporation) CEO Dashboard.
+You have LIVE access to real financial data which is provided below. Use these ACTUAL NUMBERS in your responses.
+
+ABOUT RAC:
+- 7 entities: Mining (quarry - largest revenue), Aboriginal Corporation (parent), Enterprises, Property Management, Ngarrkuwuy Developments, Rirratjingu Invest, Marrin Square Developments
+- Mining's main customer: Swiss Aluminium Australia (Rio Tinto contractor) - 75%+ of revenue
+- Products: Type E Rip Rap ($105+/t), Road Base, Screened Sand, 20mm Minus ($35/t), aggregates
+- Financial year: July-June (FY26 = Jul 2025 - Jun 2026)
+- Q1=Jul-Sep, Q2=Oct-Dec, Q3=Jan-Mar, Q4=Apr-Jun
+
+${financialContext}
+
+RESPONSE GUIDELINES:
+- ALWAYS reference specific dollar amounts and numbers from the data above
+- Be concise and executive-level — the CEO is busy
 - Use Australian dollar formatting ($X,XXX)
-- Keep responses to 2-3 paragraphs maximum
-- If you don't have enough data to answer, say so clearly
-- You can suggest the user look at specific dashboard cards for more detail`;
+- Keep responses to 2-3 short paragraphs max
+- Highlight key insights, trends, risks and opportunities
+- If data for a specific question isn't available, say so clearly and suggest what to check
+- Bold key numbers using **$amount** markdown format
+- Compare figures where relevant (e.g. revenue vs expenses, margins)`;
 
     // Build messages array with history
     const messages = [];
     if (history && Array.isArray(history)) {
       history.slice(-6).forEach((msg) => {
-        messages.push({
-          role: msg.role,
-          content: msg.content,
-        });
+        messages.push({ role: msg.role, content: msg.content });
       });
     }
     messages.push({ role: "user", content: message });
@@ -5464,11 +5581,13 @@ GUIDELINES:
     const responseText =
       data.content?.[0]?.text || "Sorry, I couldn't generate a response.";
 
+    console.log(`🤖 AI Chat: Response generated successfully`);
     res.json({ response: responseText });
+
   } catch (error) {
     console.error("AI Chat error:", error);
     res.status(500).json({
-      response: "Sorry, I encountered an error. Please try again.",
+      response: "Sorry, I encountered an error processing your question. Please try again.",
       error: error.message,
     });
   }
