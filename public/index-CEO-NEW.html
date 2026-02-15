@@ -4634,13 +4634,22 @@
           const period = document.getElementById('periodSelector')?.value || 'Q3';
           const quarterInfo = getQuarterDates(period);
           const metrics = getDashboardMetrics();
+          
+          // Include reversal state so AI knows what the user is seeing
+          const reversalContext = window.reversalState?.active ? {
+            active: true,
+            reversalCount: window.reversalState.data?.reversalCount || 0,
+            plImpact: window.reversalState.data?.plImpact || {},
+            adjustedPL: { ...window.dashboardData.pl },
+            originalPL: window.reversalState.originalPL || {},
+          } : { active: false };
 
           const response = await fetch(`${API_BASE}/api/ai-chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               message,
-              context: { entity, period, metrics, quarterInfo },
+              context: { entity, period, metrics, quarterInfo, reversals: reversalContext },
               history: chatHistory.slice(-6),
             }),
           });

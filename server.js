@@ -5555,6 +5555,27 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `⚠️ Data not available: ${unavailable.join(", ")}\n`;
     }
 
+        // Reversal adjustments context
+    const reversals = context?.reversals;
+    if (reversals?.active) {
+      const impact = reversals.plImpact || {};
+      const adjPL = reversals.adjustedPL || {};
+      const origPL = reversals.originalPL || {};
+      financialContext += `\n🔄 REVERSAL JOURNALS EXCLUDED (${reversals.reversalCount} journals removed):\n`;
+      financialContext += `  The user has ENABLED the "Reversals Hidden" filter on the dashboard.\n`;
+      financialContext += `  The P&L numbers above are RAW (including reversals).\n`;
+      financialContext += `  ADJUSTED P&L (what the user sees on dashboard with reversals excluded):\n`;
+      financialContext += `    Revenue: $${Number(adjPL.revenue || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `    COGS: $${Number(adjPL.cogs || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `    Gross Profit: $${Number(adjPL.gross || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `    OpEx: $${Number(adjPL.opex || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `    Net Profit: $${Number(adjPL.netProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  Reversal Impact: Revenue ${impact.revenueAdjustment >= 0 ? '+' : ''}$${Number(impact.revenueAdjustment || 0).toLocaleString("en-AU")}, COGS ${impact.cogsAdjustment >= 0 ? '+' : ''}$${Number(impact.cogsAdjustment || 0).toLocaleString("en-AU")}, Expenses ${impact.expenseAdjustment >= 0 ? '+' : ''}$${Number(impact.expenseAdjustment || 0).toLocaleString("en-AU")}\n`;
+      financialContext += `  IMPORTANT: When responding, use the ADJUSTED figures since that is what the user is viewing.\n\n`;
+    } else {
+      financialContext += `\n📋 Note: Reversal filter is OFF — figures include all journal entries including reversals.\n\n`;
+    }
+
     // Debug: show what data sources succeeded
     console.log(`🤖 AI Chat: Available data - Cash: ${!!cashData && !cashData?.error}, P&L: ${!!plData?.summary}, Invoices: ${!!invoicesData && !invoicesData?.error}, Expenses: ${!!expenseData?.analysis}, Ratios: ${!!ratiosData?.ratios}`);
     if (unavailable.length > 0) {
@@ -5578,6 +5599,9 @@ ABOUT RAC:
 ${financialContext}
 
 RESPONSE GUIDELINES:
+- If reversal journals are EXCLUDED (filter active), use the ADJUSTED P&L figures in your response and note that reversals have been excluded
+- If reversal filter is OFF, use the raw figures but note if reversals may be distorting the numbers (e.g. negative COGS, unusual margins)
+- CRITICAL: When quoting ratios or margins, you MUST use the exact values from the FINANCIAL RATIOS section. NEVER calculate your own ratios. If a ratio looks unusual, report the actual figure and note it may reflect adjustments.
 - CRITICAL: When quoting ratios or margins, you MUST use the exact values from the FINANCIAL RATIOS section. NEVER calculate your own ratios. If a ratio looks unusual, report the actual figure and note it may reflect adjustments.ALWAYS use the exact numbers from the data provided — never calculate your own ratios or percentages when they are already provided in the FINANCIAL RATIOS section
 - If a ratio looks unusual (e.g. margin over 100%), mention it as noteworthy but still report the actual figure
 - ALWAYS reference specific dollar amounts and numbers from the data above
