@@ -5525,7 +5525,7 @@ app.post("/api/ai-chat", async (req, res) => {
     // Financial Ratios - data is nested under ratiosData.ratios
     if (ratiosData && !ratiosData.error && ratiosData.ratios) {
       const r = ratiosData.ratios;
-      financialContext += `📐 FINANCIAL RATIOS:\n`;
+      financialContext += `📐 FINANCIAL RATIOS (USE THESE EXACT VALUES — do NOT calculate your own):\n`;
       if (r.liquidity) {
         financialContext += `  Current Ratio: ${Number(r.liquidity.currentRatio || 0).toFixed(2)}\n`;
         financialContext += `  Working Capital: $${Number(r.liquidity.workingCapital || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
@@ -5578,7 +5578,7 @@ ABOUT RAC:
 ${financialContext}
 
 RESPONSE GUIDELINES:
-- ALWAYS use the exact numbers from the data provided — never calculate your own ratios or percentages when they are already provided in the FINANCIAL RATIOS section
+- CRITICAL: When quoting ratios or margins, you MUST use the exact values from the FINANCIAL RATIOS section. NEVER calculate your own ratios. If a ratio looks unusual, report the actual figure and note it may reflect adjustments.ALWAYS use the exact numbers from the data provided — never calculate your own ratios or percentages when they are already provided in the FINANCIAL RATIOS section
 - If a ratio looks unusual (e.g. margin over 100%), mention it as noteworthy but still report the actual figure
 - ALWAYS reference specific dollar amounts and numbers from the data above
 - Be concise and executive-level — the CEO is busy
