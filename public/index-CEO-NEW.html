@@ -524,6 +524,16 @@
         opacity: 1;
       }
 
+      .summary-card .card-arrow {
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .summary-card:hover .card-arrow {
+        opacity: 1;
+      }
+
+
       .kpi-value {
         font-size: var(--font-size-kpi);
         font-weight: 600;
@@ -1747,7 +1757,7 @@
                 <div class="card-title">P&L Summary</div>
                 <div class="card-subtitle" id="pl-period">Q3 FY25/26</div>
               </div>
-              <span style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
+              <span class="card-arrow" style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
