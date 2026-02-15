@@ -4642,6 +4642,12 @@
             plImpact: window.reversalState.data?.plImpact || {},
             adjustedPL: { ...window.dashboardData.pl },
             originalPL: window.reversalState.originalPL || {},
+            adjustedRatios: {
+              currentRatio: document.getElementById('ratio-current')?.textContent || '',
+              grossMargin: document.getElementById('ratio-gross-margin')?.textContent || '',
+              netProfitMargin: document.getElementById('ratio-net-margin')?.textContent || '',
+              debtToEquity: document.getElementById('ratio-debt-equity')?.textContent || '',
+            },
           } : { active: false };
 
           const response = await fetch(`${API_BASE}/api/ai-chat`, {
