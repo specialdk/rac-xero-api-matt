@@ -863,17 +863,24 @@ const enhancedTokenStorage = {
         return { success: false, error: "No refresh token" };
       }
 
-      // Use Xero SDK to refresh the token
-      const tokenSet = {
-        access_token: storedToken.access_token,
-        refresh_token: storedToken.refresh_token,
-        expires_in: Math.floor((storedToken.expires_at - Date.now()) / 1000),
-      };
+      // Refresh token directly via Xero's token endpoint (bypasses SDK state issues)
+      const refreshResponse = await fetch('https://identity.xero.com/connect/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: storedToken.refresh_token,
+          client_id: process.env.XERO_CLIENT_ID,
+          client_secret: process.env.XERO_CLIENT_SECRET,
+        }),
+      });
 
-      await xero.setTokenSet(tokenSet);
+      if (!refreshResponse.ok) {
+        const errorBody = await refreshResponse.text();
+        throw new Error(`Token refresh failed: ${refreshResponse.status} - ${errorBody}`);
+      }
 
-      // Refresh the token
-      const newTokenSet = await xero.refreshToken();
+      const newTokenSet = await refreshResponse.json();
       console.log(
         `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token refreshed successfully for: ${storedToken.tenant_name}`
       );
