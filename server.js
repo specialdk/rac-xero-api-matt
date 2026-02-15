@@ -5570,6 +5570,14 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `    Gross Profit: $${Number(adjPL.gross || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
       financialContext += `    OpEx: $${Number(adjPL.opex || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
       financialContext += `    Net Profit: $${Number(adjPL.netProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      const adjRatios = reversals.adjustedRatios;
+      if (adjRatios) {
+        financialContext += `  ADJUSTED RATIOS (what the user sees on dashboard):\n`;
+        financialContext += `    Current Ratio: ${adjRatios.currentRatio}\n`;
+        financialContext += `    Gross Margin: ${adjRatios.grossMargin}\n`;
+        financialContext += `    Net Profit Margin: ${adjRatios.netProfitMargin}\n`;
+        financialContext += `    Debt to Equity: ${adjRatios.debtToEquity}\n`;
+      }
       financialContext += `  Reversal Impact: Revenue ${impact.revenueAdjustment >= 0 ? '+' : ''}$${Number(impact.revenueAdjustment || 0).toLocaleString("en-AU")}, COGS ${impact.cogsAdjustment >= 0 ? '+' : ''}$${Number(impact.cogsAdjustment || 0).toLocaleString("en-AU")}, Expenses ${impact.expenseAdjustment >= 0 ? '+' : ''}$${Number(impact.expenseAdjustment || 0).toLocaleString("en-AU")}\n`;
       financialContext += `  IMPORTANT: When responding, use the ADJUSTED figures since that is what the user is viewing.\n\n`;
       financialContext += `  WARNING: Do NOT quote individual account breakdowns (e.g. quarry sales, rental income, haulage) when reversals are excluded — those figures are RAW and will not add up to the adjusted totals. Only reference the ADJUSTED totals above.\n`;
