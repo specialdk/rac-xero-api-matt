@@ -5572,6 +5572,7 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `    Net Profit: $${Number(adjPL.netProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
       financialContext += `  Reversal Impact: Revenue ${impact.revenueAdjustment >= 0 ? '+' : ''}$${Number(impact.revenueAdjustment || 0).toLocaleString("en-AU")}, COGS ${impact.cogsAdjustment >= 0 ? '+' : ''}$${Number(impact.cogsAdjustment || 0).toLocaleString("en-AU")}, Expenses ${impact.expenseAdjustment >= 0 ? '+' : ''}$${Number(impact.expenseAdjustment || 0).toLocaleString("en-AU")}\n`;
       financialContext += `  IMPORTANT: When responding, use the ADJUSTED figures since that is what the user is viewing.\n\n`;
+      financialContext += `  NOTE: Individual revenue/expense account breakdowns in the P&L data above are RAW (pre-reversal). Do NOT reference individual account lines when reversals are excluded — only use the adjusted totals provided here.\n`;
     } else {
       financialContext += `\n📋 Note: Reversal filter is OFF — figures include all journal entries including reversals.\n\n`;
     }
@@ -5601,6 +5602,7 @@ ${financialContext}
 RESPONSE GUIDELINES:
 - If reversal journals are EXCLUDED (filter active), use the ADJUSTED P&L figures in your response and note that reversals have been excluded
 - If reversal filter is OFF, use the raw figures but note if reversals may be distorting the numbers (e.g. negative COGS, unusual margins)
+
 - CRITICAL: When quoting ratios or margins, you MUST use the exact values from the FINANCIAL RATIOS section. NEVER calculate your own ratios. If a ratio looks unusual, report the actual figure and note it may reflect adjustments.
 - CRITICAL: When quoting ratios or margins, you MUST use the exact values from the FINANCIAL RATIOS section. NEVER calculate your own ratios. If a ratio looks unusual, report the actual figure and note it may reflect adjustments.ALWAYS use the exact numbers from the data provided — never calculate your own ratios or percentages when they are already provided in the FINANCIAL RATIOS section
 - If a ratio looks unusual (e.g. margin over 100%), mention it as noteworthy but still report the actual figure
