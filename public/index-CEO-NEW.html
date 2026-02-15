@@ -4616,6 +4616,58 @@
         if (el) el.remove();
       }
 
+      function getAdjustedAccountBreakdowns() {
+        const reversals = window.reversalState?.data?.reversalJournals || [];
+        const rawPL = window.reversalState?.originalPL || window.dashboardData?.pl || {};
+        
+        // Build per-account adjustment map from reversal journal lines
+        const adjustments = {};
+        reversals.forEach(journal => {
+          journal.lines.forEach(line => {
+            const key = line.accountName;
+            if (!adjustments[key]) {
+              adjustments[key] = { amount: 0, category: line.plCategory };
+            }
+            adjustments[key].amount += line.lineAmount;
+          });
+        });
+
+        // Apply adjustments to raw P&L accounts
+        function adjustAccounts(rawAccounts, category) {
+          const adjusted = (rawAccounts || []).map(acc => {
+            const adj = adjustments[acc.name];
+            let adjAmount = acc.amount;
+            if (adj && adj.category === category) {
+              if (category === 'revenue') {
+                adjAmount = acc.amount + adj.amount;
+              } else {
+                adjAmount = acc.amount - adj.amount;
+              }
+            }
+            return { name: acc.name, amount: adjAmount };
+          });
+          
+          // Add any reversal accounts that aren't in the raw P&L
+          Object.entries(adjustments).forEach(([name, adj]) => {
+            if (adj.category === category && !rawAccounts?.some(a => a.name === name)) {
+              const amount = category === 'revenue' ? adj.amount : -adj.amount;
+              if (Math.abs(amount) > 0.01) {
+                adjusted.push({ name, amount });
+              }
+            }
+          });
+          
+          return adjusted.filter(a => Math.abs(a.amount) > 0.01)
+                         .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+        }
+
+        return {
+          revenueAccounts: adjustAccounts(rawPL.revenueAccounts, 'revenue'),
+          cogsAccounts: adjustAccounts(rawPL.cogsAccounts, 'cogs'),
+          expenseAccounts: adjustAccounts(rawPL.expenseAccounts, 'expense'),
+        };
+      }
+
       async function sendChat() {
         const input = document.getElementById('chatInput');
         const message = input.value.trim();
@@ -4648,6 +4700,7 @@
               netProfitMargin: document.getElementById('ratio-net-margin')?.textContent || '',
               debtToEquity: document.getElementById('ratio-debt-equity')?.textContent || '',
             },
+            adjustedAccounts: getAdjustedAccountBreakdowns(),
           } : { active: false };
 
           const response = await fetch(`${API_BASE}/api/ai-chat`, {

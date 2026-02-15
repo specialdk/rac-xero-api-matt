@@ -5570,6 +5570,7 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `    Gross Profit: $${Number(adjPL.gross || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
       financialContext += `    OpEx: $${Number(adjPL.opex || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
       financialContext += `    Net Profit: $${Number(adjPL.netProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+     
       const adjRatios = reversals.adjustedRatios;
       if (adjRatios) {
         financialContext += `  ADJUSTED RATIOS (what the user sees on dashboard):\n`;
@@ -5579,8 +5580,31 @@ app.post("/api/ai-chat", async (req, res) => {
         financialContext += `    Debt to Equity: ${adjRatios.debtToEquity}\n`;
       }
       financialContext += `  Reversal Impact: Revenue ${impact.revenueAdjustment >= 0 ? '+' : ''}$${Number(impact.revenueAdjustment || 0).toLocaleString("en-AU")}, COGS ${impact.cogsAdjustment >= 0 ? '+' : ''}$${Number(impact.cogsAdjustment || 0).toLocaleString("en-AU")}, Expenses ${impact.expenseAdjustment >= 0 ? '+' : ''}$${Number(impact.expenseAdjustment || 0).toLocaleString("en-AU")}\n`;
-      financialContext += `  IMPORTANT: When responding, use the ADJUSTED figures since that is what the user is viewing.\n\n`;
-      financialContext += `  WARNING: Do NOT quote individual account breakdowns (e.g. quarry sales, rental income, haulage) when reversals are excluded — those figures are RAW and will not add up to the adjusted totals. Only reference the ADJUSTED totals above.\n`;
+      financialContext += `  IMPORTANT: When responding, use the ADJUSTED figures since that is what the user is viewing.\n`;
+
+      const adjAccounts = reversals.adjustedAccounts;
+      if (adjAccounts) {
+        financialContext += `  ADJUSTED ACCOUNT BREAKDOWNS (with reversals excluded):\n`;
+        if (adjAccounts.revenueAccounts?.length > 0) {
+          financialContext += `    Revenue accounts:\n`;
+          adjAccounts.revenueAccounts.slice(0, 10).forEach(acc => {
+            financialContext += `      - ${acc.name}: $${Number(acc.amount || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+          });
+        }
+        if (adjAccounts.cogsAccounts?.length > 0) {
+          financialContext += `    COGS accounts:\n`;
+          adjAccounts.cogsAccounts.slice(0, 10).forEach(acc => {
+            financialContext += `      - ${acc.name}: $${Number(acc.amount || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+          });
+        }
+        if (adjAccounts.expenseAccounts?.length > 0) {
+          financialContext += `    Expense accounts (top 10):\n`;
+          adjAccounts.expenseAccounts.slice(0, 10).forEach(acc => {
+            financialContext += `      - ${acc.name}: $${Number(acc.amount || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+          });
+        }
+      }
+      financialContext += `  When referencing individual accounts, use the ADJUSTED ACCOUNT BREAKDOWNS above (not the raw P&L data).\n\n`;
     } else {
       financialContext += `\n📋 Note: Reversal filter is OFF — figures include all journal entries including reversals.\n\n`;
     }
