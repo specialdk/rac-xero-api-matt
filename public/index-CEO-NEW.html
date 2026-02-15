@@ -2137,7 +2137,7 @@
             btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount">0</span>';
             // Open drawer to show "no reversals found" message
             document.getElementById('drawerTitle').textContent = 'Reversal Journals';
-            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">Ã¢Å“â€¦</p><p>No reversal journals found in this period.</p></div>';
+            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">&#x1F50D;</p><p>No reversal journals found in this period.</p></div>';
             document.getElementById('drawer').classList.add('active');
             document.getElementById('drawerOverlay').classList.add('active');
             return;
@@ -3869,7 +3869,7 @@
                   grouped[acc.entity].subtotal += acc.balance || 0;
                 });
                 return Object.entries(grouped).map(([entity, data]) => `
-                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} Ã¢â‚¬â€ $${data.subtotal.toLocaleString()}</h3>
+                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} &#x2014; $${data.subtotal.toLocaleString()}</h3>
                   <table class="data-table" style="margin-bottom: 12px;">
                     <tbody>
                       ${data.accounts.map(acc => `
@@ -4181,11 +4181,11 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(currentRatio) >= 1.5 ? 'var(--color-positive)' : parseFloat(currentRatio) >= 1 ? 'var(--color-warning)' : 'var(--color-negative)'};">${currentRatio}</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Total Assets Ã· Total Liabilities<br>
-                    = $${assets.toLocaleString()} Ã· $${liabilities.toLocaleString()}
+                    = Total Assets &#xF7; Total Liabilities<br>
+                    = $${assets.toLocaleString()} &#xF7; $${liabilities.toLocaleString()}
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
-                    ${parseFloat(currentRatio) >= 1.5 ? 'âœ“ Strong liquidity' : parseFloat(currentRatio) >= 1 ? 'âš  Adequate liquidity' : 'âš  Low liquidity'}
+                    ${parseFloat(currentRatio) >= 1.5 ? '&#x2705; Strong liquidity' : parseFloat(currentRatio) >= 1 ? '&#x26A0; Adequate liquidity' : '&#x26A0; Low liquidity'}
                   </div>
                 </div>
 
@@ -4196,8 +4196,8 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(grossMargin) >= 30 ? 'var(--color-positive)' : parseFloat(grossMargin) >= 15 ? 'var(--color-warning)' : 'var(--color-negative)'};">${grossMargin}%</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Gross Profit Ã· Revenue Ã— 100<br>
-                    = $${grossProfit.toLocaleString()} Ã· $${revenue.toLocaleString()} Ã— 100
+                    = Gross Profit &#xF7; Revenue &#xD7; 100<br>
+                    = $${grossProfit.toLocaleString()} &#xF7; $${revenue.toLocaleString()} &#xD7; 100
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
                     Profit after direct costs
@@ -4211,11 +4211,11 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(netMargin) >= 10 ? 'var(--color-positive)' : parseFloat(netMargin) >= 0 ? 'var(--color-warning)' : 'var(--color-negative)'};">${netMargin}%</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Net Profit Ã· Revenue Ã— 100<br>
-                    = $${netProfit.toLocaleString()} Ã· $${revenue.toLocaleString()} Ã— 100
+                    = Net Profit &#xF7; Revenue &#xD7; 100<br>
+                    = $${netProfit.toLocaleString()} &#xF7; $${revenue.toLocaleString()} &#xD7; 100
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
-                    ${parseFloat(netMargin) >= 10 ? 'âœ“ Healthy profitability' : parseFloat(netMargin) >= 0 ? 'âš  Marginal profit' : 'âš  Operating at a loss'}
+                    ${parseFloat(netMargin) >= 10 ? '&#x2705; Healthy profitability' : parseFloat(netMargin) >= 0 ? '&#x26A0; Marginal profit' : '&#x26A0; Operating at a loss'}
                   </div>
                 </div>
 
@@ -4226,11 +4226,11 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(debtEquity) <= 1 ? 'var(--color-positive)' : parseFloat(debtEquity) <= 2 ? 'var(--color-warning)' : 'var(--color-negative)'};">${debtEquity}</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Total Liabilities Ã· Total Equity<br>
-                    = $${liabilities.toLocaleString()} Ã· $${equity.toLocaleString()}
+                    = Total Liabilities &#xF7; Total Equity<br>
+                    = $${liabilities.toLocaleString()} &#xF7; $${equity.toLocaleString()}
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
-                    ${parseFloat(debtEquity) <= 1 ? 'âœ“ Low leverage' : parseFloat(debtEquity) <= 2 ? 'âš  Moderate leverage' : 'âš  High leverage'}
+                    ${parseFloat(debtEquity) <= 1 ? '&#x2705; Low leverage' : parseFloat(debtEquity) <= 2 ? '&#x26A0; Moderate leverage' : '&#x26A0; High leverage'}
                   </div>
                 </div>
               </div>
@@ -4305,7 +4305,7 @@
                 $${(receivables.total || 0).toLocaleString()}
               </div>
               <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
-                ${receivables.invoiceCount || 0} invoices ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
+                ${receivables.invoiceCount || 0} invoices &#x2022; ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
               </div>
               
               <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top Customers</h3>
