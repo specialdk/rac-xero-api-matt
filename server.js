@@ -5578,6 +5578,8 @@ ABOUT RAC:
 ${financialContext}
 
 RESPONSE GUIDELINES:
+- ALWAYS use the exact numbers from the data provided — never calculate your own ratios or percentages when they are already provided in the FINANCIAL RATIOS section
+- If a ratio looks unusual (e.g. margin over 100%), mention it as noteworthy but still report the actual figure
 - ALWAYS reference specific dollar amounts and numbers from the data above
 - Be concise and executive-level — the CEO is busy
 - Use Australian dollar formatting ($X,XXX)
