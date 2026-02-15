@@ -5411,10 +5411,22 @@ app.post("/api/ai-chat", async (req, res) => {
 
     const entityName = context?.entity || "Unknown Entity";
     const period = context?.period || "Current";
+    const quarterInfo = context?.quarterInfo || null;
     const baseUrl = `http://localhost:${process.env.PORT || 8080}`;
 
+    // Calculate period months from quarter dates (match dashboard exactly)
+    let periodMonths = 3;
+    let reportDate = undefined;
+    if (quarterInfo?.startDate && quarterInfo?.endDate) {
+      const start = new Date(quarterInfo.startDate);
+      const end = new Date(quarterInfo.endDate);
+      periodMonths = quarterInfo.isComplete ? 3 : 
+        (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+      reportDate = quarterInfo.endDate;
+    }
+
     // ── Fetch REAL financial data from our own API endpoints ──
-    console.log(`🤖 AI Chat: Fetching live data for "${entityName}"...`);
+    console.log(`🤖 AI Chat: Fetching live data for "${entityName}" (${period}, ${periodMonths}mo to ${reportDate || 'today'})...`);
 
     const fetchInternal = async (endpoint, body) => {
       try {
@@ -5431,12 +5443,12 @@ app.post("/api/ai-chat", async (req, res) => {
       }
     };
 
-    // Fetch all data sources in parallel (don't let one failure block others)
+    // Fetch all data sources in parallel (match dashboard's quarter dates)
     const [cashData, plData, invoicesData, expenseData, ratiosData] = await Promise.all([
       fetchInternal("/api/cash-position", { organizationName: entityName }),
-      fetchInternal("/api/profit-loss-summary", { organizationName: entityName, periodMonths: 3 }),
+      fetchInternal("/api/profit-loss-summary", { organizationName: entityName, date: reportDate, periodMonths }),
       fetchInternal("/api/outstanding-invoices", { organizationName: entityName }),
-      fetchInternal("/api/expense-analysis", { organizationName: entityName, periodMonths: 3 }),
+      fetchInternal("/api/expense-analysis", { organizationName: entityName, date: reportDate, periodMonths }),
       fetchInternal("/api/financial-ratios", { organizationName: entityName }),
     ]);
 

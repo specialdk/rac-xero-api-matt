@@ -4631,7 +4631,8 @@
 
         try {
           const entity = getSelectedEntity();
-          const period = document.getElementById('periodSelector')?.value || 'Current';
+          const period = document.getElementById('periodSelector')?.value || 'Q3';
+          const quarterInfo = getQuarterDates(period);
           const metrics = getDashboardMetrics();
 
           const response = await fetch(`${API_BASE}/api/ai-chat`, {
@@ -4639,7 +4640,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               message,
-              context: { entity, period, metrics },
+              context: { entity, period, metrics, quarterInfo },
               history: chatHistory.slice(-6),
             }),
           });
