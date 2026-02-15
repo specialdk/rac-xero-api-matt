@@ -5404,7 +5404,7 @@ app.post("/api/ai-chat", async (req, res) => {
 
     const entityName = context?.entity || "Unknown Entity";
     const period = context?.period || "Current";
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const baseUrl = `http://localhost:${process.env.PORT || 8080}`;
 
     // ── Fetch REAL financial data from our own API endpoints ──
     console.log(`🤖 AI Chat: Fetching live data for "${entityName}"...`);
