@@ -5536,6 +5536,13 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `⚠️ Data not available: ${unavailable.join(", ")}\n`;
     }
 
+    // Debug: show what data sources succeeded
+    console.log(`🤖 AI Chat: Available data - Cash: ${!!cashData && !cashData?.error}, P&L: ${!!plData?.summary}, Invoices: ${!!invoicesData && !invoicesData?.error}, Expenses: ${!!expenseData?.analysis}, Ratios: ${!!ratiosData?.ratios}`);
+    if (unavailable.length > 0) {
+      console.log(`🤖 AI Chat: UNAVAILABLE: ${unavailable.join(', ')}`);
+    }
+    console.log(`🤖 AI Chat: Context length: ${financialContext.length} chars`);
+
     console.log(`🤖 AI Chat: Data fetched. Building prompt...`);
 
     // ── Build system prompt with REAL data ──
