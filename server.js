@@ -5572,7 +5572,7 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `    Net Profit: $${Number(adjPL.netProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
       financialContext += `  Reversal Impact: Revenue ${impact.revenueAdjustment >= 0 ? '+' : ''}$${Number(impact.revenueAdjustment || 0).toLocaleString("en-AU")}, COGS ${impact.cogsAdjustment >= 0 ? '+' : ''}$${Number(impact.cogsAdjustment || 0).toLocaleString("en-AU")}, Expenses ${impact.expenseAdjustment >= 0 ? '+' : ''}$${Number(impact.expenseAdjustment || 0).toLocaleString("en-AU")}\n`;
       financialContext += `  IMPORTANT: When responding, use the ADJUSTED figures since that is what the user is viewing.\n\n`;
-      financialContext += `  NOTE: Individual revenue/expense account breakdowns in the P&L data above are RAW (pre-reversal). Do NOT reference individual account lines when reversals are excluded — only use the adjusted totals provided here.\n`;
+      financialContext += `  WARNING: Do NOT quote individual account breakdowns (e.g. quarry sales, rental income, haulage) when reversals are excluded — those figures are RAW and will not add up to the adjusted totals. Only reference the ADJUSTED totals above.\n`;
     } else {
       financialContext += `\n📋 Note: Reversal filter is OFF — figures include all journal entries including reversals.\n\n`;
     }
