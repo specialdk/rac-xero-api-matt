@@ -453,6 +453,78 @@
         font-style: italic;
         line-height: 1.4;
       }
+
+      /* Journal exclusion toggle */
+      .reversal-journal-card.included {
+        opacity: 0.55;
+        border-color: #D1D5DB;
+        background: #F9FAFB;
+      }
+      .reversal-journal-card.included .journal-amount {
+        color: #9CA3AF;
+      }
+      .journal-exclude-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--color-border);
+      }
+      .journal-exclude-toggle label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        user-select: none;
+      }
+      .journal-exclude-toggle input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #DC2626;
+      }
+      .journal-exclude-toggle .override-info {
+        font-size: 10px;
+        color: var(--color-text-muted);
+        font-style: italic;
+      }
+      .reversal-save-bar {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        border-top: 2px solid var(--color-border);
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        z-index: 10;
+      }
+      .reversal-save-bar .save-status {
+        font-size: 12px;
+        color: var(--color-text-muted);
+      }
+      .reversal-save-bar .save-status.saved {
+        color: #059669;
+        font-weight: 600;
+      }
+      .btn-save-overrides {
+        background: linear-gradient(135deg, #0078D4 0%, #106EBE 100%);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .btn-save-overrides:hover { opacity: 0.9; }
+      .btn-save-overrides:disabled { opacity: 0.5; cursor: not-allowed; }
       .snapshot-status.error { color: #F87171; }
 
 
@@ -523,16 +595,6 @@
       .kpi-card:hover .kpi-arrow {
         opacity: 1;
       }
-
-      .summary-card .card-arrow {
-        opacity: 0;
-        transition: opacity 0.2s;
-      }
-
-      .summary-card:hover .card-arrow {
-        opacity: 1;
-      }
-
 
       .kpi-value {
         font-size: var(--font-size-kpi);
@@ -1521,7 +1583,7 @@
         <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
-        <button class="btn-dashboard" onclick="window.location.href='/'">🔗 Connection Manager</button>
+        <button class="btn-dashboard" onclick="window.location.href='/'">ðŸ”— Connection Manager</button>
       </div>
     </header>
 
@@ -1757,7 +1819,7 @@
                 <div class="card-title">P&L Summary</div>
                 <div class="card-subtitle" id="pl-period">Q3 FY25/26</div>
               </div>
-              <span class="card-arrow" style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
+              <span style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1816,7 +1878,7 @@
                 <div class="card-title">Balance Sheet</div>
                 <div class="card-subtitle">Current position</div>
               </div>
-             <span class="card-arrow" style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
+             <span style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1847,7 +1909,7 @@
                <div class="card-title">Key Ratios</div>
                 <div class="card-subtitle" id="ratios-subtitle">Financial health indicators</div>
               </div>
-              <span class="card-arrow" style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
+              <span style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -2095,6 +2157,7 @@
                 const entities = getSelectedEntities();
                 let combined = {
                   reversalCount: 0,
+                  totalReversalJournals: 0,
                   plImpact: { revenueAdjustment: 0, cogsAdjustment: 0, expenseAdjustment: 0, netProfitAdjustment: 0 },
                   reversalJournals: [],
                   totalManualJournals: 0,
@@ -2107,14 +2170,15 @@
                       body: JSON.stringify({ organizationName: ent, dateFrom: quarterInfo.startDate, dateTo: quarterInfo.endDate }),
                     });
                     const data = await resp.json();
-                    if (data.reversalCount > 0) {
+                    if (data.reversalCount > 0 || (data.totalReversalJournals && data.totalReversalJournals > 0)) {
                       combined.reversalCount += data.reversalCount;
+                      combined.totalReversalJournals += (data.totalReversalJournals || data.reversalJournals.length);
                       combined.totalManualJournals += data.totalManualJournals;
                       combined.plImpact.revenueAdjustment += data.plImpact.revenueAdjustment;
                       combined.plImpact.cogsAdjustment += data.plImpact.cogsAdjustment;
                       combined.plImpact.expenseAdjustment += data.plImpact.expenseAdjustment;
                       combined.plImpact.netProfitAdjustment += data.plImpact.netProfitAdjustment;
-                      data.reversalJournals.forEach(j => { j.entityName = ent; });
+                      data.reversalJournals.forEach(j => { j.entityName = ent; j.tenantId = data.tenantId; });
                       combined.reversalJournals.push(...data.reversalJournals);
                     }
                   } catch (e) { console.warn(`Reversal fetch failed for ${ent}:`, e); }
@@ -2143,7 +2207,7 @@
             btn.classList.remove('loading');
           }
 
-          if (state.data.reversalCount === 0) {
+          if ((state.data.totalReversalJournals || state.data.reversalJournals?.length || 0) === 0) {
             btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount">0</span>';
             // Open drawer to show "no reversals found" message
             document.getElementById('drawerTitle').textContent = 'Reversal Journals';
@@ -2260,33 +2324,35 @@
 
       function showReversalDrawer() {
         const data = window.reversalState.data;
-        const adj = data.plImpact;
+        const excludedJournals = data.reversalJournals.filter(j => j.excluded);
+        const adj = recalcReversalImpact();
 
         let html = `
-          <div class="reversal-summary">
-            <h4>&#x26A0;&#xFE0F; ${data.reversalCount} Reversal Journal${data.reversalCount !== 1 ? 's' : ''} Excluded</h4>
+          <div class="reversal-summary" id="reversalSummaryBlock">
+            <h4>&#x26A0;&#xFE0F; ${excludedJournals.length} of ${data.reversalJournals.length} Journal${data.reversalJournals.length !== 1 ? 's' : ''} Excluded from P&L</h4>
+            <p style="font-size:11px; color:#991B1B; margin-bottom:12px;">Use the checkboxes below to control which journals are excluded. Click <strong>Save Selections</strong> to persist for all users.</p>
             <div class="reversal-summary-grid">
               <div class="reversal-summary-item" style="grid-column: span 2;">
                 <span class="label">Revenue Impact</span>
-                <span class="value" style="color: ${adj.revenueAdjustment >= 0 ? '#059669' : '#DC2626'}">
+                <span class="value" id="revImpact" style="color: ${adj.revenueAdjustment >= 0 ? '#059669' : '#DC2626'}">
                   ${adj.revenueAdjustment >= 0 ? '+' : ''}$${adj.revenueAdjustment.toLocaleString()}
                 </span>
               </div>
               <div class="reversal-summary-item" style="grid-column: span 2;">
                 <span class="label">COGS Impact</span>
-                <span class="value" style="color: ${adj.cogsAdjustment <= 0 ? '#059669' : '#DC2626'}">
+                <span class="value" id="cogsImpact" style="color: ${adj.cogsAdjustment <= 0 ? '#059669' : '#DC2626'}">
                   ${adj.cogsAdjustment > 0 ? '-' : '+'}$${Math.abs(adj.cogsAdjustment).toLocaleString()}
                 </span>
               </div>
               <div class="reversal-summary-item" style="grid-column: span 2;">
                 <span class="label">Expense Impact</span>
-                <span class="value" style="color: ${adj.expenseAdjustment <= 0 ? '#059669' : '#DC2626'}">
+                <span class="value" id="expImpact" style="color: ${adj.expenseAdjustment <= 0 ? '#059669' : '#DC2626'}">
                   ${adj.expenseAdjustment > 0 ? '-' : '+'}$${Math.abs(adj.expenseAdjustment).toLocaleString()}
                 </span>
               </div>
               <div class="reversal-summary-item" style="grid-column: span 2; border-top: 1px solid #FECACA; padding-top: 8px; margin-top: 4px;">
                 <span class="label" style="font-weight: 600;">Net Profit Impact</span>
-                <span class="value" style="color: ${adj.netProfitAdjustment >= 0 ? '#059669' : '#DC2626'}; font-size: 15px;">
+                <span class="value" id="netImpact" style="color: ${adj.netProfitAdjustment >= 0 ? '#059669' : '#DC2626'}; font-size: 15px;">
                   ${adj.netProfitAdjustment >= 0 ? '+' : ''}$${adj.netProfitAdjustment.toLocaleString()}
                 </span>
               </div>
@@ -2294,15 +2360,18 @@
           </div>
         `;
 
-        data.reversalJournals.forEach(journal => {
+        data.reversalJournals.forEach((journal, idx) => {
           const journalDate = new Date(journal.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
           const totalAmount = Math.max(journal.totalDebits, journal.totalCredits);
           const entityTag = journal.entityName ? `<span style="font-size:11px; color:#6B7280; margin-left:6px;">(${journal.entityName})</span>` : '';
           const reversalLine = journal.lines.find(l => (l.description || '').toLowerCase().includes('reversal:'));
           const description = reversalLine ? reversalLine.description : (journal.narration || journal.reference || 'No description');
+          const isExcluded = journal.excluded !== false;
+          const cardClass = isExcluded ? '' : 'included';
+          const overrideNote = journal.overrideSetBy ? `Set by ${journal.overrideSetBy}` : '';
 
           html += `
-            <div class="reversal-journal-card">
+            <div class="reversal-journal-card ${cardClass}" id="jnl-card-${idx}">
               <div class="journal-header">
                 <div>
                   <span class="journal-ref">${journal.reference || 'Journal #' + (journal.journalNumber || 'N/A')}${entityTag}</span>
@@ -2327,13 +2396,131 @@
             `;
           });
 
-          html += '</div></div>';
+          html += `
+              </div>
+              <div class="journal-exclude-toggle">
+                <label>
+                  <input type="checkbox" ${isExcluded ? 'checked' : ''} onchange="onJournalToggle(${idx}, this.checked)" />
+                  Exclude from P&L
+                </label>
+                <span class="override-info">${overrideNote}</span>
+              </div>
+            </div>`;
         });
+
+        html += `
+          <div class="reversal-save-bar">
+            <span class="save-status" id="overrideSaveStatus">Unsaved changes apply live — click Save to persist</span>
+            <button class="btn-save-overrides" onclick="saveReversalOverrides()">Save Selections</button>
+          </div>
+        `;
 
         document.getElementById('drawerTitle').textContent = 'Reversal Journals';
         document.getElementById('drawerContent').innerHTML = html;
         document.getElementById('drawer').classList.add('active');
         document.getElementById('drawerOverlay').classList.add('active');
+      }
+
+      // Recalculate P&L impact from current excluded journals
+      function recalcReversalImpact() {
+        const journals = window.reversalState.data.reversalJournals;
+        let revenueAdjustment = 0, cogsAdjustment = 0, expenseAdjustment = 0;
+        journals.filter(j => j.excluded !== false).forEach(j => {
+          j.lines.forEach(line => {
+            if (line.plCategory === 'revenue') revenueAdjustment += line.lineAmount;
+            else if (line.plCategory === 'cogs') cogsAdjustment += line.lineAmount;
+            else if (line.plCategory === 'expense') expenseAdjustment += line.lineAmount;
+          });
+        });
+        return {
+          revenueAdjustment: Math.round(revenueAdjustment * 100) / 100,
+          cogsAdjustment: Math.round(cogsAdjustment * 100) / 100,
+          expenseAdjustment: Math.round(expenseAdjustment * 100) / 100,
+          netProfitAdjustment: Math.round((revenueAdjustment + cogsAdjustment + expenseAdjustment) * 100) / 100
+        };
+      }
+
+      // Handle checkbox toggle on a journal card
+      function onJournalToggle(idx, isExcluded) {
+        const journals = window.reversalState.data.reversalJournals;
+        journals[idx].excluded = isExcluded;
+
+        // Update card visual
+        const card = document.getElementById(`jnl-card-${idx}`);
+        if (card) {
+          card.classList.toggle('included', !isExcluded);
+        }
+
+        // Recalculate and update summary + dashboard P&L
+        const adj = recalcReversalImpact();
+        window.reversalState.data.plImpact = adj;
+
+        // Update summary block
+        const excludedCount = journals.filter(j => j.excluded !== false).length;
+        const summaryBlock = document.getElementById('reversalSummaryBlock');
+        if (summaryBlock) {
+          summaryBlock.querySelector('h4').innerHTML = `&#x26A0;&#xFE0F; ${excludedCount} of ${journals.length} Journal${journals.length !== 1 ? 's' : ''} Excluded from P&L`;
+        }
+        document.getElementById('revImpact').textContent = `${adj.revenueAdjustment >= 0 ? '+' : ''}$${adj.revenueAdjustment.toLocaleString()}`;
+        document.getElementById('cogsImpact').textContent = `${adj.cogsAdjustment > 0 ? '-' : '+'}$${Math.abs(adj.cogsAdjustment).toLocaleString()}`;
+        document.getElementById('expImpact').textContent = `${adj.expenseAdjustment > 0 ? '-' : '+'}$${Math.abs(adj.expenseAdjustment).toLocaleString()}`;
+        document.getElementById('netImpact').textContent = `${adj.netProfitAdjustment >= 0 ? '+' : ''}$${adj.netProfitAdjustment.toLocaleString()}`;
+
+        // Update reversal count on button
+        window.reversalState.data.reversalCount = excludedCount;
+        const btn = document.getElementById('reversalToggle');
+        if (btn && window.reversalState.active) {
+          btn.innerHTML = '&#x1F504; Reversals Hidden <span class="reversal-count" id="reversalCount">' + excludedCount + '</span>';
+        }
+
+        // Re-apply P&L adjustments to dashboard if reversals are active
+        if (window.reversalState.active && window.reversalState.originalPL) {
+          const origPL = window.reversalState.originalPL;
+          window.dashboardData.pl = { ...origPL };
+          applyReversalAdjustments();
+        }
+
+        // Mark as unsaved
+        const statusEl = document.getElementById('overrideSaveStatus');
+        if (statusEl) {
+          statusEl.textContent = 'You have unsaved changes';
+          statusEl.className = 'save-status';
+        }
+      }
+
+      // Save all override selections to database
+      async function saveReversalOverrides() {
+        const data = window.reversalState.data;
+        if (!data || !data.reversalJournals.length) return;
+
+        const statusEl = document.getElementById('overrideSaveStatus');
+        statusEl.textContent = 'Saving...';
+        statusEl.className = 'save-status';
+
+        try {
+          // For consolidated view, we need to save per-tenant
+          const byTenant = {};
+          data.reversalJournals.forEach(j => {
+            const tid = j.tenantId || data.tenantId;
+            if (!byTenant[tid]) byTenant[tid] = [];
+            byTenant[tid].push({ journalId: j.journalID, excluded: j.excluded !== false });
+          });
+
+          for (const [tenantId, overrides] of Object.entries(byTenant)) {
+            await fetch(`${API_BASE}/api/reversal-overrides/bulk`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tenantId, overrides, setBy: 'Dashboard User' })
+            });
+          }
+
+          statusEl.textContent = '\u2705 Saved — selections will persist for all users';
+          statusEl.className = 'save-status saved';
+        } catch (error) {
+          console.error('Failed to save reversal overrides:', error);
+          statusEl.textContent = '\u274C Save failed — try again';
+          statusEl.className = 'save-status';
+        }
       }
 
       // ========== QUARTER DATE CALCULATIONS ==========
@@ -2995,7 +3182,7 @@
             document.getElementById("kpi-inventory").textContent = "$" + Math.round(totalValue).toLocaleString();
           }
 
-          // Trend line — SOH tonnes + forward order pipeline
+          // Trend line â€” SOH tonnes + forward order pipeline
           const trendParts = [];
           trendParts.push(`${Math.round(totalTonnes).toLocaleString()}t on hand`);
           if (forwardOrders.orderCount > 0) {
@@ -3332,14 +3519,14 @@
           ? (balance.totalAssets / balance.totalLiabilities).toFixed(2) 
           : '-';
         
-        // Gross Margin = (Revenue - COGS) / Revenue ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â 100
+        // Gross Margin = (Revenue - COGS) / Revenue ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â 100
         const revenue = Math.abs(pl.revenue || 0);
         const cogs = Math.abs(pl.cogs || 0);
         const grossMargin = revenue > 0 
           ? (((revenue - cogs) / revenue) * 100).toFixed(1) + '%'
           : '-';
         
-        // Net Profit Margin = Net Profit / Revenue ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â 100
+        // Net Profit Margin = Net Profit / Revenue ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â 100
         const netProfit = pl.netProfit || 0;
         const netMargin = revenue > 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'
@@ -3379,13 +3566,13 @@
           : 'N/A';
         document.getElementById('ratio-current').textContent = currentRatio;
 
-        // Gross Margin (Gross Profit / Revenue Ã— 100)
+        // Gross Margin (Gross Profit / Revenue Ãƒâ€” 100)
         const grossMargin = revenue !== 0 
           ? ((grossProfit / revenue) * 100).toFixed(1) + '%'
           : 'N/A';
         document.getElementById('ratio-gross-margin').textContent = grossMargin;
 
-        // Net Profit Margin (Net Profit / Revenue Ã— 100)
+        // Net Profit Margin (Net Profit / Revenue Ãƒâ€” 100)
         const netMargin = revenue !== 0 
           ? ((netProfit / revenue) * 100).toFixed(1) + '%'
           : 'N/A';

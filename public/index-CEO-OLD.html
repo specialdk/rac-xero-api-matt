@@ -524,6 +524,16 @@
         opacity: 1;
       }
 
+      .summary-card .card-arrow {
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .summary-card:hover .card-arrow {
+        opacity: 1;
+      }
+
+
       .kpi-value {
         font-size: var(--font-size-kpi);
         font-weight: 600;
@@ -576,7 +586,7 @@
       /* ========== CHART ROW (Full Width) ========== */
       .chart-row {
         display: grid;
-        grid-template-columns: 2fr 1fr;
+        grid-template-columns: 2fr 1fr 1fr;
         gap: var(--spacing-md);
         min-height: 200px;
       }
@@ -742,6 +752,75 @@
         font-size: 9px;
         color: var(--color-text-muted);
         white-space: nowrap;
+      }
+
+      /* ========== PRODUCTION CARD ========== */
+      .production-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .production-table thead th {
+        font-size: 10px;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        font-weight: 600;
+        padding: 4px 6px;
+        text-align: right;
+        border-bottom: 1px solid var(--color-border);
+        white-space: nowrap;
+      }
+
+      .production-table thead th:first-child {
+        text-align: left;
+      }
+
+      .production-table tbody td {
+        padding: 5px 6px;
+        text-align: right;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+      }
+
+      .production-table tbody td:first-child {
+        text-align: left;
+        font-weight: 500;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .production-table tfoot td {
+        padding: 6px;
+        text-align: right;
+        font-weight: 700;
+        border-top: 2px solid var(--color-border);
+        font-size: 12px;
+      }
+
+      .production-table tfoot td:first-child {
+        text-align: left;
+      }
+
+      .prod-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 2px;
+        vertical-align: middle;
+      }
+
+      .prod-indicator.green { background: var(--color-positive); }
+      .prod-indicator.amber { background: #F59E0B; }
+      .prod-indicator.red { background: var(--color-negative); }
+      .prod-indicator.grey { background: #D1D5DB; }
+
+      .production-scroll {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
       }
 
       /* ========== SUMMARY ROW (Bottom) ========== */
@@ -1090,7 +1169,7 @@
         overflow-y: auto;
       }
 
-      /* ========== AI CHAT PANEL ========== */
+       /* ========== AI CHAT PANEL ========== */
       .chat-panel {
         width: 450px;
         min-width: 450px;
@@ -1099,6 +1178,11 @@
         display: flex;
         flex-direction: column;
         z-index: 50;
+      }
+
+      .chat-panel.expanded {
+        width: 600px;
+        min-width: 600px;
       }
 
       .chat-header {
@@ -1116,6 +1200,57 @@
         font-weight: 600;
       }
 
+      .chat-header-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .chat-header-actions button {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .chat-header-actions button:hover {
+        background: rgba(255,255,255,0.3);
+      }
+
+      .chat-context {
+        padding: 6px 12px;
+        background: rgba(102, 126, 234, 0.08);
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--color-text-secondary);
+      }
+
+      .chat-context .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        margin-left: auto;
+      }
+
+      .chat-context .status-dot.live {
+        animation: pulse-dot 2s infinite;
+      }
+
+      @keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+
       .chat-messages {
         flex: 1;
         padding: var(--spacing-md);
@@ -1130,7 +1265,7 @@
         padding: 10px 14px;
         border-radius: 12px;
         font-size: 13px;
-        line-height: 1.4;
+        line-height: 1.5;
       }
 
       .chat-message.assistant {
@@ -1145,6 +1280,64 @@
         color: white;
         align-self: flex-end;
         border-bottom-right-radius: 4px;
+      }
+
+      .message-content strong {
+        font-weight: 600;
+      }
+
+      .message-meta {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 4px;
+        font-size: 10px;
+        color: var(--color-text-muted);
+      }
+
+      .chat-message.user .message-meta {
+        color: rgba(255,255,255,0.6);
+        justify-content: flex-end;
+      }
+
+      .copy-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 12px;
+        padding: 0;
+        opacity: 0.5;
+      }
+
+      .copy-btn:hover {
+        opacity: 1;
+      }
+
+      /* Typing indicator */
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px 16px !important;
+        align-self: flex-start;
+        background: var(--bg-page);
+        border-radius: 12px;
+        border-bottom-left-radius: 4px;
+      }
+
+      .typing-indicator .dot {
+        width: 8px;
+        height: 8px;
+        background: var(--color-text-secondary);
+        border-radius: 50%;
+        animation: typing-bounce 1.4s infinite ease-in-out;
+      }
+
+      .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+      .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+
+      @keyframes typing-bounce {
+        0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+        40% { transform: translateY(-6px); opacity: 1; }
       }
 
       .chat-suggestions {
@@ -1201,6 +1394,8 @@
         cursor: pointer;
         font-size: 16px;
       }
+
+      
 
       /* ========== DATA TABLE (for drawers) ========== */
       .data-table {
@@ -1326,7 +1521,7 @@
         <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
-        <button class="btn-dashboard" onclick="window.location.href='index.html'">&#x1F4CA; Full Dashboard</button>
+        <button class="btn-dashboard" onclick="window.location.href='/'">🔗 Connection Manager</button>
       </div>
     </header>
 
@@ -1521,6 +1716,35 @@
               </div>
             </div>
           </div>
+
+          <!-- Production Overview (Mining only) -->
+          <div class="chart-card" id="production-card" onclick="openDrawer('production')" style="cursor: pointer; display: none;">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">&#x2692;&#xFE0F; Production</div>
+                <div class="chart-subtitle" id="production-period">QTD overview</div>
+              </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">&#x203A;</span>
+            </div>
+            <div class="production-scroll">
+              <table class="production-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>SOH</th>
+                    <th>Made</th>
+                    <th>Sold</th>
+                    <th>Orders</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="productionBody">
+                  <tr><td colspan="6" style="text-align:center; color: var(--color-text-muted); padding: 20px;">Loading...</td></tr>
+                </tbody>
+                <tfoot id="productionFoot"></tfoot>
+              </table>
+            </div>
+          </div>
         </div>
 
         <!-- Summary Row - Detail Cards -->
@@ -1533,7 +1757,7 @@
                 <div class="card-title">P&L Summary</div>
                 <div class="card-subtitle" id="pl-period">Q3 FY25/26</div>
               </div>
-              <span style="color: var(--color-text-muted); font-size: 18px;">â€º</span>
+              <span class="card-arrow" style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1592,7 +1816,7 @@
                 <div class="card-title">Balance Sheet</div>
                 <div class="card-subtitle">Current position</div>
               </div>
-              <span style="color: var(--color-text-muted); font-size: 18px;">â€º</span>
+             <span class="card-arrow" style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1623,7 +1847,7 @@
                <div class="card-title">Key Ratios</div>
                 <div class="card-subtitle" id="ratios-subtitle">Financial health indicators</div>
               </div>
-              <span style="color: var(--color-text-muted); font-size: 18px;">â€º</span>
+              <span class="card-arrow" style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
             </div>
             <div class="card-content">
               <div class="budget-item">
@@ -1701,27 +1925,37 @@
       <div class="chat-panel" id="chatPanel">
         <div class="chat-header">
           <h3>&#x1F4AC; Ask about your finances</h3>
+          <div class="chat-header-actions">
+            <button onclick="toggleChatExpand()" title="Expand/Collapse">&#x2922;</button>
+            <button onclick="clearChat()" title="Clear chat">&#x1F5D1;</button>
+            <button onclick="toggleChat()" title="Close">&#x2715;</button>
+          </div>
+        </div>
+        <div class="chat-context" id="chatContext">
+          <span>&#x1F4CA; Loading...</span>
+          <span>&#x1F4C5; Current</span>
+          <span class="status-dot live"></span>
         </div>
         <div class="chat-messages" id="chatMessages">
           <div class="chat-message assistant">
-            Hi! I can help you understand your Mining financial data. Try asking me things like:
+            Hi! I'm your AI financial analyst. I can help you understand your dashboard data in real time.
             <br><br>
-            &bull; "What's driving our revenue decline?"<br>
-            &bull; "Show me our biggest expenses"<br>
-            &bull; "Compare to last year"
+            &#x2022; "What's driving our revenue?"<br>
+            &#x2022; "Summarise our cash position"<br>
+            &#x2022; "Any concerns I should know about?"
           </div>
         </div>
-        <div class="chat-suggestions">
+        <div class="chat-suggestions" id="chatSuggestions">
           <span class="suggestion-chip" onclick="sendSuggestion('Top 3 expenses?')">Top expenses</span>
-          <span class="suggestion-chip" onclick="sendSuggestion('Why profit negative?')">Profit analysis</span>
-          <span class="suggestion-chip" onclick="sendSuggestion('Cash forecast')">Cash forecast</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('How is revenue tracking?')">Revenue trend</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('What is our cash position?')">Cash position</span>
+          <span class="suggestion-chip" onclick="sendSuggestion('Any concerns?')">Risk check</span>
         </div>
         <div class="chat-input-area">
-          <input type="text" class="chat-input" id="chatInput" placeholder="Ask a question..." onkeypress="handleChatKeypress(event)">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ask about your finances..." onkeypress="handleChatKeypress(event)">
           <button class="chat-send" onclick="sendChat()">&#x27A4;</button>
         </div>
       </div>
-    </div>
 
     <!-- ========== DRAWER OVERLAY ========== -->
     <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
@@ -1913,7 +2147,7 @@
             btn.innerHTML = '&#x1F504; Reversals <span class="reversal-count" id="reversalCount">0</span>';
             // Open drawer to show "no reversals found" message
             document.getElementById('drawerTitle').textContent = 'Reversal Journals';
-            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">Ã¢Å“â€¦</p><p>No reversal journals found in this period.</p></div>';
+            document.getElementById('drawerContent').innerHTML = '<div style="text-align:center; padding:40px; color:#6B7280;"><p style="font-size:32px; margin-bottom:12px;">&#x1F50D;</p><p>No reversal journals found in this period.</p></div>';
             document.getElementById('drawer').classList.add('active');
             document.getElementById('drawerOverlay').classList.add('active');
             return;
@@ -2150,16 +2384,22 @@
         console.log("Loading dashboard for:", entity, period, quarterInfo);
 
         // Toggle Inventory vs Top Expenses card based on entity
-        // Mining shows Inventory (the quarry operation)
+        // Mining shows Inventory (the quarry operation) + Production card
         // ALL and other individual entities show Top Expenses
         const inventoryCard = document.getElementById('inventory-card');
         const expensesCard = document.getElementById('expenses-card');
+        const productionCard = document.getElementById('production-card');
+        const chartRow = document.querySelector('.chart-row');
         if (entity === 'Mining') {
           inventoryCard.style.display = 'block';
           expensesCard.style.display = 'none';
+          productionCard.style.display = 'flex';
+          chartRow.style.gridTemplateColumns = '2fr 1fr 1fr';
         } else {
           inventoryCard.style.display = 'none';
           expensesCard.style.display = 'block';
+          productionCard.style.display = 'none';
+          chartRow.style.gridTemplateColumns = '2fr 1fr';
         }
 
         // Update header title based on selection
@@ -2208,6 +2448,11 @@
         // Load top customers after receivables data is available
         await loadTopCustomers(quarterInfo);
 
+        // Load production card (Mining only, needs inventory data first)
+        if (entity === 'Mining') {
+          await loadProduction(quarterInfo);
+        }
+
         // Load budget after P&L (needs P&L data)
         await loadBudget(quarterInfo);
 
@@ -2224,6 +2469,8 @@
         // Initialize charts
         initSparklines();
         initTrendChart();
+        updateChatContext();
+        updateSuggestions();
       }
 
       // ========== CONSOLIDATED DASHBOARD (All Entities) ==========
@@ -2781,6 +3028,156 @@
           document.getElementById("kpi-inventory-trend").innerHTML = "\u26a0 Inventory API unavailable";
           document.getElementById("kpi-inventory-trend").className = "kpi-trend neutral";
           window.inventoryLive = null;
+        }
+      }
+
+      // ========== PRODUCTION OVERVIEW (LIVE from Quarry APP API) ==========
+      async function loadProduction(quarterInfo) {
+        const tbody = document.getElementById('productionBody');
+        const tfoot = document.getElementById('productionFoot');
+
+        try {
+          // Calculate days since quarter start for sub-endpoint queries
+          const qStart = new Date(quarterInfo.startDate);
+          const today = new Date();
+          const daysSinceQStart = Math.max(1, Math.ceil((today - qStart) / (1000 * 60 * 60 * 24)));
+
+          // Update period subtitle
+          document.getElementById('production-period').textContent =
+            `${quarterInfo.quarterCode} FY25/26 \u00b7 ${daysSinceQStart} days`;
+
+          // Fetch QTD production and sales from sub-endpoints
+          const [prodRes, salesRes] = await Promise.all([
+            fetch(`${INVENTORY_API}/production?days=${daysSinceQStart}`).then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch(`${INVENTORY_API}/sales?days=${daysSinceQStart}`).then(r => r.ok ? r.json() : null).catch(() => null),
+          ]);
+
+          // Aggregate production by product
+          const qtdProduction = {};
+          if (prodRes && Array.isArray(prodRes.production)) {
+            prodRes.production.forEach(row => {
+              const key = row.productName || row.product || row.name || 'Unknown';
+              qtdProduction[key] = (qtdProduction[key] || 0) + (row.tonnes || row.quantity || 0);
+            });
+          }
+
+          // Aggregate sales by product (tonnes shipped = demand fulfilled)
+          const qtdSales = {};
+          if (salesRes && Array.isArray(salesRes.sales)) {
+            salesRes.sales.forEach(row => {
+              const key = row.productName || row.product || row.name || 'Unknown';
+              qtdSales[key] = (qtdSales[key] || 0) + (row.tonnes || row.quantity || 0);
+            });
+          }
+
+          // Get SOH and forward orders from main inventory data
+          const inv = window.inventoryLive;
+          const products = inv ? (inv.products || []) : [];
+
+          // Build merged product list
+          const productMap = {};
+
+          // Start with products from main inventory (has SOH and forward orders)
+          products.forEach(p => {
+            productMap[p.name] = {
+              name: p.name,
+              group: p.group,
+              soh: p.sohTonnes || 0,
+              produced: qtdProduction[p.name] || 0,
+              demand: (qtdSales[p.name] || 0) + (p.demandTonnes || 0),
+              forwardOrders: p.demandTonnes || 0,
+              salesQtd: qtdSales[p.name] || 0,
+              mtdProd: p.mtdProduction || 0,
+              mtdSales: p.mtdSales || 0,
+            };
+          });
+
+          // Add any products from sub-endpoints not in main inventory
+          Object.keys(qtdProduction).forEach(name => {
+            if (!productMap[name]) {
+              productMap[name] = {
+                name, group: '', soh: 0,
+                produced: qtdProduction[name] || 0,
+                demand: qtdSales[name] || 0,
+                forwardOrders: 0, salesQtd: qtdSales[name] || 0,
+                mtdProd: 0, mtdSales: 0,
+              };
+            }
+          });
+
+          // Filter: ONLY products with sales, production, or forward orders
+          let active = Object.values(productMap).filter(p =>
+            p.produced > 0 || p.forwardOrders > 0 || p.mtdProd > 0 || p.mtdSales > 0 || p.salesQtd > 0
+          );
+
+          // If sub-endpoints returned no data, fall back to MTD from main endpoint
+          const hasQtdData = Object.keys(qtdProduction).length > 0 || Object.keys(qtdSales).length > 0;
+          if (!hasQtdData) {
+            active = Object.values(productMap).filter(p =>
+              p.mtdProd > 0 || p.mtdSales > 0 || p.forwardOrders > 0
+            );
+            active.forEach(p => {
+              p.produced = p.mtdProd;
+              p.salesQtd = p.mtdSales;
+            });
+            document.getElementById('production-period').textContent =
+              `${quarterInfo.quarterCode} FY25/26 \u00b7 MTD data`;
+          }
+
+          // Sort: products with largest forward orders first, then by sales
+          active.sort((a, b) => (b.forwardOrders + b.salesQtd) - (a.forwardOrders + a.salesQtd));
+
+          // Store for drawer
+          window.productionData = { active, hasQtdData, quarterInfo };
+
+          // Render table
+          if (active.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--color-text-muted); padding: 16px; font-size: 12px;">No production or demand activity this period</td></tr>';
+            tfoot.innerHTML = '';
+            return;
+          }
+
+          tbody.innerHTML = active.map(p => {
+            // Traffic light based on forward orders vs production + existing stock
+            let indicator = 'grey';
+            let tooltip = 'No orders';
+            if (p.forwardOrders > 0) {
+              const coverage = (p.soh + p.produced) / p.forwardOrders;
+              if (coverage >= 1.0) { indicator = 'green'; tooltip = 'Can fulfil'; }
+              else if (coverage >= 0.5 || p.produced > 0) { indicator = 'amber'; tooltip = 'Partial cover'; }
+              else { indicator = 'red'; tooltip = 'At risk'; }
+            } else if (p.produced > 0 || p.salesQtd > 0) {
+              indicator = 'green'; tooltip = p.produced > 0 ? 'Building stock' : 'Sales only';
+            }
+
+            return `<tr>
+              <td title="${p.name}">${p.name}</td>
+              <td>${Math.round(p.soh).toLocaleString()}</td>
+              <td>${Math.round(p.produced).toLocaleString()}</td>
+              <td>${Math.round(p.salesQtd).toLocaleString()}</td>
+              <td>${Math.round(p.forwardOrders).toLocaleString()}</td>
+              <td title="${tooltip}"><span class="prod-indicator ${indicator}"></span></td>
+            </tr>`;
+          }).join('');
+
+          // Totals row
+          const totProd = active.reduce((s, p) => s + p.produced, 0);
+          const totSales = active.reduce((s, p) => s + p.salesQtd, 0);
+          const totOrders = active.reduce((s, p) => s + p.forwardOrders, 0);
+          const totSoh = active.reduce((s, p) => s + p.soh, 0);
+          tfoot.innerHTML = `<tr>
+            <td>TOTAL</td>
+            <td>${Math.round(totSoh).toLocaleString()}</td>
+            <td>${Math.round(totProd).toLocaleString()}</td>
+            <td>${Math.round(totSales).toLocaleString()}</td>
+            <td>${Math.round(totOrders).toLocaleString()}</td>
+            <td></td>
+          </tr>`;
+
+        } catch (error) {
+          console.error("Error loading production:", error);
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--color-text-muted); padding: 16px; font-size: 12px;">\u26a0 Production data unavailable</td></tr>';
+          tfoot.innerHTML = '';
         }
       }
 
@@ -3446,6 +3843,7 @@
           profit: 'Profit & Loss Detail',
           receivables: 'Aged Receivables',
           inventory: 'Inventory Detail',
+          production: 'Production Overview',
           expenses: 'Top Expenses',
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
@@ -3481,7 +3879,7 @@
                   grouped[acc.entity].subtotal += acc.balance || 0;
                 });
                 return Object.entries(grouped).map(([entity, data]) => `
-                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} Ã¢â‚¬â€ $${data.subtotal.toLocaleString()}</h3>
+                  <h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${entity} &#x2014; $${data.subtotal.toLocaleString()}</h3>
                   <table class="data-table" style="margin-bottom: 12px;">
                     <tbody>
                       ${data.accounts.map(acc => `
@@ -3793,11 +4191,11 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(currentRatio) >= 1.5 ? 'var(--color-positive)' : parseFloat(currentRatio) >= 1 ? 'var(--color-warning)' : 'var(--color-negative)'};">${currentRatio}</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Total Assets Ã· Total Liabilities<br>
-                    = $${assets.toLocaleString()} Ã· $${liabilities.toLocaleString()}
+                    = Total Assets &#xF7; Total Liabilities<br>
+                    = $${assets.toLocaleString()} &#xF7; $${liabilities.toLocaleString()}
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
-                    ${parseFloat(currentRatio) >= 1.5 ? 'âœ“ Strong liquidity' : parseFloat(currentRatio) >= 1 ? 'âš  Adequate liquidity' : 'âš  Low liquidity'}
+                    ${parseFloat(currentRatio) >= 1.5 ? '&#x2705; Strong liquidity' : parseFloat(currentRatio) >= 1 ? '&#x26A0; Adequate liquidity' : '&#x26A0; Low liquidity'}
                   </div>
                 </div>
 
@@ -3808,8 +4206,8 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(grossMargin) >= 30 ? 'var(--color-positive)' : parseFloat(grossMargin) >= 15 ? 'var(--color-warning)' : 'var(--color-negative)'};">${grossMargin}%</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Gross Profit Ã· Revenue Ã— 100<br>
-                    = $${grossProfit.toLocaleString()} Ã· $${revenue.toLocaleString()} Ã— 100
+                    = Gross Profit &#xF7; Revenue &#xD7; 100<br>
+                    = $${grossProfit.toLocaleString()} &#xF7; $${revenue.toLocaleString()} &#xD7; 100
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
                     Profit after direct costs
@@ -3823,11 +4221,11 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(netMargin) >= 10 ? 'var(--color-positive)' : parseFloat(netMargin) >= 0 ? 'var(--color-warning)' : 'var(--color-negative)'};">${netMargin}%</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Net Profit Ã· Revenue Ã— 100<br>
-                    = $${netProfit.toLocaleString()} Ã· $${revenue.toLocaleString()} Ã— 100
+                    = Net Profit &#xF7; Revenue &#xD7; 100<br>
+                    = $${netProfit.toLocaleString()} &#xF7; $${revenue.toLocaleString()} &#xD7; 100
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
-                    ${parseFloat(netMargin) >= 10 ? 'âœ“ Healthy profitability' : parseFloat(netMargin) >= 0 ? 'âš  Marginal profit' : 'âš  Operating at a loss'}
+                    ${parseFloat(netMargin) >= 10 ? '&#x2705; Healthy profitability' : parseFloat(netMargin) >= 0 ? '&#x26A0; Marginal profit' : '&#x26A0; Operating at a loss'}
                   </div>
                 </div>
 
@@ -3838,11 +4236,11 @@
                     <span style="font-size: 18px; font-weight: 700; color: ${parseFloat(debtEquity) <= 1 ? 'var(--color-positive)' : parseFloat(debtEquity) <= 2 ? 'var(--color-warning)' : 'var(--color-negative)'};">${debtEquity}</span>
                   </div>
                   <div style="font-size: 12px; color: var(--color-text-muted);">
-                    = Total Liabilities Ã· Total Equity<br>
-                    = $${liabilities.toLocaleString()} Ã· $${equity.toLocaleString()}
+                    = Total Liabilities &#xF7; Total Equity<br>
+                    = $${liabilities.toLocaleString()} &#xF7; $${equity.toLocaleString()}
                   </div>
                   <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; font-style: italic;">
-                    ${parseFloat(debtEquity) <= 1 ? 'âœ“ Low leverage' : parseFloat(debtEquity) <= 2 ? 'âš  Moderate leverage' : 'âš  High leverage'}
+                    ${parseFloat(debtEquity) <= 1 ? '&#x2705; Low leverage' : parseFloat(debtEquity) <= 2 ? '&#x26A0; Moderate leverage' : '&#x26A0; High leverage'}
                   </div>
                 </div>
               </div>
@@ -3917,7 +4315,7 @@
                 $${(receivables.total || 0).toLocaleString()}
               </div>
               <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
-                ${receivables.invoiceCount || 0} invoices ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
+                ${receivables.invoiceCount || 0} invoices &#x2022; ${receivables.total > 0 ? Math.round(receivables.aged30Days / receivables.total * 100) : 0}% current
               </div>
               
               <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top Customers</h3>
@@ -4042,6 +4440,90 @@
                 </div>
               </div>
             `;
+          })(),
+          production: (() => {
+            const pd = window.productionData;
+            if (!pd || !pd.active) return '<p style="color: var(--color-text-muted);">Production data unavailable.</p>';
+            const active = pd.active;
+            const qi = pd.quarterInfo;
+            const totProd = active.reduce((s, p) => s + p.produced, 0);
+            const totSales = active.reduce((s, p) => s + p.salesQtd, 0);
+            const totOrders = active.reduce((s, p) => s + p.forwardOrders, 0);
+            const totSoh = active.reduce((s, p) => s + p.soh, 0);
+
+            return `
+              <div style="padding: 16px 0;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                  <div style="padding: 12px; background: #E8F0FE; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">Produced</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #1967D2;">${Math.round(totProd).toLocaleString()}t</div>
+                  </div>
+                  <div style="padding: 12px; background: #E6F4EA; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">Sold</div>
+                    <div style="font-size: 18px; font-weight: 700; color: var(--color-positive);">${Math.round(totSales).toLocaleString()}t</div>
+                  </div>
+                  <div style="padding: 12px; background: #FFF4E5; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">Forward Orders</div>
+                    <div style="font-size: 18px; font-weight: 700; color: var(--color-warning);">${Math.round(totOrders).toLocaleString()}t</div>
+                  </div>
+                  <div style="padding: 12px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: var(--color-text-muted);">Stock on Hand</div>
+                    <div style="font-size: 18px; font-weight: 700;">${Math.round(totSoh).toLocaleString()}t</div>
+                  </div>
+                </div>
+
+                <h3 style="margin: 0 0 10px; font-size: 14px; font-weight: 600;">Active Products</h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th style="text-align:right">SOH (t)</th>
+                      <th style="text-align:right">Made</th>
+                      <th style="text-align:right">Sold</th>
+                      <th style="text-align:right">Orders</th>
+                      <th style="text-align:center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${active.map(p => {
+                      let status = '\u2705';
+                      if (p.forwardOrders > 0) {
+                        const coverage = (p.soh + p.produced) / p.forwardOrders;
+                        if (coverage < 0.5 && p.produced === 0) { status = '\u{1F534}'; }
+                        else if (coverage < 1.0) { status = '\u{1F7E1}'; }
+                      }
+                      return '<tr>' +
+                        '<td style="font-size: 12px;">' + p.name + '</td>' +
+                        '<td style="text-align:right">' + Math.round(p.soh).toLocaleString() + '</td>' +
+                        '<td style="text-align:right">' + Math.round(p.produced).toLocaleString() + '</td>' +
+                        '<td style="text-align:right">' + Math.round(p.salesQtd).toLocaleString() + '</td>' +
+                        '<td style="text-align:right; font-weight:' + (p.forwardOrders > 0 ? '600' : '400') + ';">' + Math.round(p.forwardOrders).toLocaleString() + '</td>' +
+                        '<td style="text-align:center">' + status + '</td>' +
+                      '</tr>';
+                    }).join('')}
+                    <tr style="font-weight:600; background:#f5f5f5;">
+                      <td>TOTAL</td>
+                      <td style="text-align:right">${Math.round(totSoh).toLocaleString()}</td>
+                      <td style="text-align:right">${Math.round(totProd).toLocaleString()}</td>
+                      <td style="text-align:right">${Math.round(totSales).toLocaleString()}</td>
+                      <td style="text-align:right">${Math.round(totOrders).toLocaleString()}</td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div style="margin-top: 16px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 12px;">
+                  <strong>Legend:</strong>
+                  <span style="margin-left: 8px;">\u2705 Can fulfil (SOH + produced covers orders)</span>
+                  <span style="margin-left: 8px;">\u{1F7E1} Partial cover (producing but short)</span>
+                  <span style="margin-left: 8px;">\u{1F534} At risk (orders with insufficient stock)</span>
+                </div>
+
+                <div style="margin-top: 12px; font-size: 11px; color: var(--color-text-muted); text-align: right;">
+                  ${qi.quarterCode} FY25/26 \u00b7 ${pd.hasQtdData ? 'QTD' : 'MTD'} data from RAC Inventory System
+                </div>
+              </div>
+            `;
           })()
         };
 
@@ -4049,21 +4531,213 @@
       }
 
       // ========== CHAT FUNCTIONS ==========
+      let chatHistory = [];
+
       function toggleChat() {
         document.getElementById('chatPanel').classList.toggle('active');
       }
 
-      function sendChat() {
+      function toggleChatExpand() {
+        document.getElementById('chatPanel').classList.toggle('expanded');
+      }
+
+      function clearChat() {
+        chatHistory = [];
+        const messages = document.getElementById('chatMessages');
+        messages.innerHTML = `
+          <div class="chat-message assistant">
+            Chat cleared. Ask me anything about your financial data!
+          </div>`;
+        updateSuggestions();
+      }
+
+      function updateChatContext() {
+        const contextBar = document.getElementById('chatContext');
+        if (!contextBar) return;
+        const entity = getSelectedEntity();
+        const period = document.getElementById('periodSelector')?.value || 'Current';
+        contextBar.innerHTML = `<span>\u{1F4CA} ${entity}</span><span>\u{1F4C5} ${period}</span><span class="status-dot live"></span>`;
+      }
+
+      function getDashboardMetrics() {
+        const metrics = {};
+        try {
+          // Grab visible KPI values from the dashboard cards
+          document.querySelectorAll('.metric-value, .kpi-value, [data-metric]').forEach(el => {
+            const card = el.closest('.card, .metric-card, .grid-card');
+            const label = card?.querySelector('.metric-label, .card-title, h3, .card-header');
+            if (label && el.textContent.trim()) {
+              metrics[label.textContent.trim()] = el.textContent.trim();
+            }
+          });
+        } catch (e) { /* metrics are optional context */ }
+        return metrics;
+      }
+
+      function updateSuggestions() {
+        const entity = getSelectedEntity();
+        const suggestions = document.getElementById('chatSuggestions');
+        if (!suggestions) return;
+
+        const isMining = entity.toLowerCase().includes('mining');
+        const isConsolidated = entity.toLowerCase().includes('all') || entity.toLowerCase().includes('consolidated');
+
+        let chips;
+        if (isConsolidated) {
+          chips = [
+            { text: 'Which entity has the most cash?', label: 'Cash comparison' },
+            { text: 'Total group revenue?', label: 'Group revenue' },
+            { text: 'Any entities losing money?', label: 'Loss check' },
+            { text: 'Group financial health?', label: 'Health check' },
+          ];
+        } else if (isMining) {
+          chips = [
+            { text: 'Top 3 expenses?', label: 'Top expenses' },
+            { text: 'How is revenue tracking?', label: 'Revenue trend' },
+            { text: 'What is our cash position?', label: 'Cash position' },
+            { text: 'Compare to last quarter', label: 'QoQ compare' },
+          ];
+        } else {
+          chips = [
+            { text: 'Summarise this entity', label: 'Summary' },
+            { text: 'Any concerns?', label: 'Risk check' },
+            { text: 'Cash position?', label: 'Cash position' },
+            { text: 'What are the key metrics?', label: 'Key metrics' },
+          ];
+        }
+
+        suggestions.innerHTML = chips
+          .map(c => `<span class="suggestion-chip" onclick="sendSuggestion('${c.text}')">${c.label}</span>`)
+          .join('');
+      }
+
+      function showTypingIndicator() {
+        const messages = document.getElementById('chatMessages');
+        const typing = document.createElement('div');
+        typing.className = 'typing-indicator';
+        typing.id = 'typingIndicator';
+        typing.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+        messages.appendChild(typing);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      function hideTypingIndicator() {
+        const el = document.getElementById('typingIndicator');
+        if (el) el.remove();
+      }
+
+      function getAdjustedAccountBreakdowns() {
+        const reversals = window.reversalState?.data?.reversalJournals || [];
+        const rawPL = window.reversalState?.originalPL || window.dashboardData?.pl || {};
+        
+        // Build per-account adjustment map from reversal journal lines
+        const adjustments = {};
+        reversals.forEach(journal => {
+          journal.lines.forEach(line => {
+            const key = line.accountName;
+            if (!adjustments[key]) {
+              adjustments[key] = { amount: 0, category: line.plCategory };
+            }
+            adjustments[key].amount += line.lineAmount;
+          });
+        });
+
+        // Apply adjustments to raw P&L accounts
+        function adjustAccounts(rawAccounts, category) {
+          const adjusted = (rawAccounts || []).map(acc => {
+            const adj = adjustments[acc.name];
+            let adjAmount = acc.amount;
+            if (adj && adj.category === category) {
+              if (category === 'revenue') {
+                adjAmount = acc.amount + adj.amount;
+              } else {
+                adjAmount = acc.amount - adj.amount;
+              }
+            }
+            return { name: acc.name, amount: adjAmount };
+          });
+          
+          // Add any reversal accounts that aren't in the raw P&L
+          Object.entries(adjustments).forEach(([name, adj]) => {
+            if (adj.category === category && !rawAccounts?.some(a => a.name === name)) {
+              const amount = category === 'revenue' ? adj.amount : -adj.amount;
+              if (Math.abs(amount) > 0.01) {
+                adjusted.push({ name, amount });
+              }
+            }
+          });
+          
+          return adjusted.filter(a => Math.abs(a.amount) > 0.01)
+                         .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+        }
+
+        return {
+          revenueAccounts: adjustAccounts(rawPL.revenueAccounts, 'revenue'),
+          cogsAccounts: adjustAccounts(rawPL.cogsAccounts, 'cogs'),
+          expenseAccounts: adjustAccounts(rawPL.expenseAccounts, 'expense'),
+        };
+      }
+
+      async function sendChat() {
         const input = document.getElementById('chatInput');
         const message = input.value.trim();
         if (!message) return;
 
+        // Add user message
         addChatMessage(message, 'user');
+        chatHistory.push({ role: 'user', content: message });
         input.value = '';
 
-        setTimeout(() => {
-          addChatMessage("I'm analyzing your Mining financial data... This would connect to your MCP tools for real-time analysis.", 'assistant');
-        }, 1000);
+        // Show typing animation
+        showTypingIndicator();
+
+        try {
+          const entity = getSelectedEntity();
+          const period = document.getElementById('periodSelector')?.value || 'Q3';
+          const quarterInfo = getQuarterDates(period);
+          const metrics = getDashboardMetrics();
+          
+          // Include reversal state so AI knows what the user is seeing
+          const reversalContext = window.reversalState?.active ? {
+            active: true,
+            reversalCount: window.reversalState.data?.reversalCount || 0,
+            plImpact: window.reversalState.data?.plImpact || {},
+            adjustedPL: { ...window.dashboardData.pl },
+            originalPL: window.reversalState.originalPL || {},
+            adjustedRatios: {
+              currentRatio: document.getElementById('ratio-current')?.textContent || '',
+              grossMargin: document.getElementById('ratio-gross-margin')?.textContent || '',
+              netProfitMargin: document.getElementById('ratio-net-margin')?.textContent || '',
+              debtToEquity: document.getElementById('ratio-debt-equity')?.textContent || '',
+            },
+            adjustedAccounts: getAdjustedAccountBreakdowns(),
+          } : { active: false };
+
+          const response = await fetch(`${API_BASE}/api/ai-chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message,
+              context: { entity, period, metrics, quarterInfo, reversals: reversalContext },
+              history: chatHistory.slice(-6),
+            }),
+          });
+
+          hideTypingIndicator();
+
+          if (!response.ok) throw new Error(`Server returned ${response.status}`);
+
+          const data = await response.json();
+          const reply = data.response || 'Sorry, I couldn\'t generate a response.';
+
+          addChatMessage(reply, 'assistant');
+          chatHistory.push({ role: 'assistant', content: reply });
+
+        } catch (error) {
+          hideTypingIndicator();
+          addChatMessage('Sorry, I couldn\'t connect to the AI service. Check that the server is running and ANTHROPIC_API_KEY is set in Railway.', 'assistant');
+          console.error('Chat error:', error);
+        }
       }
 
       function sendSuggestion(text) {
@@ -4075,15 +4749,38 @@
         const messages = document.getElementById('chatMessages');
         const div = document.createElement('div');
         div.className = `chat-message ${type}`;
-        div.textContent = text;
+
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+
+        // Simple markdown: **bold** and newlines
+        const formatted = text
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>');
+
+        div.innerHTML = `
+          <div class="message-content">${formatted}</div>
+          <div class="message-meta">
+            <span class="message-time">${timeStr}</span>
+            ${type === 'assistant' ? '<button class="copy-btn" onclick="copyMessage(this)" title="Copy">\u{1F4CB}</button>' : ''}
+          </div>`;
+
         messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
+      }
+
+      function copyMessage(btn) {
+        const content = btn.closest('.chat-message').querySelector('.message-content').textContent;
+        navigator.clipboard.writeText(content).then(() => {
+          btn.textContent = '\u2713';
+          setTimeout(() => btn.textContent = '\u{1F4CB}', 1500);
+        });
       }
 
       function handleChatKeypress(event) {
         if (event.key === 'Enter') sendChat();
       }
-
+      
 // ========== SNAPSHOT FUNCTIONS ==========
       async function runDailySnapshot() {
         const btn = document.getElementById('snapshotBtn');
@@ -4129,6 +4826,7 @@
           btn.innerHTML = '&#x1F4F8; Snapshot';
         }
       }
+
 
       // ========== INITIALIZE ==========
       document.addEventListener('DOMContentLoaded', () => {
