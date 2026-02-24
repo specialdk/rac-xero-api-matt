@@ -1160,7 +1160,20 @@
       }
 
        /* ========== AI CHAT PANEL ========== */
-      .chat-panel {
+     .chat-panel {
+  width: 450px;
+  min-width: 450px;
+  background: var(--bg-card);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+}
+
+.chat-panel.expanded {
+  width: 600px;
+  min-width: 600px;
+}
 
       .chat-header {
         padding: var(--spacing-md);
@@ -1933,7 +1946,6 @@
           <button class="chat-send" onclick="sendChat()">&#x27A4;</button>
         </div>
       </div>
-    </div> <!-- /.main-container -->   <!-- ADD THIS LINE -->
     
     <!-- ========== DRAWER OVERLAY ========== -->
     <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
