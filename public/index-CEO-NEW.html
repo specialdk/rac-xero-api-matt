@@ -2673,6 +2673,7 @@
         const quarterInfo = getQuarterDates(period);
 
         console.log("Loading dashboard for:", entity, period, quarterInfo);
+        window.currentQuarterInfo = quarterInfo;
 
         // Toggle Inventory vs Top Expenses card based on entity
         // Mining shows Inventory (the quarry operation) + Production card
@@ -3866,25 +3867,78 @@
           ? dailyCash.map(d => parseFloat(d.cash_position))
           : [window.dashboardData.cash.totalCash || 485000];
         
-        // Get monthly revenue and profit from snapshots - use actual current value as endpoint
+        // ---- Build monthly data with current month appended ----
+        // Snapshots give us completed months. We derive the current month's
+        // MTD value by subtracting snapshot months within the period from
+        // the period total returned by the live Xero API.
+        const periodStart = window.currentQuarterInfo?.startDate;
         const actualRevenue = window.dashboardData.pl?.revenue || 0;
-        const revenueData = monthly.length > 0 
-          ? monthly.map(m => parseFloat(m.revenue))
-          : [230000, 211000, 499000, 159000, 151000, 465000, actualRevenue];
-        // Ensure last point matches actual data
-        revenueData[revenueData.length - 1] = actualRevenue;
-          
         const actualProfit = window.dashboardData.pl?.netProfit || 0;
-        const profitData = monthly.length > 0 
-          ? monthly.map(m => parseFloat(m.net_profit))
-          : [10000, -44000, 223000, -243000, 155000, -96000, actualProfit];
-        // Ensure last point matches actual data
-        profitData[profitData.length - 1] = actualProfit;
+        const actualExpenses = window.dashboardData.pl?.totalExpenses || (actualRevenue - actualProfit);
 
-        // Cash sparkline (use daily if available, otherwise monthly trend)
+        // Determine current month label
+        const now = new Date();
+        const currentMonthStr = now.toISOString().slice(0, 7); // e.g. "2026-02"
+        const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const currentMonthLabel = monthNames[now.getMonth() + 1];
+
+        // Check if current month already in snapshots
+        const hasCurrentMonth = monthly.some(m => m.period_month === currentMonthStr);
+
+        // Check if current month is within the selected period
+        const periodEnd = window.currentQuarterInfo?.endDate;
+        const currentMonthInPeriod = periodStart && periodEnd 
+          ? (currentMonthStr >= periodStart.slice(0, 7) && currentMonthStr <= periodEnd.slice(0, 7))
+          : true; // default to true if no period info
+        const shouldAppendCurrentMonth = !hasCurrentMonth && currentMonthInPeriod;
+
+        // Sum snapshot months within the period to calculate current MTD
+        let periodSnapshotRevenue = 0, periodSnapshotProfit = 0;
+        if (periodStart && !hasCurrentMonth) {
+          monthly.forEach(m => {
+            if (m.period_month >= periodStart.slice(0, 7)) {
+              periodSnapshotRevenue += parseFloat(m.revenue) || 0;
+              periodSnapshotProfit += parseFloat(m.net_profit) || 0;
+            }
+          });
+        }
+
+        const currentMonthRevenue = hasCurrentMonth ? 0 : actualRevenue - periodSnapshotRevenue;
+        const currentMonthProfit = hasCurrentMonth ? 0 : actualProfit - periodSnapshotProfit;
+        
+        // Build data arrays - keep snapshot values intact, append current month
+        let revenueData, profitData;
+        if (monthly.length > 0) {
+          revenueData = monthly.map(m => parseFloat(m.revenue));
+          profitData = monthly.map(m => parseFloat(m.net_profit));
+          if (shouldAppendCurrentMonth) {
+            labels.push(currentMonthLabel);
+            revenueData.push(currentMonthRevenue);
+            profitData.push(currentMonthProfit);
+          }
+        } else {
+          revenueData = [actualRevenue];
+          profitData = [actualProfit];
+        }
+
+        // Cash sparkline - append today's live value if daily snapshots don't include today
+        const liveCash = window.dashboardData.cash?.totalCash || 0;
         const cashLabels = dailyCash.length > 0 
           ? dailyCash.map(d => { const ds = d.snapshot_date.split('T')[0]; const mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return mn[parseInt(ds.split('-')[1]) - 1]; })
           : labels;
+        
+        // Append today if last snapshot is from a different month
+        if (dailyCash.length > 0) {
+          const lastSnapMonth = dailyCash[dailyCash.length - 1].snapshot_date.split('T')[0].slice(0, 7);
+          if (lastSnapMonth !== currentMonthStr) {
+            cashLabels.push(currentMonthLabel);
+            cashData.push(liveCash);
+          } else {
+            // Update last point to live value
+            cashData[cashData.length - 1] = liveCash;
+          }
+        }
+        
         const cashChart = new Chart(document.getElementById('sparkCash'), {
           ...sparklineConfig,
           data: {
@@ -3930,14 +3984,25 @@
         });
         document.getElementById('sparkProfit').chart = profitChart;
 
-        // Receivables sparkline (from daily snapshots)
+        // Receivables sparkline - append today's live value
+        const liveReceivables = window.dashboardData.receivables?.totalOutstanding || 0;
         const receivablesData = dailyCash.length > 0 
           ? dailyCash.map(d => parseFloat(d.receivables_total))
-          : [175000, 172000, 168000, 180000, 175000, 178000, 175754];
+          : [liveReceivables];
+        const recLabels = [...cashLabels]; // Copy cash labels (already has today appended if needed)
+        
+        // If we added today to cash but receivables array is shorter, append live value
+        if (dailyCash.length > 0 && receivablesData.length < cashLabels.length) {
+          receivablesData.push(liveReceivables);
+        } else if (dailyCash.length > 0) {
+          // Update last point to live value  
+          receivablesData[receivablesData.length - 1] = liveReceivables;
+        }
+        
         const recChart = new Chart(document.getElementById('sparkReceivables'), {
           ...sparklineConfig,
           data: {
-            labels: cashLabels.length > 1 ? cashLabels : labels,
+            labels: recLabels.length > 1 ? recLabels : labels,
             datasets: [{
               data: receivablesData.length > 1 ? receivablesData : Array(labels.length).fill(receivablesData[0]),
               borderColor: '#0078D4',
@@ -3948,13 +4013,28 @@
         });
         document.getElementById('sparkReceivables').chart = recChart;
 
-        // Inventory sparkline (static for now - no inventory in snapshots)
+        // Inventory sparkline - use monthly snapshots + live current value
+        const liveInventory = window.dashboardData.inventory?.totalValue || 0;
+        let invData, invLabels;
+        if (monthly.length > 0) {
+          // Use inventory from monthly snapshots if available, otherwise estimate from revenue pattern
+          invData = monthly.map(m => parseFloat(m.inventory_value) || liveInventory);
+          invLabels = [...labels]; // labels already includes current month from revenue logic
+          // If we appended current month for revenue, append live inventory too
+          if (shouldAppendCurrentMonth && invData.length < labels.length) {
+            invData.push(liveInventory);
+          }
+        } else {
+          invData = [liveInventory];
+          invLabels = [currentMonthLabel];
+        }
+        
         const invChart = new Chart(document.getElementById('sparkInventory'), {
           ...sparklineConfig,
           data: {
-            labels: labels,
+            labels: invLabels,
             datasets: [{
-              data: [3200000, 3350000, 3400000, 3450000, 3480000, 3490000, 3500031],
+              data: invData,
               borderColor: '#107C10',
               fill: true,
               backgroundColor: 'rgba(16, 124, 16, 0.1)'
@@ -3970,7 +4050,7 @@
         const monthly = window.historicalData?.monthly || [];
         const showYTD = document.getElementById('ytdToggle')?.checked || false;
         
-        // Build labels and data from snapshots
+        // Build labels from snapshots
         const labels = monthly.length > 0 
           ? monthly.map(m => {
               const [year, month] = m.period_month.split('-');
@@ -3979,24 +4059,53 @@
             })
           : ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
         
+        const periodStart = window.currentQuarterInfo?.startDate;
         const actualRevenue = window.dashboardData.pl?.revenue || 0;
         const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
         const actualProfit = window.dashboardData.pl?.netProfit || 0;
 
-        const revenueData = monthly.length > 0 
-          ? monthly.map(m => parseFloat(m.revenue))
-          : [180000, 120000, 95000, 80000, 60000, actualRevenue];
-        revenueData[revenueData.length - 1] = actualRevenue;
-          
-        const expenseData = monthly.length > 0 
-          ? monthly.map(m => parseFloat(m.revenue) - parseFloat(m.net_profit))
-          : [145000, 105000, 100000, 92000, 68000, actualExpenses];
-        expenseData[expenseData.length - 1] = actualExpenses;
-          
-        const profitData = monthly.length > 0 
-          ? monthly.map(m => parseFloat(m.net_profit))
-          : [35000, 15000, -5000, -12000, -8000, actualProfit];
-        profitData[profitData.length - 1] = actualProfit;
+        // Determine current month
+        const now = new Date();
+        const currentMonthStr = now.toISOString().slice(0, 7);
+        const monthNames2 = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const currentMonthLabel = monthNames2[now.getMonth() + 1];
+        const hasCurrentMonth = monthly.some(m => m.period_month === currentMonthStr);
+        
+        // Only append current month if within selected period
+        const periodEnd = window.currentQuarterInfo?.endDate;
+        const currentMonthInPeriod = periodStart && periodEnd
+          ? (currentMonthStr >= periodStart.slice(0, 7) && currentMonthStr <= periodEnd.slice(0, 7))
+          : true;
+        const shouldAppendCurrentMonth = !hasCurrentMonth && currentMonthInPeriod;
+
+        // Sum snapshot months within period for MTD calculation
+        let periodSnapRev = 0, periodSnapExp = 0, periodSnapProfit = 0;
+        if (periodStart && shouldAppendCurrentMonth) {
+          monthly.forEach(m => {
+            if (m.period_month >= periodStart.slice(0, 7)) {
+              periodSnapRev += parseFloat(m.revenue) || 0;
+              periodSnapProfit += parseFloat(m.net_profit) || 0;
+              periodSnapExp += (parseFloat(m.revenue) || 0) - (parseFloat(m.net_profit) || 0);
+            }
+          });
+        }
+
+        let revenueData, expenseData, profitData;
+        if (monthly.length > 0) {
+          revenueData = monthly.map(m => parseFloat(m.revenue));
+          expenseData = monthly.map(m => parseFloat(m.revenue) - parseFloat(m.net_profit));
+          profitData = monthly.map(m => parseFloat(m.net_profit));
+          if (shouldAppendCurrentMonth) {
+            labels.push(currentMonthLabel);
+            revenueData.push(actualRevenue - periodSnapRev);
+            expenseData.push(actualExpenses - periodSnapExp);
+            profitData.push(actualProfit - periodSnapProfit);
+          }
+        } else {
+          revenueData = [actualRevenue];
+          expenseData = [actualExpenses];
+          profitData = [actualProfit];
+        }
 
         // Calculate YTD cumulative totals
         const ytdRevenue = [], ytdExpenses = [], ytdProfit = [];
