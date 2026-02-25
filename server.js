@@ -85,21 +85,6 @@ async function initializeDatabase() {
             )
         `);
 
-
-    // Create reversal journal overrides table
-    await pool.query(`
-            CREATE TABLE IF NOT EXISTS reversal_overrides (
-                id SERIAL PRIMARY KEY,
-                tenant_id VARCHAR(255) NOT NULL,
-                journal_id VARCHAR(255) NOT NULL,
-                excluded BOOLEAN NOT NULL DEFAULT true,
-                set_by VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(tenant_id, journal_id)
-            )
-        `);
-
     console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Database tables initialized successfully");
   } catch (error) {
     console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error initializing database:", error);
@@ -5177,43 +5162,9 @@ app.get("/api/reversal-journals/:tenantId", async (req, res) => {
       }
     }
 
-   // Load overrides from database
-    let overrides = {};
-    try {
-      const overrideResult = await pool.query(
-        `SELECT journal_id, excluded, set_by FROM reversal_overrides WHERE tenant_id = $1`,
-        [req.params.tenantId]
-      );
-      overrideResult.rows.forEach(row => {
-        overrides[row.journal_id] = { excluded: row.excluded, setBy: row.set_by };
-      });
-    } catch (dbErr) {
-      console.warn("Could not load reversal overrides:", dbErr.message);
-    }
+   const netProfitAdjustment = revenueAdjustment + cogsAdjustment + expenseAdjustment;
 
-    // Apply override status to each journal (default: excluded=true for pattern-matched journals)
-    reversalJournals.forEach(j => {
-      if (overrides[j.journalID] !== undefined) {
-        j.excluded = overrides[j.journalID].excluded;
-        j.overrideSetBy = overrides[j.journalID].setBy;
-      } else {
-        j.excluded = true; // default: pattern-matched journals are excluded
-      }
-    });
-
-    // Recalculate P&L impact based ONLY on excluded journals
-    let adjRevenue = 0, adjCogs = 0, adjExpense = 0;
-    reversalJournals.filter(j => j.excluded).forEach(j => {
-      j.lines.forEach(line => {
-        if (line.plCategory === 'revenue') adjRevenue += line.lineAmount;
-        else if (line.plCategory === 'cogs') adjCogs += line.lineAmount;
-        else if (line.plCategory === 'expense') adjExpense += line.lineAmount;
-      });
-    });
-    const netProfitAdjustment = adjRevenue + adjCogs + adjExpense;
-
-    const excludedCount = reversalJournals.filter(j => j.excluded).length;
-    console.log(`Found ${reversalJournals.length} reversal journals (${excludedCount} excluded). Revenue: $${adjRevenue.toFixed(2)}, COGS: $${adjCogs.toFixed(2)}, Expense: $${adjExpense.toFixed(2)}`);
+    console.log(`Ã¢Å“â€¦ Found ${reversalJournals.length} reversal journals. Revenue: $${revenueAdjustment.toFixed(2)}, COGS: $${cogsAdjustment.toFixed(2)}, Expense: $${expenseAdjustment.toFixed(2)}`);
 
     res.json({
       tenantId: req.params.tenantId,
@@ -5221,14 +5172,13 @@ app.get("/api/reversal-journals/:tenantId", async (req, res) => {
       dateFrom,
       dateTo,
       totalManualJournals: journalList.length,
-      reversalCount: excludedCount,
-      totalReversalJournals: reversalJournals.length,
+      reversalCount: reversalJournals.length,
       plImpact: {
-        revenueAdjustment: Math.round(adjRevenue * 100) / 100,
-        cogsAdjustment: Math.round(adjCogs * 100) / 100,
-        expenseAdjustment: Math.round(adjExpense * 100) / 100,
+        revenueAdjustment: Math.round(revenueAdjustment * 100) / 100,
+        cogsAdjustment: Math.round(cogsAdjustment * 100) / 100,
+        expenseAdjustment: Math.round(expenseAdjustment * 100) / 100,
         netProfitAdjustment: Math.round(netProfitAdjustment * 100) / 100,
-        description: "P&L impact calculated from EXCLUDED journals only. Toggle individual journals to include/exclude."
+        description: "To get P&L WITHOUT reversals: add revenueAdjustment to revenue, subtract cogsAdjustment from COGS, subtract expenseAdjustment from expenses"
       },
       reversalJournals: reversalJournals,
       generatedAt: new Date().toISOString(),
@@ -5275,83 +5225,6 @@ app.post("/api/reversal-journals", async (req, res) => {
   } catch (error) {
     console.error("Reversal journals POST error:", error);
     res.status(500).json({ error: error.message });
-
-
-// ============================================================================
-// REVERSAL JOURNAL OVERRIDES - Matt can include/exclude specific journals
-// ============================================================================
-
-// Get all overrides for a tenant
-app.get("/api/reversal-overrides/:tenantId", async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT journal_id, excluded, set_by, updated_at FROM reversal_overrides WHERE tenant_id = $1`,
-      [req.params.tenantId]
-    );
-    const overrides = {};
-    result.rows.forEach(row => {
-      overrides[row.journal_id] = {
-        excluded: row.excluded,
-        setBy: row.set_by,
-        updatedAt: row.updated_at
-      };
-    });
-    res.json({ tenantId: req.params.tenantId, overrides });
-  } catch (error) {
-    console.error("Error getting reversal overrides:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Save/update an override for a specific journal
-app.post("/api/reversal-overrides", async (req, res) => {
-  try {
-    const { tenantId, journalId, excluded, setBy } = req.body;
-    if (!tenantId || !journalId) {
-      return res.status(400).json({ error: "tenantId and journalId required" });
-    }
-    
-    await pool.query(
-      `INSERT INTO reversal_overrides (tenant_id, journal_id, excluded, set_by, updated_at)
-       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-       ON CONFLICT (tenant_id, journal_id)
-       DO UPDATE SET excluded = $3, set_by = $4, updated_at = CURRENT_TIMESTAMP`,
-      [tenantId, journalId, excluded !== false, setBy || 'unknown']
-    );
-    
-    res.json({ success: true, tenantId, journalId, excluded: excluded !== false });
-  } catch (error) {
-    console.error("Error saving reversal override:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Bulk save overrides (save all at once from drawer)
-app.post("/api/reversal-overrides/bulk", async (req, res) => {
-  try {
-    const { tenantId, overrides, setBy } = req.body;
-    if (!tenantId || !overrides || !Array.isArray(overrides)) {
-      return res.status(400).json({ error: "tenantId and overrides array required" });
-    }
-    
-    let saved = 0;
-    for (const override of overrides) {
-      await pool.query(
-        `INSERT INTO reversal_overrides (tenant_id, journal_id, excluded, set_by, updated_at)
-         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-         ON CONFLICT (tenant_id, journal_id)
-         DO UPDATE SET excluded = $3, set_by = $4, updated_at = CURRENT_TIMESTAMP`,
-        [tenantId, override.journalId, override.excluded, setBy || 'unknown']
-      );
-      saved++;
-    }
-    
-    res.json({ success: true, saved });
-  } catch (error) {
-    console.error("Error bulk saving reversal overrides:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
   }
 });
 
@@ -5552,6 +5425,78 @@ app.post("/api/ai-chat", async (req, res) => {
       reportDate = quarterInfo.endDate;
     }
 
+    // —— Check if dashboard provided pre-loaded consolidated data (ALL entities view) ——
+    const consolidated = context?.consolidatedData;
+    let financialContext = "";
+
+    if (consolidated) {
+      // Use pre-loaded data from dashboard (ALL entities consolidated view)
+      console.log(`🤖 AI Chat: Using pre-loaded consolidated data for ALL entities`);
+      financialContext = `\n📊 LIVE FINANCIAL DATA FOR: ALL RAC ENTITIES (Consolidated)\n`;
+      financialContext += `Period: ${period}\n`;
+      financialContext += `Data from dashboard: ${new Date().toLocaleString("en-AU", { timeZone: "Australia/Darwin" })}\n\n`;
+
+      financialContext += `💰 CASH POSITION:\n`;
+      financialContext += `Total Cash: ${consolidated.cash?.total || 'N/A'}\n`;
+      if (consolidated.cash?.bankAccounts?.length > 0) {
+        consolidated.cash.bankAccounts.forEach(acc => {
+          financialContext += `  • ${acc.name || acc.accountName || 'Account'}: $${(acc.balance || 0).toLocaleString("en-AU")}\n`;
+        });
+      }
+      financialContext += `\n`;
+
+      if (consolidated.pl) {
+        const pl = consolidated.pl;
+        financialContext += `📈 PROFIT & LOSS (Consolidated):\n`;
+        financialContext += `  Revenue: $${Number(pl.revenue || 0).toLocaleString("en-AU")}\n`;
+        financialContext += `  Cost of Sales (COGS): $${Number(pl.cogs || 0).toLocaleString("en-AU")}\n`;
+        financialContext += `  Gross Profit: $${Number(pl.gross || 0).toLocaleString("en-AU")}\n`;
+        financialContext += `  Operating Expenses: $${Number(pl.opex || 0).toLocaleString("en-AU")}\n`;
+        financialContext += `  Net Profit: $${Number(pl.netProfit || 0).toLocaleString("en-AU")}\n`;
+        if (pl.entityBreakdown && pl.entityBreakdown.length > 0) {
+          financialContext += `  Entity Breakdown:\n`;
+          pl.entityBreakdown.forEach(e => {
+            financialContext += `    - ${e.entity || e.name}: Revenue $${Number(e.revenue || 0).toLocaleString("en-AU")}, Expenses $${Number(e.expenses || 0).toLocaleString("en-AU")}, Net $${Number(e.netProfit || 0).toLocaleString("en-AU")}\n`;
+          });
+        }
+        financialContext += `\n`;
+      }
+
+      if (consolidated.balance) {
+        financialContext += `🏦 BALANCE SHEET (Consolidated):\n`;
+        financialContext += `  Total Assets: ${consolidated.balance.totalAssets}\n`;
+        financialContext += `  Total Liabilities: ${consolidated.balance.totalLiabilities}\n`;
+        financialContext += `  Total Equity: ${consolidated.balance.totalEquity}\n\n`;
+      }
+
+      if (consolidated.receivables) {
+        const ar = consolidated.receivables;
+        financialContext += `📋 AGED RECEIVABLES:\n`;
+        financialContext += `  Current (0-30 days): ${ar.current}\n`;
+        financialContext += `  31-60 days: ${ar.days31_60}\n`;
+        financialContext += `  61-90 days: ${ar.days61_90}\n`;
+        financialContext += `  90+ days: ${ar.days90plus}\n`;
+        financialContext += `  Total: ${ar.total}\n\n`;
+      }
+
+      if (consolidated.ratios) {
+        const r = consolidated.ratios;
+        financialContext += `📊 FINANCIAL RATIOS:\n`;
+        financialContext += `  Current Ratio: ${r.currentRatio}\n`;
+        financialContext += `  Gross Margin: ${r.grossMargin}\n`;
+        financialContext += `  Net Profit Margin: ${r.netProfitMargin}\n`;
+        financialContext += `  Debt to Equity: ${r.debtToEquity}\n\n`;
+      }
+
+      if (consolidated.topCustomers && consolidated.topCustomers.length > 0) {
+        financialContext += `👥 TOP CUSTOMERS:\n`;
+        consolidated.topCustomers.forEach((c, i) => {
+          financialContext += `  ${i + 1}. ${c.name}: ${c.value}\n`;
+        });
+        financialContext += `\n`;
+      }
+
+    } else {
     // â”€â”€ Fetch REAL financial data from our own API endpoints â”€â”€
     console.log(`ðŸ¤– AI Chat: Fetching live data for "${entityName}" (${period}, ${periodMonths}mo to ${reportDate || 'today'})...`);
 
@@ -5580,7 +5525,7 @@ app.post("/api/ai-chat", async (req, res) => {
     ]);
 
     // â”€â”€ Build rich financial context for the AI â”€â”€
-    let financialContext = `\nðŸ“Š LIVE FINANCIAL DATA FOR: ${entityName}\n`;
+    financialContext = `\nðŸ“Š LIVE FINANCIAL DATA FOR: ${entityName}\n`;
     financialContext += `Period: ${period}\n`;
     financialContext += `Data fetched: ${new Date().toLocaleString("en-AU", { timeZone: "Australia/Darwin" })}\n\n`;
 
@@ -5682,6 +5627,7 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `âš ï¸ Data not available: ${unavailable.join(", ")}\n`;
     }
 
+    } // end else (non-consolidated fetch path)
         // Reversal adjustments context
     const reversals = context?.reversals;
     if (reversals?.active) {
@@ -5736,14 +5682,16 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `\nðŸ“‹ Note: Reversal filter is OFF â€” figures include all journal entries including reversals.\n\n`;
     }
 
-    // Debug: show what data sources succeeded
-    console.log(`ðŸ¤– AI Chat: Available data - Cash: ${!!cashData && !cashData?.error}, P&L: ${!!plData?.summary}, Invoices: ${!!invoicesData && !invoicesData?.error}, Expenses: ${!!expenseData?.analysis}, Ratios: ${!!ratiosData?.ratios}`);
-    if (unavailable.length > 0) {
-      console.log(`ðŸ¤– AI Chat: UNAVAILABLE: ${unavailable.join(', ')}`);
+    // Debug: show what data sources were used
+    if (!consolidated) {
+      console.log(`🤖 AI Chat: Available data - Cash: ${!!cashData && !cashData?.error}, P&L: ${!!plData?.summary}, Invoices: ${!!invoicesData && !invoicesData?.error}, Expenses: ${!!expenseData?.analysis}, Ratios: ${!!ratiosData?.ratios}`);
+      if (unavailable.length > 0) {
+        console.log(`🤖 AI Chat: UNAVAILABLE: ${unavailable.join(', ')}`);
+      }
     }
-    console.log(`ðŸ¤– AI Chat: Context length: ${financialContext.length} chars`);
+    console.log(`🤖 AI Chat: Context length: ${financialContext.length} chars`);
 
-    console.log(`ðŸ¤– AI Chat: Data fetched. Building prompt...`);
+    console.log(`🤖 AI Chat: Data ready. Building prompt...`);
 
     // â”€â”€ Build system prompt with REAL data â”€â”€
     const systemPrompt = `You are an AI financial analyst embedded in the RAC (Rirratjingu Aboriginal Corporation) CEO Dashboard.

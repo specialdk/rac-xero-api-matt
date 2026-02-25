@@ -85,9 +85,24 @@ async function initializeDatabase() {
             )
         `);
 
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Database tables initialized successfully");
+
+    // Create reversal journal overrides table
+    await pool.query(`
+            CREATE TABLE IF NOT EXISTS reversal_overrides (
+                id SERIAL PRIMARY KEY,
+                tenant_id VARCHAR(255) NOT NULL,
+                journal_id VARCHAR(255) NOT NULL,
+                excluded BOOLEAN NOT NULL DEFAULT true,
+                set_by VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tenant_id, journal_id)
+            )
+        `);
+
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Database tables initialized successfully");
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error initializing database:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error initializing database:", error);
   }
 }
 
@@ -117,9 +132,9 @@ const tokenStorage = {
           Date.now() + tokenData.expires_in * 1000,
         ]
       );
-      console.log(`ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Stored Xero token for: ${tenantName}`);
+      console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Stored Xero token for: ${tenantName}`);
     } catch (error) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error storing Xero token:", error);
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error storing Xero token:", error);
     }
   },
 
@@ -214,7 +229,7 @@ const tokenStorage = {
         error: Date.now() > row.expires_at ? "Token expired" : null,
       }));
     } catch (error) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting Xero connections:", error);
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting Xero connections:", error);
       return [];
     }
   },
@@ -244,10 +259,10 @@ const tokenStorage = {
         ]
       );
       console.log(
-        `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Stored ApprovalMax token for ${organizations.length} organizations`
+        `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Stored ApprovalMax token for ${organizations.length} organizations`
       );
     } catch (error) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error storing ApprovalMax token:", error);
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error storing ApprovalMax token:", error);
     }
   },
 
@@ -267,7 +282,7 @@ const tokenStorage = {
 
       // Check if token is expired
       if (Date.now() > token.expires_at) {
-        console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â ApprovalMax token expired");
+        console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ApprovalMax token expired");
         return null;
       }
 
@@ -279,7 +294,7 @@ const tokenStorage = {
         lastSeen: token.last_seen.toISOString(),
       };
     } catch (error) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting ApprovalMax token:", error);
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting ApprovalMax token:", error);
       return null;
     }
   },
@@ -331,16 +346,16 @@ app.get("/auth", async (req, res) => {
       authUrl.searchParams.set("redirect_uri", APPROVALMAX_REDIRECT_URI);
       authUrl.searchParams.set("state", state);
 
-      console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¯ Redirecting to ApprovalMax OAuth:", authUrl.toString());
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ Redirecting to ApprovalMax OAuth:", authUrl.toString());
       res.redirect(authUrl.toString());
     } else {
       // Existing Xero OAuth
       const consentUrl = await xero.buildConsentUrl();
-      console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¯ Redirecting to Xero OAuth:", consentUrl);
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ Redirecting to Xero OAuth:", consentUrl);
       res.redirect(consentUrl);
     }
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error in /auth:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error in /auth:", error);
     res
       .status(500)
       .json({ error: "Authorization failed", details: error.message });
@@ -353,26 +368,26 @@ app.get("/callback", async (req, res) => {
     const { code, state, error } = req.query;
 
     if (error) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ OAuth error:", error);
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ OAuth error:", error);
       return res.redirect("/?error=oauth_failed");
     }
 
     if (!code) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ No authorization code received");
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ No authorization code received");
       return res.redirect("/?error=no_code");
     }
 
-    console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Processing Xero callback...");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Processing Xero callback...");
     const tokenSet = await xero.apiCallback(req.url);
 
     if (!tokenSet || !tokenSet.access_token) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ No access token received from Xero");
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ No access token received from Xero");
       return res.redirect("/?error=no_token");
     }
 
     // Get tenant information
     const tenants = await xero.updateTenants(false, tokenSet);
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Xero tenants received:", tenants.length);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Xero tenants received:", tenants.length);
 
     // Store tokens in database (instead of memory)
     for (const tenant of tenants) {
@@ -384,13 +399,13 @@ app.get("/callback", async (req, res) => {
     }
 
     console.log(
-      "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Xero tokens stored in database for",
+      "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Xero tokens stored in database for",
       tenants.length,
       "tenants"
     );
     res.redirect("/?success=xero_connected");
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error in Xero callback:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error in Xero callback:", error);
     res.redirect("/?error=callback_failed");
   }
 });
@@ -404,23 +419,23 @@ app.get("/callback/approvalmax", async (req, res) => {
   try {
     const { code, state, error } = req.query;
 
-    console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¯ ApprovalMax callback received:", {
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ ApprovalMax callback received:", {
       code: code?.substring(0, 20) + "...",
       state,
       error,
     });
 
     if (error) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ ApprovalMax OAuth error:", error);
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ApprovalMax OAuth error:", error);
       return res.redirect("/?error=approvalmax_oauth_failed");
     }
 
     if (!code) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ No authorization code received from ApprovalMax");
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ No authorization code received from ApprovalMax");
       return res.redirect("/?error=approvalmax_no_code");
     }
 
-    console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Exchanging ApprovalMax authorization code for tokens...");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Exchanging ApprovalMax authorization code for tokens...");
 
     const redirectUri =
       APPROVALMAX_REDIRECT_URI ||
@@ -446,7 +461,7 @@ app.get("/callback/approvalmax", async (req, res) => {
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok || !tokenData.access_token) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ ApprovalMax token exchange failed:", {
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ApprovalMax token exchange failed:", {
         status: tokenResponse.status,
         error: tokenData.error,
         description: tokenData.error_description,
@@ -458,10 +473,10 @@ app.get("/callback/approvalmax", async (req, res) => {
       );
     }
 
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ApprovalMax tokens received successfully");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ ApprovalMax tokens received successfully");
 
     // Get organization information
-    console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Fetching ApprovalMax organizations...");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Fetching ApprovalMax organizations...");
     const orgsResponse = await fetch(`${APPROVALMAX_CONFIG.apiUrl}/companies`, {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
@@ -473,24 +488,24 @@ app.get("/callback/approvalmax", async (req, res) => {
     if (orgsResponse.ok) {
       organizations = await orgsResponse.json();
       console.error(
-        "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ApprovalMax organizations received:",
+        "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ ApprovalMax organizations received:",
         organizations.length
       );
     } else {
-      console.warn("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Failed to fetch organizations:", orgsResponse.status);
+      console.warn("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Failed to fetch organizations:", orgsResponse.status);
     }
 
     // Store tokens in database (instead of memory)
     await tokenStorage.storeApprovalMaxToken(tokenData, organizations);
 
     console.error(
-      "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ApprovalMax tokens stored in database for",
+      "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ ApprovalMax tokens stored in database for",
       organizations.length,
       "organizations"
     );
     res.redirect("/?success=approvalmax_connected");
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error in ApprovalMax callback:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error in ApprovalMax callback:", error);
     res.redirect("/?error=approvalmax_callback_failed");
   }
 });
@@ -525,13 +540,13 @@ app.get("/api/connection-status", async (req, res) => {
     }
 
     console.error(
-      "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€¦Ã‚Â  Connection status from database:",
+      "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â  Connection status from database:",
       connections.length,
       "total connections"
     );
     res.json(connections);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting connection status:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting connection status:", error);
     res.status(500).json({ error: "Failed to get connection status" });
   }
 });
@@ -570,7 +585,7 @@ app.get("/api/cash-position/:tenantId", async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting cash position:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting cash position:", error);
     res.status(500).json({ error: "Failed to get cash position" });
   }
 });
@@ -602,7 +617,7 @@ app.get("/api/receivables/:tenantId", async (req, res) => {
 
     res.json({ totalReceivables });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting receivables:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting receivables:", error);
     res.status(500).json({ error: "Failed to get receivables" });
   }
 });
@@ -646,7 +661,7 @@ app.get("/api/outstanding-invoices/:tenantId", async (req, res) => {
       }))
     );
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting outstanding invoices:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting outstanding invoices:", error);
     res.status(500).json({ error: "Failed to get outstanding invoices" });
   }
 });
@@ -677,7 +692,7 @@ app.get("/api/contacts/:tenantId", async (req, res) => {
       }))
     );
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting contacts:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting contacts:", error);
     res.status(500).json({ error: "Failed to get contacts" });
   }
 });
@@ -704,7 +719,7 @@ app.get("/api/approvalmax/companies", async (req, res) => {
     const companies = await response.json();
     res.json(companies);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting ApprovalMax companies:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting ApprovalMax companies:", error);
     res.status(500).json({ error: "Failed to get companies" });
   }
 });
@@ -712,7 +727,7 @@ app.get("/api/approvalmax/companies", async (req, res) => {
 // Consolidated data endpoint - UPDATED WITH DATABASE
 app.get("/api/consolidated", async (req, res) => {
   try {
-    console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Loading consolidated data from database...");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Loading consolidated data from database...");
 
     let totalCash = 0;
     let totalReceivables = 0;
@@ -770,7 +785,7 @@ app.get("/api/consolidated", async (req, res) => {
         }
       } catch (error) {
         console.error(
-          `ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error loading data for tenant ${connection.tenantId}:`,
+          `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error loading data for tenant ${connection.tenantId}:`,
           error
         );
       }
@@ -804,7 +819,7 @@ app.get("/api/consolidated", async (req, res) => {
           });
         }
       } catch (error) {
-        console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error loading ApprovalMax data:", error);
+        console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error loading ApprovalMax data:", error);
       }
     }
 
@@ -819,7 +834,7 @@ app.get("/api/consolidated", async (req, res) => {
       lastUpdated: new Date().toISOString(),
     };
 
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Consolidated data loaded from database:", {
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Consolidated data loaded from database:", {
       xeroEntities: tenantData.length,
       approvalMaxOrgs: approvalData.length,
       totalCash,
@@ -828,7 +843,7 @@ app.get("/api/consolidated", async (req, res) => {
 
     res.json(consolidatedData);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error loading consolidated data:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error loading consolidated data:", error);
     res.status(500).json({ error: "Failed to load consolidated data" });
   }
 });
@@ -843,7 +858,7 @@ const enhancedTokenStorage = {
   // Refresh a specific Xero token
   async refreshXeroToken(tenantId) {
     try {
-      console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Attempting to refresh token for tenant: ${tenantId}`);
+      console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Attempting to refresh token for tenant: ${tenantId}`);
 
       // Get current token from database
       const result = await pool.query(
@@ -852,14 +867,14 @@ const enhancedTokenStorage = {
       );
 
       if (result.rows.length === 0) {
-        console.log(`ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ No token found for tenant: ${tenantId}`);
+        console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ No token found for tenant: ${tenantId}`);
         return { success: false, error: "Token not found" };
       }
 
       const storedToken = result.rows[0];
 
       if (!storedToken.refresh_token) {
-        console.log(`ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ No refresh token available for tenant: ${tenantId}`);
+        console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ No refresh token available for tenant: ${tenantId}`);
         return { success: false, error: "No refresh token" };
       }
 
@@ -882,7 +897,7 @@ const enhancedTokenStorage = {
 
       const newTokenSet = await refreshResponse.json();
       console.log(
-        `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token refreshed successfully for: ${storedToken.tenant_name}`
+        `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Token refreshed successfully for: ${storedToken.tenant_name}`
       );
 
       // Store the new token for ALL Xero tenants (they share one OAuth token set)
@@ -912,7 +927,7 @@ const enhancedTokenStorage = {
         allTenantsUpdated: true,
       };
     } catch (error) {
-      console.error(`ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error refreshing token for ${tenantId}:`, error);
+      console.error(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error refreshing token for ${tenantId}:`, error);
       return {
         success: false,
         error: error.message,
@@ -926,7 +941,7 @@ const enhancedTokenStorage = {
   // Refresh all Xero tokens that are close to expiring
   async refreshAllExpiringTokens() {
     try {
-      console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Checking for tokens that need refresh...");
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Checking for tokens that need refresh...");
 
       // Get tokens expiring within 10 minutes OR already expired within last 24 hours
       const tenMinutesFromNow = Date.now() + 10 * 60 * 1000;
@@ -942,7 +957,7 @@ const enhancedTokenStorage = {
       );
 
       if (result.rows.length === 0) {
-        console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ No tokens need refreshing");
+        console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ No tokens need refreshing");
         return { refreshed: 0, failed: 0, results: [] };
       }
 
@@ -966,14 +981,14 @@ const enhancedTokenStorage = {
         } else {
           failed++;
           console.log(
-            `ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Failed to refresh: ${token.tenant_name} - ${result.error}`
+            `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Failed to refresh: ${token.tenant_name} - ${result.error}`
           );
         }
       }
 
       return { refreshed, failed, results: refreshResults };
     } catch (error) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error in refreshAllExpiringTokens:", error);
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error in refreshAllExpiringTokens:", error);
       return { refreshed: 0, failed: 0, error: error.message };
     }
   },
@@ -1002,7 +1017,7 @@ const enhancedTokenStorage = {
         ),
       }));
     } catch (error) {
-      console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting expiring tokens:", error);
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting expiring tokens:", error);
       return [];
     }
   },
@@ -1012,7 +1027,7 @@ const enhancedTokenStorage = {
 let autoRefreshInterval;
 
 function startAutoRefresh() {
-  console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¡ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Starting auto token refresh system...");
+  console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ Starting auto token refresh system...");
 
   // Run immediately
   enhancedTokenStorage.refreshAllExpiringTokens();
@@ -1023,7 +1038,7 @@ function startAutoRefresh() {
 
     if (result.refreshed > 0) {
       console.error(
-        `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Auto-refresh completed: ${result.refreshed} tokens refreshed, ${result.failed} failed`
+        `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Auto-refresh completed: ${result.refreshed} tokens refreshed, ${result.failed} failed`
       );
     }
   }, 3 * 60 * 1000); // Every 3 minutes
@@ -1033,7 +1048,7 @@ function stopAutoRefresh() {
   if (autoRefreshInterval) {
     clearInterval(autoRefreshInterval);
     autoRefreshInterval = null;
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¹ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Auto token refresh stopped");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Auto token refresh stopped");
   }
 }
 
@@ -1058,7 +1073,7 @@ app.get("/api/token-status", async (req, res) => {
 
     res.json(tokenStatus);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Token status error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Token status error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1103,7 +1118,7 @@ app.get("/api/connection-status-enhanced", async (req, res) => {
 
     res.json(enhancedConnections);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting enhanced connection status:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting enhanced connection status:", error);
     res.status(500).json({ error: "Failed to get enhanced connection status" });
   }
 });
@@ -1220,7 +1235,7 @@ app.post("/api/budget-summary", async (req, res) => {
 // API endpoint to manually trigger refresh
 app.post("/api/refresh-tokens", async (req, res) => {
   try {
-    console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Manual token refresh requested");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Manual token refresh requested");
     const result = await enhancedTokenStorage.refreshAllExpiringTokens();
 
     res.json({
@@ -1231,7 +1246,7 @@ app.post("/api/refresh-tokens", async (req, res) => {
       message: `Refreshed ${result.refreshed} tokens, ${result.failed} failed`,
     });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Manual refresh error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Manual refresh error:", error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1278,7 +1293,7 @@ app.post("/api/trial-balance", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Trial balance POST API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Trial balance POST API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1362,7 +1377,7 @@ app.post("/api/cash-position", async (req, res) => {
       bankAccounts,
     });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Cash position API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Cash position API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1414,7 +1429,7 @@ app.post("/api/profit-loss-summary", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ P&L summary API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ P&L summary API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1460,7 +1475,7 @@ app.post("/api/outstanding-invoices", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Outstanding invoices API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Outstanding invoices API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1505,7 +1520,7 @@ app.post("/api/financial-ratios", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Financial ratios API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Financial ratios API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1531,7 +1546,7 @@ app.post("/api/consolidated-trial-balance", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Consolidated trial balance API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Consolidated trial balance API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1580,7 +1595,7 @@ app.post("/api/journal-entries", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Journal entries API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Journal entries API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1629,7 +1644,7 @@ app.post("/api/equity-analysis", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Equity analysis API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Equity analysis API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1683,7 +1698,7 @@ app.post("/api/account-history", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Account history API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Account history API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1726,7 +1741,7 @@ app.post("/api/aged-receivables", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Aged receivables API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Aged receivables API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1773,7 +1788,7 @@ app.post("/api/expense-analysis", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Expense analysis API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Expense analysis API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1818,7 +1833,7 @@ app.post("/api/intercompany-transactions", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Intercompany transactions API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Intercompany transactions API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1867,7 +1882,7 @@ app.post("/api/chart-of-accounts", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Chart of accounts API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Chart of accounts API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1914,7 +1929,7 @@ app.post("/api/find-unbalanced", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Find unbalanced API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Find unbalanced API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1969,7 +1984,7 @@ app.post("/api/compare-periods", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Compare periods API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Compare periods API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1983,9 +1998,9 @@ async function initializeAutoRefresh() {
     // Start the auto-refresh system
     startAutoRefresh();
 
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Auto token refresh system initialized");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Auto token refresh system initialized");
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Failed to initialize auto-refresh:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Failed to initialize auto-refresh:", error);
   }
 }
 
@@ -2867,7 +2882,7 @@ app.get("/api/health-check", async (req, res) => {
 // DATABASE DEBUG endpoint - Add this to see what's stored
 app.get("/api/debug/database", async (req, res) => {
   try {
-    console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â DEBUG: Checking database contents...");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â DEBUG: Checking database contents...");
 
     // Get all tokens from database
     const result = await pool.query(
@@ -2884,7 +2899,7 @@ app.get("/api/debug/database", async (req, res) => {
       last_seen: row.last_seen,
     }));
 
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ DEBUG: Database tokens:", tokens);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ DEBUG: Database tokens:", tokens);
 
     res.json({
       totalTokens: tokens.length,
@@ -2893,7 +2908,7 @@ app.get("/api/debug/database", async (req, res) => {
       currentTimestamp: now,
     });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ DEBUG: Database error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ DEBUG: Database error:", error);
     res.status(500).json({
       error: "Database query failed",
       details: error.message,
@@ -3143,7 +3158,7 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
   }
 });
 
-// Shared P&L section categorizer Ã¢â‚¬â€ ONE place to maintain
+// Shared P&L section categorizer ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ONE place to maintain
 // Catches all Xero section types; defaults non-revenue to expense (conservative)
 function categorizeSection(sectionTitle) {
   const title = sectionTitle.toLowerCase();
@@ -3293,7 +3308,7 @@ app.post("/api/yoy-analysis", async (req, res) => {
 app.get("/api/trial-balance/:tenantId", async (req, res) => {
   try {
     console.log(
-      `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â Getting PROPER trial balance for tenant: ${req.params.tenantId}`
+      `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Getting PROPER trial balance for tenant: ${req.params.tenantId}`
     );
 
     const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
@@ -3307,7 +3322,7 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
 
     // Get date from query parameter or use today
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
-    console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Report date: ${reportDate}`);
+    console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Report date: ${reportDate}`);
 
     // Get Balance Sheet report for specified date
     const balanceSheetResponse = await xero.accountingApi.getReportBalanceSheet(
@@ -3397,7 +3412,7 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
 
     // Get P&L data for the same date
     try {
-      console.error("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Fetching P&L report for Revenue/Expenses...");
+      console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Fetching P&L report for Revenue/Expenses...");
       const profitLossResponse =
         await xero.accountingApi.getReportProfitAndLoss(
           req.params.tenantId,
@@ -3451,7 +3466,7 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
         }
       });
     } catch (plError) {
-      console.errorlog("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Could not fetch P&L data:", plError.message);
+      console.errorlog("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Could not fetch P&L data:", plError.message);
     }
 
     // Sort and calculate balance check
@@ -3483,7 +3498,7 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
     };
 
     console.log(
-      `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ PROPER Trial balance completed for ${tokenData.tenantName} as at ${reportDate}:`,
+      `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ PROPER Trial balance completed for ${tokenData.tenantName} as at ${reportDate}:`,
       {
         processedAccounts: processedAccounts,
         totalAssets: trialBalance.totals.totalAssets,
@@ -3504,7 +3519,7 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
       dataSource: "Balance Sheet + P&L Reports",
     });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error getting PROPER trial balance:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error getting PROPER trial balance:", error);
     res.status(500).json({
       error: "Failed to get trial balance",
       details: error.message,
@@ -3519,7 +3534,7 @@ app.get("/api/consolidated-trial-balance", async (req, res) => {
     // Get date from query parameter or use today
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
     console.log(
-      `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Loading HIERARCHICAL consolidated trial balance for ${reportDate}...`
+      `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Loading HIERARCHICAL consolidated trial balance for ${reportDate}...`
     );
 
     const xeroConnections = await tokenStorage.getAllXeroConnections();
@@ -3527,7 +3542,7 @@ app.get("/api/consolidated-trial-balance", async (req, res) => {
       (conn) => conn.connected
     );
 
-    console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¢ Found ${connectedXeroEntities.length} connected entities`);
+    console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Found ${connectedXeroEntities.length} connected entities`);
 
     const hierarchicalTrialBalance = {
       consolidated: {
@@ -3559,7 +3574,7 @@ app.get("/api/consolidated-trial-balance", async (req, res) => {
     for (const connection of connectedXeroEntities) {
       try {
         console.log(
-          `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Processing entity: ${connection.tenantName} for ${reportDate}`
+          `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ Processing entity: ${connection.tenantName} for ${reportDate}`
         );
 
         const trialBalanceResponse = await fetch(
@@ -3677,12 +3692,12 @@ app.get("/api/consolidated-trial-balance", async (req, res) => {
           totals.totalExpenses += entityTotals.totalExpenses;
 
           console.log(
-            `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Added ${connection.tenantName} to hierarchical structure for ${reportDate}`
+            `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Added ${connection.tenantName} to hierarchical structure for ${reportDate}`
           );
         }
       } catch (error) {
         console.error(
-          `ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error loading trial balance for ${connection.tenantId}:`,
+          `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error loading trial balance for ${connection.tenantId}:`,
           error
         );
       }
@@ -3726,7 +3741,7 @@ app.get("/api/consolidated-trial-balance", async (req, res) => {
     };
 
     console.log(
-      `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Hierarchical consolidated trial balance completed for ${reportDate}:`,
+      `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Hierarchical consolidated trial balance completed for ${reportDate}:`,
       {
         companies: hierarchicalTrialBalance.companies.length,
         totalAccounts: hierarchicalTrialBalance.summary.totalAccounts,
@@ -3739,7 +3754,7 @@ app.get("/api/consolidated-trial-balance", async (req, res) => {
     res.json(hierarchicalTrialBalance);
   } catch (error) {
     console.error(
-      "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error loading hierarchical consolidated trial balance:",
+      "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error loading hierarchical consolidated trial balance:",
       error
     );
     res.status(500).json({
@@ -3770,7 +3785,7 @@ app.get("/api/debug/simple/:tenantId", async (req, res) => {
       firstAccountKeys: firstThree[0] ? Object.keys(firstThree[0]) : [],
     });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Simple debug error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Simple debug error:", error);
     res
       .status(500)
       .json({ error: "Simple debug failed", details: error.message });
@@ -3797,7 +3812,7 @@ app.get("/api/trial-balance-fixed/:tenantId", async (req, res) => {
       today
     );
 
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Got Balance Sheet report");
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Got Balance Sheet report");
 
     res.json({
       message: "Testing Balance Sheet approach",
@@ -3806,7 +3821,7 @@ app.get("/api/trial-balance-fixed/:tenantId", async (req, res) => {
         balanceSheetResponse.body.reports?.[0]?.rows?.slice(0, 10),
     });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Error:", error);
     res
       .status(500)
       .json({ error: "Failed", details: error.message || "No message" });
@@ -3999,7 +4014,7 @@ app.post("/api/profit-loss-summary", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ P&L summary API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ P&L summary API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -4499,9 +4514,9 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
     const reportDate = req.query.date || new Date().toISOString().split("T")[0];
 
     console.log(
-      `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ DEBUG: Starting monthly breakdown for ${tokenData.tenantName}`
+      `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ DEBUG: Starting monthly breakdown for ${tokenData.tenantName}`
     );
-    console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ DEBUG: Report date: ${reportDate}`);
+    console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ DEBUG: Report date: ${reportDate}`);
 
     // Use IDENTICAL date logic to YoY analysis
     const currentPeriodEnd = new Date(reportDate);
@@ -4510,7 +4525,7 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
     currentPeriodStart.setDate(currentPeriodStart.getDate() + 1);
 
     console.log(
-      `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ DEBUG: YoY period: ${
+      `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ DEBUG: YoY period: ${
         currentPeriodStart.toISOString().split("T")[0]
       } to ${currentPeriodEnd.toISOString().split("T")[0]}`
     );
@@ -4572,7 +4587,7 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
     for (const period of monthlyPeriods) {
       try {
         console.log(
-          `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€¦Ã‚Â  DEBUG: Fetching P&L for ${period.label} (${period.startDate} to ${period.endDate})`
+          `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â  DEBUG: Fetching P&L for ${period.label} (${period.startDate} to ${period.endDate})`
         );
 
         const response = await xero.accountingApi.getReportProfitAndLoss(
@@ -4597,7 +4612,7 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
         totalExpenses += monthlyPL.totalExpenses;
 
         console.log(
-          `  ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ${
+          `  ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ ${
             period.label
           }: Rev $${monthlyPL.totalRevenue.toLocaleString()}, Exp $${monthlyPL.totalExpenses.toLocaleString()}, Profit $${(
             monthlyPL.totalRevenue - monthlyPL.totalExpenses
@@ -4605,7 +4620,7 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
         );
       } catch (monthError) {
         console.error(
-          `ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ ERROR loading month ${period.label}:`,
+          `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ERROR loading month ${period.label}:`,
           monthError.message
         );
 
@@ -4628,7 +4643,7 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
       totalNetProfit: totalRevenue - totalExpenses,
     };
 
-    console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€¦Ã‚Â  DEBUG: Monthly breakdown totals:`);
+    console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â  DEBUG: Monthly breakdown totals:`);
     console.log(
       `  Total Revenue: $${monthlyTotals.totalRevenue.toLocaleString()}`
     );
@@ -4677,7 +4692,7 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
             Math.abs(monthlyTotals.totalNetProfit - currentPeriod.profit) < 100,
         };
 
-        console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â DEBUG: YoY Reconciliation Check:`);
+        console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â DEBUG: YoY Reconciliation Check:`);
         console.log(
           `  YoY Revenue: $${yoyComparison.yoyRevenue.toLocaleString()}, Monthly Sum: $${monthlyTotals.totalRevenue.toLocaleString()}, Variance: $${yoyComparison.revenueVariance.toLocaleString()}`
         );
@@ -4686,16 +4701,16 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
         );
         console.log(
           `  Revenue Reconciled: ${
-            yoyComparison.revenueReconciled ? "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" : "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢"
+            yoyComparison.revenueReconciled ? "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" : "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢"
           }`
         );
         console.log(
-          `  Profit Reconciled: ${yoyComparison.profitReconciled ? "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" : "ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢"}`
+          `  Profit Reconciled: ${yoyComparison.profitReconciled ? "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" : "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢"}`
         );
       }
     } catch (yoyError) {
       console.warn(
-        `ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Could not fetch YoY data for reconciliation:`,
+        `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Could not fetch YoY data for reconciliation:`,
         yoyError.message
       );
     }
@@ -4734,7 +4749,7 @@ app.get("/api/monthly-breakdown/:tenantId", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ ERROR in monthly breakdown:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ERROR in monthly breakdown:", error);
     res.status(500).json({
       error: "Failed to get monthly breakdown",
       details: error.message,
@@ -4781,7 +4796,7 @@ app.post("/api/monthly-breakdown", async (req, res) => {
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Monthly breakdown API error:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Monthly breakdown API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -4842,7 +4857,7 @@ app.get("/api/historical-metrics/:organizationName", async (req, res) => {
       generatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Error loading historical metrics:", error);
+    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error loading historical metrics:", error);
     res.status(500).json({ 
       error: "Failed to load historical metrics", 
       details: error.message 
@@ -4869,7 +4884,7 @@ function getOrgShortName(tenantName) {
 
 app.post("/api/backfill-monthly-balances", async (req, res) => {
   try {
-    console.log("ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Starting monthly balance backfill...");
+    console.log("ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ Starting monthly balance backfill...");
     
     const monthEndDates = [
       '2025-07-31', '2025-08-31', '2025-09-30',
@@ -4885,8 +4900,8 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
       return res.status(400).json({ error: "No active Xero connections. Please re-authenticate first." });
     }
     
-    console.log(`ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Found ${activeConnections.length} active connections`);
-    console.log(`ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦ Backfilling ${monthEndDates.length} month-end dates`);
+    console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ Found ${activeConnections.length} active connections`);
+    console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Backfilling ${monthEndDates.length} month-end dates`);
     
     const results = [];
     let successCount = 0;
@@ -4904,7 +4919,7 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
           );
           
           if (existing.rows.length > 0) {
-            console.log(`ÃƒÂ¢Ã‚ÂÃ‚Â­ÃƒÂ¯Ã‚Â¸Ã‚Â Skipping ${orgShortName} @ ${dateStr} - already exists`);
+            console.log(`ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Skipping ${orgShortName} @ ${dateStr} - already exists`);
             results.push({ org: orgShortName, date: dateStr, status: 'skipped' });
             continue;
           }
@@ -4981,7 +4996,7 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
             assets: Math.round(totalAssets * 100) / 100
           });
           
-          console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ${orgShortName} @ ${dateStr}: Cash=$${cashPosition.toLocaleString()}, Recv=$${receivablesTotal.toLocaleString()}, Assets=$${totalAssets.toLocaleString()}`);
+          console.log(`ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ${orgShortName} @ ${dateStr}: Cash=$${cashPosition.toLocaleString()}, Recv=$${receivablesTotal.toLocaleString()}, Assets=$${totalAssets.toLocaleString()}`);
           
           // Rate limit: 500ms between Xero API calls (60/min limit)
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -4989,14 +5004,14 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
         } catch (err) {
           failCount++;
           results.push({ org: orgShortName, date: dateStr, status: 'failed', error: err.message });
-          console.error(`ÃƒÂ¢Ã‚ÂÃ…â€™ ${orgShortName} @ ${dateStr}: ${err.message}`);
+          console.error(`ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ ${orgShortName} @ ${dateStr}: ${err.message}`);
           // Wait a bit longer on failure in case of rate limiting
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
     }
     
-    console.log(`ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â Backfill complete: ${successCount} success, ${failCount} failed out of ${results.length} total`);
+    console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â Backfill complete: ${successCount} success, ${failCount} failed out of ${results.length} total`);
     
     res.json({
       message: 'Monthly balance backfill complete',
@@ -5010,7 +5025,7 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
     });
     
   } catch (error) {
-    console.error("ÃƒÂ¢Ã‚ÂÃ…â€™ Backfill error:", error);
+    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Backfill error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -5057,7 +5072,7 @@ app.get("/api/reversal-journals/:tenantId", async (req, res) => {
     const dateFrom = req.query.dateFrom || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
     const dateTo = req.query.dateTo || new Date().toISOString().split("T")[0];
 
-    console.log(`ðŸ”„ Fetching reversal journals for ${tokenData.tenantName} from ${dateFrom} to ${dateTo}`);
+    console.log(`Ã°Å¸â€â€ž Fetching reversal journals for ${tokenData.tenantName} from ${dateFrom} to ${dateTo}`);
 
     // Step 1: Get chart of accounts for account type lookup
     const accountsResponse = await xero.accountingApi.getAccounts(req.params.tenantId);
@@ -5081,7 +5096,7 @@ app.get("/api/reversal-journals/:tenantId", async (req, res) => {
     const journalList = (journalListResponse.body.manualJournals || [])
       .filter(j => j.status === "POSTED");
 
-    console.log(`ðŸ“‹ Found ${journalList.length} posted manual journals in period`);
+    console.log(`Ã°Å¸â€œâ€¹ Found ${journalList.length} posted manual journals in period`);
 
     // Step 3: Fetch each journal individually to get line details
     const reversalJournals = [];
@@ -5158,13 +5173,47 @@ app.get("/api/reversal-journals/:tenantId", async (req, res) => {
 
         reversalJournals.push(journalDetail);
       } catch (err) {
-        console.warn(`âš ï¸ Could not fetch journal ${journal.manualJournalID}:`, err.message);
+        console.warn(`Ã¢Å¡Â Ã¯Â¸Â Could not fetch journal ${journal.manualJournalID}:`, err.message);
       }
     }
 
-   const netProfitAdjustment = revenueAdjustment + cogsAdjustment + expenseAdjustment;
+   // Load overrides from database
+    let overrides = {};
+    try {
+      const overrideResult = await pool.query(
+        `SELECT journal_id, excluded, set_by FROM reversal_overrides WHERE tenant_id = $1`,
+        [req.params.tenantId]
+      );
+      overrideResult.rows.forEach(row => {
+        overrides[row.journal_id] = { excluded: row.excluded, setBy: row.set_by };
+      });
+    } catch (dbErr) {
+      console.warn("Could not load reversal overrides:", dbErr.message);
+    }
 
-    console.log(`âœ… Found ${reversalJournals.length} reversal journals. Revenue: $${revenueAdjustment.toFixed(2)}, COGS: $${cogsAdjustment.toFixed(2)}, Expense: $${expenseAdjustment.toFixed(2)}`);
+    // Apply override status to each journal (default: excluded=true for pattern-matched journals)
+    reversalJournals.forEach(j => {
+      if (overrides[j.journalID] !== undefined) {
+        j.excluded = overrides[j.journalID].excluded;
+        j.overrideSetBy = overrides[j.journalID].setBy;
+      } else {
+        j.excluded = true; // default: pattern-matched journals are excluded
+      }
+    });
+
+    // Recalculate P&L impact based ONLY on excluded journals
+    let adjRevenue = 0, adjCogs = 0, adjExpense = 0;
+    reversalJournals.filter(j => j.excluded).forEach(j => {
+      j.lines.forEach(line => {
+        if (line.plCategory === 'revenue') adjRevenue += line.lineAmount;
+        else if (line.plCategory === 'cogs') adjCogs += line.lineAmount;
+        else if (line.plCategory === 'expense') adjExpense += line.lineAmount;
+      });
+    });
+    const netProfitAdjustment = adjRevenue + adjCogs + adjExpense;
+
+    const excludedCount = reversalJournals.filter(j => j.excluded).length;
+    console.log(`Found ${reversalJournals.length} reversal journals (${excludedCount} excluded). Revenue: $${adjRevenue.toFixed(2)}, COGS: $${adjCogs.toFixed(2)}, Expense: $${adjExpense.toFixed(2)}`);
 
     res.json({
       tenantId: req.params.tenantId,
@@ -5172,13 +5221,14 @@ app.get("/api/reversal-journals/:tenantId", async (req, res) => {
       dateFrom,
       dateTo,
       totalManualJournals: journalList.length,
-      reversalCount: reversalJournals.length,
+      reversalCount: excludedCount,
+      totalReversalJournals: reversalJournals.length,
       plImpact: {
-        revenueAdjustment: Math.round(revenueAdjustment * 100) / 100,
-        cogsAdjustment: Math.round(cogsAdjustment * 100) / 100,
-        expenseAdjustment: Math.round(expenseAdjustment * 100) / 100,
+        revenueAdjustment: Math.round(adjRevenue * 100) / 100,
+        cogsAdjustment: Math.round(adjCogs * 100) / 100,
+        expenseAdjustment: Math.round(adjExpense * 100) / 100,
         netProfitAdjustment: Math.round(netProfitAdjustment * 100) / 100,
-        description: "To get P&L WITHOUT reversals: add revenueAdjustment to revenue, subtract cogsAdjustment from COGS, subtract expenseAdjustment from expenses"
+        description: "P&L impact calculated from EXCLUDED journals only. Toggle individual journals to include/exclude."
       },
       reversalJournals: reversalJournals,
       generatedAt: new Date().toISOString(),
@@ -5225,6 +5275,83 @@ app.post("/api/reversal-journals", async (req, res) => {
   } catch (error) {
     console.error("Reversal journals POST error:", error);
     res.status(500).json({ error: error.message });
+
+
+// ============================================================================
+// REVERSAL JOURNAL OVERRIDES - Matt can include/exclude specific journals
+// ============================================================================
+
+// Get all overrides for a tenant
+app.get("/api/reversal-overrides/:tenantId", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT journal_id, excluded, set_by, updated_at FROM reversal_overrides WHERE tenant_id = $1`,
+      [req.params.tenantId]
+    );
+    const overrides = {};
+    result.rows.forEach(row => {
+      overrides[row.journal_id] = {
+        excluded: row.excluded,
+        setBy: row.set_by,
+        updatedAt: row.updated_at
+      };
+    });
+    res.json({ tenantId: req.params.tenantId, overrides });
+  } catch (error) {
+    console.error("Error getting reversal overrides:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Save/update an override for a specific journal
+app.post("/api/reversal-overrides", async (req, res) => {
+  try {
+    const { tenantId, journalId, excluded, setBy } = req.body;
+    if (!tenantId || !journalId) {
+      return res.status(400).json({ error: "tenantId and journalId required" });
+    }
+    
+    await pool.query(
+      `INSERT INTO reversal_overrides (tenant_id, journal_id, excluded, set_by, updated_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+       ON CONFLICT (tenant_id, journal_id)
+       DO UPDATE SET excluded = $3, set_by = $4, updated_at = CURRENT_TIMESTAMP`,
+      [tenantId, journalId, excluded !== false, setBy || 'unknown']
+    );
+    
+    res.json({ success: true, tenantId, journalId, excluded: excluded !== false });
+  } catch (error) {
+    console.error("Error saving reversal override:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bulk save overrides (save all at once from drawer)
+app.post("/api/reversal-overrides/bulk", async (req, res) => {
+  try {
+    const { tenantId, overrides, setBy } = req.body;
+    if (!tenantId || !overrides || !Array.isArray(overrides)) {
+      return res.status(400).json({ error: "tenantId and overrides array required" });
+    }
+    
+    let saved = 0;
+    for (const override of overrides) {
+      await pool.query(
+        `INSERT INTO reversal_overrides (tenant_id, journal_id, excluded, set_by, updated_at)
+         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+         ON CONFLICT (tenant_id, journal_id)
+         DO UPDATE SET excluded = $3, set_by = $4, updated_at = CURRENT_TIMESTAMP`,
+        [tenantId, override.journalId, override.excluded, setBy || 'unknown']
+      );
+      saved++;
+    }
+    
+    res.json({ success: true, saved });
+  } catch (error) {
+    console.error("Error bulk saving reversal overrides:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
   }
 });
 
@@ -5243,7 +5370,7 @@ app.get("/api/invoices-detail/:tenantId", async (req, res) => {
     const dateTo = req.query.dateTo || new Date().toISOString().split("T")[0];
     const statusFilter = req.query.status; // Optional: PAID, AUTHORISED, DRAFT, VOIDED, DELETED
 
-    console.log(`📋 Fetching detailed invoices for ${tokenData.tenantName} from ${dateFrom} to ${dateTo}`);
+    console.log(`ðŸ“‹ Fetching detailed invoices for ${tokenData.tenantName} from ${dateFrom} to ${dateTo}`);
 
     // Build where clause for ACCREC (sales) invoices in date range
     let whereClause = `Type=="ACCREC" AND Date >= DateTime(${dateFrom.replace(/-/g, ",")}) AND Date <= DateTime(${dateTo.replace(/-/g, ",")})`;
@@ -5284,13 +5411,13 @@ app.get("/api/invoices-detail/:tenantId", async (req, res) => {
         page++;
         // Safety limit - 50 pages = 5000 invoices max
         if (page > 50) {
-          console.warn("⚠️ Hit 50 page limit, stopping pagination");
+          console.warn("âš ï¸ Hit 50 page limit, stopping pagination");
           hasMore = false;
         }
       }
     }
 
-    console.log(`✅ Total invoices found: ${allInvoices.length}`);
+    console.log(`âœ… Total invoices found: ${allInvoices.length}`);
 
     // Map to clean response with line items
     const result = allInvoices.map((inv) => ({
@@ -5342,7 +5469,7 @@ app.get("/api/invoices-detail/:tenantId", async (req, res) => {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("❌ Error getting invoice details:", error);
+    console.error("âŒ Error getting invoice details:", error);
     res.status(500).json({ error: "Failed to get invoice details", details: error.message });
   }
 });
@@ -5425,8 +5552,8 @@ app.post("/api/ai-chat", async (req, res) => {
       reportDate = quarterInfo.endDate;
     }
 
-    // ── Fetch REAL financial data from our own API endpoints ──
-    console.log(`🤖 AI Chat: Fetching live data for "${entityName}" (${period}, ${periodMonths}mo to ${reportDate || 'today'})...`);
+    // â”€â”€ Fetch REAL financial data from our own API endpoints â”€â”€
+    console.log(`ðŸ¤– AI Chat: Fetching live data for "${entityName}" (${period}, ${periodMonths}mo to ${reportDate || 'today'})...`);
 
     const fetchInternal = async (endpoint, body) => {
       try {
@@ -5452,18 +5579,18 @@ app.post("/api/ai-chat", async (req, res) => {
       fetchInternal("/api/financial-ratios", { organizationName: entityName }),
     ]);
 
-    // ── Build rich financial context for the AI ──
-    let financialContext = `\n📊 LIVE FINANCIAL DATA FOR: ${entityName}\n`;
+    // â”€â”€ Build rich financial context for the AI â”€â”€
+    let financialContext = `\nðŸ“Š LIVE FINANCIAL DATA FOR: ${entityName}\n`;
     financialContext += `Period: ${period}\n`;
     financialContext += `Data fetched: ${new Date().toLocaleString("en-AU", { timeZone: "Australia/Darwin" })}\n\n`;
 
     // Cash Position
     if (cashData && !cashData.error) {
-      financialContext += `💰 CASH POSITION:\n`;
+      financialContext += `ðŸ’° CASH POSITION:\n`;
       financialContext += `Total Cash: $${(cashData.totalCash || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
       if (cashData.bankAccounts) {
         cashData.bankAccounts.forEach((acc) => {
-          financialContext += `  • ${acc.name}: $${(acc.balance || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+          financialContext += `  â€¢ ${acc.name}: $${(acc.balance || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
         });
       }
       financialContext += `\n`;
@@ -5473,7 +5600,7 @@ app.post("/api/ai-chat", async (req, res) => {
     if (plData && !plData.error && plData.summary) {
       const pl = plData.summary;
       const periodDesc = plData.period?.description || "3 month period";
-      financialContext += `📈 PROFIT & LOSS (${periodDesc}):\n`;
+      financialContext += `ðŸ“ˆ PROFIT & LOSS (${periodDesc}):\n`;
       financialContext += `  Revenue: $${Number(pl.totalRevenue || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
       financialContext += `  Cost of Sales (COGS): $${Number(pl.totalCOGS || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
       financialContext += `  Gross Profit: $${Number(pl.grossProfit || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
@@ -5493,7 +5620,7 @@ app.post("/api/ai-chat", async (req, res) => {
       const invoices = invoicesData.invoices || invoicesData;
       if (Array.isArray(invoices) && invoices.length > 0) {
         const totalOwed = invoices.reduce((sum, inv) => sum + (inv.amountDue || inv.AmountDue || 0), 0);
-        financialContext += `📋 OUTSTANDING INVOICES:\n`;
+        financialContext += `ðŸ“‹ OUTSTANDING INVOICES:\n`;
         financialContext += `  Total Outstanding: $${totalOwed.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
         financialContext += `  Number of Invoices: ${invoices.length}\n`;
         // Show top 5 by amount
@@ -5512,7 +5639,7 @@ app.post("/api/ai-chat", async (req, res) => {
     if (expenseData && !expenseData.error && expenseData.analysis) {
       const expenses = expenseData.analysis.topExpenses || expenseData.analysis.expenseCategories || [];
       if (Array.isArray(expenses) && expenses.length > 0) {
-        financialContext += `💸 TOP EXPENSES (${expenseData.period?.months || 3} month period, total: $${Number(expenseData.analysis.totalExpenses || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}):\n`;
+        financialContext += `ðŸ’¸ TOP EXPENSES (${expenseData.period?.months || 3} month period, total: $${Number(expenseData.analysis.totalExpenses || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}):\n`;
         expenses.slice(0, 10).forEach((cat, i) => {
           const name = cat.accountName || cat.name || "Unknown";
           const amount = Math.abs(cat.amount || 0);
@@ -5525,7 +5652,7 @@ app.post("/api/ai-chat", async (req, res) => {
     // Financial Ratios - data is nested under ratiosData.ratios
     if (ratiosData && !ratiosData.error && ratiosData.ratios) {
       const r = ratiosData.ratios;
-      financialContext += `📐 FINANCIAL RATIOS (USE THESE EXACT VALUES — do NOT calculate your own):\n`;
+      financialContext += `ðŸ“ FINANCIAL RATIOS (USE THESE EXACT VALUES â€” do NOT calculate your own):\n`;
       if (r.liquidity) {
         financialContext += `  Current Ratio: ${Number(r.liquidity.currentRatio || 0).toFixed(2)}\n`;
         financialContext += `  Working Capital: $${Number(r.liquidity.workingCapital || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
@@ -5552,7 +5679,7 @@ app.post("/api/ai-chat", async (req, res) => {
     if (!expenseData || expenseData.error || !expenseData.analysis) unavailable.push("expenses");
     if (!ratiosData || ratiosData.error || !ratiosData.ratios) unavailable.push("financial ratios");
     if (unavailable.length > 0) {
-      financialContext += `⚠️ Data not available: ${unavailable.join(", ")}\n`;
+      financialContext += `âš ï¸ Data not available: ${unavailable.join(", ")}\n`;
     }
 
         // Reversal adjustments context
@@ -5561,7 +5688,7 @@ app.post("/api/ai-chat", async (req, res) => {
       const impact = reversals.plImpact || {};
       const adjPL = reversals.adjustedPL || {};
       const origPL = reversals.originalPL || {};
-      financialContext += `\n🔄 REVERSAL JOURNALS EXCLUDED (${reversals.reversalCount} journals removed):\n`;
+      financialContext += `\nðŸ”„ REVERSAL JOURNALS EXCLUDED (${reversals.reversalCount} journals removed):\n`;
       financialContext += `  The user has ENABLED the "Reversals Hidden" filter on the dashboard.\n`;
       financialContext += `  The P&L numbers above are RAW (including reversals).\n`;
       financialContext += `  ADJUSTED P&L (what the user sees on dashboard with reversals excluded):\n`;
@@ -5606,19 +5733,19 @@ app.post("/api/ai-chat", async (req, res) => {
       }
       financialContext += `  When referencing individual accounts, use the ADJUSTED ACCOUNT BREAKDOWNS above (not the raw P&L data).\n\n`;
     } else {
-      financialContext += `\n📋 Note: Reversal filter is OFF — figures include all journal entries including reversals.\n\n`;
+      financialContext += `\nðŸ“‹ Note: Reversal filter is OFF â€” figures include all journal entries including reversals.\n\n`;
     }
 
     // Debug: show what data sources succeeded
-    console.log(`🤖 AI Chat: Available data - Cash: ${!!cashData && !cashData?.error}, P&L: ${!!plData?.summary}, Invoices: ${!!invoicesData && !invoicesData?.error}, Expenses: ${!!expenseData?.analysis}, Ratios: ${!!ratiosData?.ratios}`);
+    console.log(`ðŸ¤– AI Chat: Available data - Cash: ${!!cashData && !cashData?.error}, P&L: ${!!plData?.summary}, Invoices: ${!!invoicesData && !invoicesData?.error}, Expenses: ${!!expenseData?.analysis}, Ratios: ${!!ratiosData?.ratios}`);
     if (unavailable.length > 0) {
-      console.log(`🤖 AI Chat: UNAVAILABLE: ${unavailable.join(', ')}`);
+      console.log(`ðŸ¤– AI Chat: UNAVAILABLE: ${unavailable.join(', ')}`);
     }
-    console.log(`🤖 AI Chat: Context length: ${financialContext.length} chars`);
+    console.log(`ðŸ¤– AI Chat: Context length: ${financialContext.length} chars`);
 
-    console.log(`🤖 AI Chat: Data fetched. Building prompt...`);
+    console.log(`ðŸ¤– AI Chat: Data fetched. Building prompt...`);
 
-    // ── Build system prompt with REAL data ──
+    // â”€â”€ Build system prompt with REAL data â”€â”€
     const systemPrompt = `You are an AI financial analyst embedded in the RAC (Rirratjingu Aboriginal Corporation) CEO Dashboard.
 You have LIVE access to real financial data which is provided below. Use these ACTUAL NUMBERS in your responses.
 
@@ -5636,10 +5763,10 @@ RESPONSE GUIDELINES:
 - If reversal filter is OFF, use the raw figures but note if reversals may be distorting the numbers (e.g. negative COGS, unusual margins)
 
 - CRITICAL: When quoting ratios or margins, you MUST use the exact values from the FINANCIAL RATIOS section. NEVER calculate your own ratios. If a ratio looks unusual, report the actual figure and note it may reflect adjustments.
-- CRITICAL: When quoting ratios or margins, you MUST use the exact values from the FINANCIAL RATIOS section. NEVER calculate your own ratios. If a ratio looks unusual, report the actual figure and note it may reflect adjustments.ALWAYS use the exact numbers from the data provided — never calculate your own ratios or percentages when they are already provided in the FINANCIAL RATIOS section
+- CRITICAL: When quoting ratios or margins, you MUST use the exact values from the FINANCIAL RATIOS section. NEVER calculate your own ratios. If a ratio looks unusual, report the actual figure and note it may reflect adjustments.ALWAYS use the exact numbers from the data provided â€” never calculate your own ratios or percentages when they are already provided in the FINANCIAL RATIOS section
 - If a ratio looks unusual (e.g. margin over 100%), mention it as noteworthy but still report the actual figure
 - ALWAYS reference specific dollar amounts and numbers from the data above
-- Be concise and executive-level — the CEO is busy
+- Be concise and executive-level â€” the CEO is busy
 - Use Australian dollar formatting ($X,XXX)
 - Keep responses to 2-3 short paragraphs max
 - Highlight key insights, trends, risks and opportunities
@@ -5685,7 +5812,7 @@ RESPONSE GUIDELINES:
     const responseText =
       data.content?.[0]?.text || "Sorry, I couldn't generate a response.";
 
-    console.log(`🤖 AI Chat: Response generated successfully`);
+    console.log(`ðŸ¤– AI Chat: Response generated successfully`);
     res.json({ response: responseText });
 
   } catch (error) {
@@ -5707,23 +5834,23 @@ async function startServer() {
     await initializeAutoRefresh();
 
     app.listen(port, () => {
-      console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¡ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ RAC Financial Dashboard running on port ${port}`);
+      console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ RAC Financial Dashboard running on port ${port}`);
       console.log(
-        `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€¦Ã‚Â  Dashboard: ${
+        `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â  Dashboard: ${
           process.env.NODE_ENV === "production"
             ? "https://your-app.up.railway.app"
             : `http://localhost:${port}`
         }`
       );
-      console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢Ãƒâ€šÃ‚Â¾ Database: Connected to PostgreSQL`);
-      console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Xero OAuth: /auth`);
-      console.log(`ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ApprovalMax OAuth: /auth?provider=approvalmax`);
+      console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ Database: Connected to PostgreSQL`);
+      console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Xero OAuth: /auth`);
+      console.log(`ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ApprovalMax OAuth: /auth?provider=approvalmax`);
       console.log(
-        `ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¯ Ready for RAC financial integration with date-flexible trial balance!`
+        `ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ Ready for RAC financial integration with date-flexible trial balance!`
       );
     });
   } catch (error) {
-    console.error("ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Failed to start server:", error);
+    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Failed to start server:", error);
     process.exit(1);
   }
 }
