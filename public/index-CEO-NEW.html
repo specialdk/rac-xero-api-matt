@@ -5016,7 +5016,46 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               message,
-              context: { entity, period, metrics, quarterInfo, reversals: reversalContext },
+              context: {
+                entity, period, metrics, quarterInfo, reversals: reversalContext,
+                // When ALL entities, pass pre-loaded data so server doesn't need to re-fetch
+                consolidatedData: (entity === 'ALL') ? {
+                  cash: {
+                    total: document.getElementById('kpi-cash')?.textContent || '',
+                    bankAccounts: window.dashboardData?.cash?.bankAccounts || [],
+                  },
+                  pl: {
+                    revenue: window.dashboardData?.pl?.revenue || 0,
+                    cogs: window.dashboardData?.pl?.cogs || 0,
+                    gross: window.dashboardData?.pl?.gross || 0,
+                    opex: window.dashboardData?.pl?.opex || 0,
+                    netProfit: window.dashboardData?.pl?.netProfit || 0,
+                    entityBreakdown: window.dashboardData?.pl?.entityBreakdown || [],
+                  },
+                  balance: {
+                    totalAssets: document.getElementById('bs-assets')?.textContent || '',
+                    totalLiabilities: document.getElementById('bs-liabilities')?.textContent || '',
+                    totalEquity: document.getElementById('bs-equity')?.textContent || '',
+                  },
+                  receivables: {
+                    total: document.getElementById('aged-total')?.textContent || '',
+                    current: document.getElementById('aged-current')?.textContent || '',
+                    days31_60: document.getElementById('aged-31-60')?.textContent || '',
+                    days61_90: document.getElementById('aged-61-90')?.textContent || '',
+                    days90plus: document.getElementById('aged-90plus')?.textContent || '',
+                  },
+                  ratios: {
+                    currentRatio: document.getElementById('ratio-current')?.textContent || '',
+                    grossMargin: document.getElementById('ratio-gross-margin')?.textContent || '',
+                    netProfitMargin: document.getElementById('ratio-net-margin')?.textContent || '',
+                    debtToEquity: document.getElementById('ratio-debt-equity')?.textContent || '',
+                  },
+                  topCustomers: Array.from(document.querySelectorAll('#customerList .customer-item')).slice(0, 5).map(el => ({
+                    name: el.querySelector('.customer-name')?.textContent || '',
+                    value: el.querySelector('.customer-value')?.textContent || '',
+                  })),
+                } : undefined,
+              },
               history: chatHistory.slice(-6),
             }),
           });

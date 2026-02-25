@@ -1500,6 +1500,70 @@
         font-style: italic;
       }
 
+      /* ========== COMPACT MODE ========== */
+      .compact .kpi-card {
+        padding: 10px 12px;
+      }
+      .compact .kpi-value {
+        font-size: 28px;
+      }
+      .compact .kpi-label {
+        font-size: 11px;
+      }
+      .compact .chart-card {
+        padding: 10px 12px;
+      }
+      .compact .summary-card {
+        padding: 10px 12px;
+      }
+      .compact .kpi-row,
+      .compact .chart-row,
+      .compact .summary-row {
+        gap: 10px;
+      }
+      .compact .dashboard {
+        padding: 10px;
+        gap: 10px;
+      }
+      .compact .budget-bar-actual,
+      .compact .budget-bar-target {
+        font-size: 12px;
+      }
+      .compact .budget-item-header {
+        font-size: 13px;
+      }
+      .compact .card-title {
+        font-size: 13px;
+      }
+      .compact .budget-actual {
+        font-size: 22px;
+      }
+      .compact .customer-value {
+        font-size: 20px;
+      }
+      .compact .chart-title {
+        font-size: 13px;
+      }
+
+      .btn-compact {
+        padding: 6px 14px;
+        background: rgba(255,255,255,0.15);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-compact:hover {
+        background: rgba(255,255,255,0.25);
+      }
+      .btn-compact.active {
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        border-color: transparent;
+      }
+
       /* ========== RESPONSIVE ========== */
       @media (max-width: 1400px) {
         .kpi-row {
@@ -1588,6 +1652,7 @@
         <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
         <button class="btn-chat" id="chatToggleBtn" onclick="toggleChat()">&#x1F4AC; AI Pad</button>
+        <button class="btn-compact" id="compactToggle" onclick="toggleCompact()" title="Compact mode for smaller screens">&#x1F4F1; Compact</button>
         <button class="btn-dashboard" onclick="window.location.href='/'">ðŸ”— Connection Manager</button>
       </div>
     </header>
@@ -2285,6 +2350,7 @@
         // Also update financial ratios
         loadFinancialRatios();
         updateSummaryCards();
+        applyCompactRounding();
       }
 
       function restoreOriginalPL() {
@@ -2325,6 +2391,7 @@
         // Also update financial ratios
         loadFinancialRatios();
         updateSummaryCards();
+        applyCompactRounding();
       }
 
       function showReversalDrawer() {
@@ -2582,16 +2649,16 @@
         const expensesCard = document.getElementById('expenses-card');
         const productionCard = document.getElementById('production-card');
         const chartRow = document.querySelector('.chart-row');
-        if (entity === 'Mining') {
+        if (entity === 'Mining' || entity === 'ALL') {
           inventoryCard.style.display = 'block';
           expensesCard.style.display = 'none';
           productionCard.style.display = 'flex';
-          chartRow.style.gridTemplateColumns = '2fr 1fr 1fr';
+          chartRow.style.gridTemplateColumns = window.compactMode ? '5fr 3fr 3fr' : '2fr 1fr 1fr';
         } else {
           inventoryCard.style.display = 'none';
           expensesCard.style.display = 'block';
           productionCard.style.display = 'none';
-          chartRow.style.gridTemplateColumns = '2fr 1fr';
+          chartRow.style.gridTemplateColumns = window.compactMode ? '5fr 3fr' : '2fr 1fr';
         }
 
         // Update header title based on selection
@@ -2663,6 +2730,7 @@
         initTrendChart();
         updateChatContext();
         updateSuggestions();
+        applyCompactRounding();
       }
 
       // ========== CONSOLIDATED DASHBOARD (All Entities) ==========
@@ -2867,6 +2935,9 @@
         // Load live inventory data for Mining's quarry operation
         await loadInventory();
 
+        // Load production card (Mining quarry data, shown in ALL view too)
+        await loadProduction(quarterInfo);
+
         // Load Top Customers from aggregated invoices
         await loadTopCustomers(quarterInfo);
 
@@ -2876,6 +2947,7 @@
         updateSummaryCards();
         initSparklines();
         initTrendChart();
+        applyCompactRounding();
       }
 
       // ========== CASH POSITION ==========
@@ -4720,6 +4792,33 @@
         };
 
         return contents[type] || '<p>Loading...</p>';
+      }
+
+      // ========== COMPACT MODE ==========
+      window.compactMode = false;
+
+      function toggleCompact() {
+        window.compactMode = !window.compactMode;
+        const btn = document.getElementById('compactToggle');
+        btn.classList.toggle('active', window.compactMode);
+        document.body.classList.toggle('compact', window.compactMode);
+        // Re-render dashboard to apply formatting + grid changes
+        loadDashboard();
+      }
+
+      // Strip decimal places from all displayed dollar values when compact mode is on
+      function applyCompactRounding() {
+        if (!window.compactMode) return;
+        const container = document.querySelector('.main-container');
+        if (!container) return;
+        // Walk all text nodes inside the dashboard
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (node.textContent.includes('$') && /\$[−\-]?[\d,]+\.\d/.test(node.textContent)) {
+            node.textContent = node.textContent.replace(/(\$[−\-]?[\d,]+)\.\d+/g, '$1');
+          }
+        }
       }
 
       // ========== CHAT FUNCTIONS ==========
