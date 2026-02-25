@@ -2649,7 +2649,7 @@
         const expensesCard = document.getElementById('expenses-card');
         const productionCard = document.getElementById('production-card');
         const chartRow = document.querySelector('.chart-row');
-        if (entity === 'Mining') {
+        if (entity === 'Mining' || entity === 'ALL') {
           inventoryCard.style.display = 'block';
           expensesCard.style.display = 'none';
           productionCard.style.display = 'flex';
@@ -2934,6 +2934,9 @@
 
         // Load live inventory data for Mining's quarry operation
         await loadInventory();
+
+        // Load production card (Mining quarry data, shown in ALL view too)
+        await loadProduction(quarterInfo);
 
         // Load Top Customers from aggregated invoices
         await loadTopCustomers(quarterInfo);
