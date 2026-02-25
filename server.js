@@ -5686,16 +5686,9 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `\nðŸ“‹ Note: Reversal filter is OFF â€” figures include all journal entries including reversals.\n\n`;
     }
 
-    // Debug: show what data sources were used
-    if (!consolidated) {
-      console.log(`🤖 AI Chat: Available data - Cash: ${!!cashData && !cashData?.error}, P&L: ${!!plData?.summary}, Invoices: ${!!invoicesData && !invoicesData?.error}, Expenses: ${!!expenseData?.analysis}, Ratios: ${!!ratiosData?.ratios}`);
-      if (unavailable.length > 0) {
-        console.log(`🤖 AI Chat: UNAVAILABLE: ${unavailable.join(', ')}`);
-      }
-    }
-    console.log(`🤖 AI Chat: Context length: ${financialContext.length} chars`);
+    // Debug
+    console.log(`🤖 AI Chat: Context length: ${financialContext.length} chars. Source: ${consolidated ? 'consolidated dashboard data' : 'API fetch'}`);
 
-    console.log(`🤖 AI Chat: Data ready. Building prompt...`);
 
     // â”€â”€ Build system prompt with REAL data â”€â”€
     const systemPrompt = `You are an AI financial analyst embedded in the RAC (Rirratjingu Aboriginal Corporation) CEO Dashboard.
