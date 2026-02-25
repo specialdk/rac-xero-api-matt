@@ -1237,9 +1237,13 @@
         min-width: 450px;
         background: var(--bg-card);
         border-left: 1px solid var(--color-border);
-        display: flex;
+        display: none;
         flex-direction: column;
         z-index: 50;
+      }
+
+      .chat-panel.active {
+        display: flex;
       }
 
       .chat-panel.expanded {
@@ -1583,6 +1587,7 @@
         <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
+        <button class="btn-chat" id="chatToggleBtn" onclick="toggleChat()">&#x1F4AC; AI Pad</button>
         <button class="btn-dashboard" onclick="window.location.href='/'">ðŸ”— Connection Manager</button>
       </div>
     </header>
@@ -1984,7 +1989,7 @@
         </div>
      
       <!-- ========== AI CHAT PANEL ========== -->
-      <div class="chat-panel" id="chatPanel">
+      <div class="chat-panel active" id="chatPanel">
         <div class="chat-header">
           <h3>&#x1F4AC; Ask about your finances</h3>
           <div class="chat-header-actions">
@@ -4721,7 +4726,14 @@
       let chatHistory = [];
 
       function toggleChat() {
-        document.getElementById('chatPanel').classList.toggle('active');
+        const panel = document.getElementById('chatPanel');
+        const btn = document.getElementById('chatToggleBtn');
+        panel.classList.toggle('active');
+        const isOpen = panel.classList.contains('active');
+        if (btn) {
+          btn.style.opacity = isOpen ? '1' : '0.6';
+          btn.title = isOpen ? 'Hide AI Pad' : 'Show AI Pad';
+        }
       }
 
       function toggleChatExpand() {
