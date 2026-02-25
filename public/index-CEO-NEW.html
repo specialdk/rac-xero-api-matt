@@ -1642,6 +1642,7 @@
           </div>
         </div>
         <select class="period-selector" id="periodSelector" onchange="loadDashboard()">
+          <option value="YTD">YTD FY25/26 (Jul-Today)</option>
           <option value="Q1">Q1 FY25/26 (Jul-Sep)</option>
           <option value="Q2">Q2 FY25/26 (Oct-Dec)</option>
           <option value="Q3" selected>Q3 FY25/26 (Jan-Mar)</option>
@@ -2600,6 +2601,30 @@
         const today = new Date();
         const year = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
 
+        // YTD = July 1 to today
+        if (quarter === 'YTD') {
+          const startDate = `${year}-07-01`;
+          const start = new Date(startDate);
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          const daysElapsed = Math.floor((yesterday - start) / (1000 * 60 * 60 * 24)) + 1;
+          const totalDays = 365; // Full FY
+          const periodMonths = (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth()) + 1;
+
+          return {
+            quarterCode: 'YTD',
+            startDate: startDate,
+            endDate: today.toISOString().split("T")[0],
+            totalDays: totalDays,
+            daysElapsed: daysElapsed,
+            isComplete: false,
+            hasStarted: true,
+            proRateFactor: daysElapsed / totalDays,
+            periodMonths: periodMonths,
+            isYTD: true,
+          };
+        }
+
         const quarters = {
           Q1: { start: `${year}-07-01`, end: `${year}-09-30`, days: 92 },
           Q2: { start: `${year}-10-01`, end: `${year}-12-31`, days: 92 },
@@ -2619,6 +2644,11 @@
           ? Math.min(Math.floor((yesterday - startDate) / (1000 * 60 * 60 * 24)) + 1, q.days)
           : 0;
 
+        // Calculate periodMonths dynamically
+        const effEnd = isComplete ? endDate : today;
+        const periodMonths = isComplete ? 3 :
+          (effEnd.getFullYear() - startDate.getFullYear()) * 12 + (effEnd.getMonth() - startDate.getMonth()) + 1;
+
         return {
           quarterCode: quarter,
           startDate: q.start,
@@ -2628,6 +2658,8 @@
           isComplete,
           hasStarted,
           proRateFactor: daysElapsed / q.days,
+          periodMonths: periodMonths,
+          isYTD: false,
         };
       }
 
@@ -2783,9 +2815,7 @@
               body: JSON.stringify({
               organizationName: entity,
               date: quarterInfo.endDate,
-              periodMonths: quarterInfo.isComplete ? 3 : 
-                (new Date(quarterInfo.endDate).getFullYear() - new Date(quarterInfo.startDate).getFullYear()) * 12 + 
-                (new Date(quarterInfo.endDate).getMonth() - new Date(quarterInfo.startDate).getMonth()) + 1,
+              periodMonths: quarterInfo.periodMonths,
             }),
             });
             const plData = await plResp.json();
@@ -3002,10 +3032,7 @@
       // ========== PROFIT & LOSS ==========
       async function loadProfitLoss(quarterInfo) {
         try {
-          const start = new Date(quarterInfo.startDate);
-          const end = new Date(quarterInfo.endDate);
-          let periodMonths = quarterInfo.isComplete ? 3 : 
-            (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+          const periodMonths = quarterInfo.periodMonths;
 
           const response = await fetch(`${API_BASE}/api/profit-loss-summary`, {
             method: "POST",
@@ -3066,34 +3093,70 @@
       // ========== BUDGET ==========
       async function loadBudget(quarterInfo) {
         try {
-          const response = await fetch(`${API_BASE}/api/budget-summary`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              organizationName: getSelectedEntity(),
-              date: quarterInfo.startDate,
-              periods: 3,
-            }),
-          });
-          const data = await response.json();
-          console.log("Budget API response:", JSON.stringify(data).substring(0, 500));
-          
-          const budget = parseBudgetFromReport(data.report);
-          console.log("Parsed budget:", budget);
-          const proRatedRevenue = Math.round(budget.revenue * quarterInfo.proRateFactor);
-          const proRatedExpenses = Math.round(budget.expenses * quarterInfo.proRateFactor);
-          const proRatedGrossProfit = proRatedRevenue - (proRatedExpenses * 0.55); // Approximate COGS
+          let totalBudgetRevenue = 0;
+          let totalBudgetExpenses = 0;
+
+          if (quarterInfo.isYTD) {
+            // YTD: fetch each elapsed quarter's budget and sum them
+            const today = new Date();
+            const year = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
+            const quartersToFetch = [
+              { start: `${year}-07-01`, label: 'Q1' },
+              { start: `${year}-10-01`, label: 'Q2' },
+              { start: `${year + 1}-01-01`, label: 'Q3' },
+              { start: `${year + 1}-04-01`, label: 'Q4' },
+            ].filter(q => new Date(q.start) <= today);
+
+            for (const q of quartersToFetch) {
+              try {
+                const resp = await fetch(`${API_BASE}/api/budget-summary`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    organizationName: getSelectedEntity(),
+                    date: q.start,
+                    periods: 3,
+                  }),
+                });
+                const data = await resp.json();
+                const budget = parseBudgetFromReport(data.report);
+                totalBudgetRevenue += budget.revenue || 0;
+                totalBudgetExpenses += budget.expenses || 0;
+              } catch (e) {
+                console.warn(`Budget fetch failed for ${q.label}:`, e);
+              }
+            }
+          } else {
+            // Single quarter
+            const response = await fetch(`${API_BASE}/api/budget-summary`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                organizationName: getSelectedEntity(),
+                date: quarterInfo.startDate,
+                periods: 3,
+              }),
+            });
+            const data = await response.json();
+            console.log("Budget API response:", JSON.stringify(data).substring(0, 500));
+            const budget = parseBudgetFromReport(data.report);
+            console.log("Parsed budget:", budget);
+            totalBudgetRevenue = budget.revenue || 0;
+            totalBudgetExpenses = budget.expenses || 0;
+          }
+
+          const proRatedRevenue = Math.round(totalBudgetRevenue * quarterInfo.proRateFactor);
+          const proRatedExpenses = Math.round(totalBudgetExpenses * quarterInfo.proRateFactor);
+          const proRatedGrossProfit = proRatedRevenue - (proRatedExpenses * 0.55);
 
           const actualRevenue = window.dashboardData.pl?.revenue || 0;
           const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
           const actualGross = window.dashboardData.pl?.gross || 0;
 
-          // Calculate variances
           const revVar = proRatedRevenue > 0 ? ((actualRevenue - proRatedRevenue) / proRatedRevenue) * 100 : 0;
           const expVar = proRatedExpenses > 0 ? ((actualExpenses - proRatedExpenses) / proRatedExpenses) * 100 : 0;
           const gpVar = proRatedGrossProfit > 0 ? ((actualGross - proRatedGrossProfit) / proRatedGrossProfit) * 100 : 0;
 
-          // Update horizontal budget bars
           updateBudgetBar('rev', actualRevenue, proRatedRevenue, revVar);
           updateBudgetBar('exp', actualExpenses, proRatedExpenses, expVar);
           updateBudgetBar('gp', actualGross, proRatedGrossProfit, gpVar);

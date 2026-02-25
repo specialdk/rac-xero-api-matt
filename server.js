@@ -5417,7 +5417,11 @@ app.post("/api/ai-chat", async (req, res) => {
     // Calculate period months from quarter dates (match dashboard exactly)
     let periodMonths = 3;
     let reportDate = undefined;
-    if (quarterInfo?.startDate && quarterInfo?.endDate) {
+    if (quarterInfo?.periodMonths) {
+      // Use dashboard's pre-calculated periodMonths (handles YTD correctly)
+      periodMonths = quarterInfo.periodMonths;
+      reportDate = quarterInfo.endDate;
+    } else if (quarterInfo?.startDate && quarterInfo?.endDate) {
       const start = new Date(quarterInfo.startDate);
       const end = new Date(quarterInfo.endDate);
       periodMonths = quarterInfo.isComplete ? 3 : 
