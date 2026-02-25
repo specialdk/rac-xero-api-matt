@@ -34,7 +34,7 @@
         
         /* Typography */
         --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        --font-size-kpi: 30px;
+        --font-size-kpi: 36px;
         --font-size-kpi-secondary: 24px;
         --font-size-label: 12px;
         --font-size-body: 14px;
@@ -908,7 +908,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 6px;
+        margin-bottom: var(--spacing-sm);
       }
 
       .card-title {
@@ -933,8 +933,8 @@
       .budget-item {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        padding: 7px 0;
+        gap: 6px;
+        padding: 10px 0;
         border-bottom: 1px solid var(--color-border);
       }
 
@@ -1237,9 +1237,13 @@
         min-width: 450px;
         background: var(--bg-card);
         border-left: 1px solid var(--color-border);
-        display: flex;
+        display: none;
         flex-direction: column;
         z-index: 50;
+      }
+
+      .chat-panel.active {
+        display: flex;
       }
 
       .chat-panel.expanded {
@@ -1583,6 +1587,7 @@
         <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">&#x1F4F8; Snapshot</button>
         <span class="snapshot-status" id="snapshotStatus"></span>
         <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">&#x1F504; Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
+        <button class="btn-chat" id="chatToggleBtn" onclick="toggleChat()">&#x1F4AC; AI Pad</button>
         <button class="btn-dashboard" onclick="window.location.href='/'">ðŸ”— Connection Manager</button>
       </div>
     </header>
@@ -1834,7 +1839,7 @@
                   <span class="budget-actual" id="pl-cogs">$0</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #FFFBEB; margin: 0 -16px; padding: 7px 16px;">
+              <div class="budget-item" style="background: #FFFBEB; margin: 0 -16px; padding: 10px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label">Gross Profit</span>
                   <span class="budget-actual" id="pl-gross">$0</span>
@@ -1893,7 +1898,7 @@
                   <span class="budget-actual" id="bs-liabilities">$0</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #E8F5E9; margin: 0 -16px; padding: 7px 16px;">
+              <div class="budget-item" style="background: #E8F5E9; margin: 0 -16px; padding: 10px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label">Net Equity</span>
                   <span class="budget-actual" id="bs-equity">$0</span>
@@ -1966,7 +1971,7 @@
                   <span class="budget-actual" id="aged-61-90">$0</span>
                 </div>
               </div>
-              <div class="budget-item" style="background: #FDECE9; margin: 0 -16px; padding: 7px 16px;">
+              <div class="budget-item" style="background: #FDECE9; margin: 0 -16px; padding: 10px 16px;">
                 <div class="budget-item-header">
                   <span class="budget-item-label">90+ days</span>
                   <span class="budget-actual" id="aged-90plus">$0</span>
@@ -1984,7 +1989,7 @@
         </div>
      
       <!-- ========== AI CHAT PANEL ========== -->
-      <div class="chat-panel" id="chatPanel">
+      <div class="chat-panel active" id="chatPanel">
         <div class="chat-header">
           <h3>&#x1F4AC; Ask about your finances</h3>
           <div class="chat-header-actions">
@@ -2018,7 +2023,6 @@
           <button class="chat-send" onclick="sendChat()">&#x27A4;</button>
         </div>
       </div>
-    </div> <!-- /.main-container -->
 
     <!-- ========== DRAWER OVERLAY ========== -->
     <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
@@ -3976,23 +3980,23 @@
           }
         };
 
-        // Add second Y axis - always present to keep chart width consistent
-        // When YTD is off, labels are transparent; when on, they show
-        scales.y1 = {
-          position: 'right',
-          grid: { display: false },
-          border: { display: false },
-          ticks: {
-            font: { size: 10 },
-            color: showYTD ? '#8A8886' : 'transparent',
-            callback: function(value) {
-              if (!showYTD) return '';
-              if (value === 0) return '$0';
-              if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
-              return '$' + (value / 1000).toFixed(0) + 'K';
+        // Add second Y axis for YTD cumulative values
+        if (showYTD) {
+          scales.y1 = {
+            position: 'right',
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              font: { size: 10 },
+              color: '#8A8886',
+              callback: function(value) {
+                if (value === 0) return '$0';
+                if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+                return '$' + (value / 1000).toFixed(0) + 'K';
+              }
             }
-          }
-        };
+          };
+        }
 
         window.trendChartInstance = new Chart(ctx, {
           type: 'bar',
@@ -4722,7 +4726,14 @@
       let chatHistory = [];
 
       function toggleChat() {
-        document.getElementById('chatPanel').classList.toggle('active');
+        const panel = document.getElementById('chatPanel');
+        const btn = document.getElementById('chatToggleBtn');
+        panel.classList.toggle('active');
+        const isOpen = panel.classList.contains('active');
+        if (btn) {
+          btn.style.opacity = isOpen ? '1' : '0.6';
+          btn.title = isOpen ? 'Hide AI Pad' : 'Show AI Pad';
+        }
       }
 
       function toggleChatExpand() {
