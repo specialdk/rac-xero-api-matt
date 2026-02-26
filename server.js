@@ -2819,6 +2819,173 @@ app.get("/api/health", async (req, res) => {
 
 
 
+// ========== ACCOUNT VALIDATION / SAFETY REPORT ==========
+// Checks all entities' P&L and Balance Sheet section names against
+// the dashboard's classification rules and flags any that could
+// cause misreporting (catch-all classifications, unknown BS sections).
+app.get("/api/validate-accounts", async (req, res) => {
+  try {
+    const targetOrg = req.query.organizationName;
+    const xeroConnections = await tokenStorage.getAllXeroConnections();
+    const connectedEntities = xeroConnections.filter(c => c.connected);
+
+    // Known-good expense section names across all RAC entities
+    const KNOWN_EXPENSE_SECTIONS = [
+      "operating expenses", "expenses", "administration expenses",
+      "overheads", "depreciation", "staff costs", "other expenses",
+      "motor vehicle expenses", "occupancy costs", "finance costs",
+      "property expenses", "property maintenance expenses",
+      "cost recovery", "professional fees"
+    ];
+
+    const results = {
+      status: "pass",
+      checkedAt: new Date().toISOString(),
+      entities: [],
+      warnings: [],
+      errors: []
+    };
+
+    for (const connection of connectedEntities) {
+      if (targetOrg && !connection.tenantName.toLowerCase().includes(targetOrg.toLowerCase())) {
+        continue;
+      }
+
+      const entityResult = {
+        name: connection.tenantName,
+        tenantId: connection.tenantId,
+        plSections: [],
+        bsSections: [],
+        warnings: [],
+        status: "pass"
+      };
+
+      try {
+        const tokenData = await tokenStorage.getXeroToken(connection.tenantId);
+        if (!tokenData) {
+          entityResult.warnings.push({ type: "error", severity: "error", message: "No token available" });
+          entityResult.status = "fail";
+          results.entities.push(entityResult);
+          continue;
+        }
+        xero.setTokenSet(tokenData);
+
+        // --- Check P&L sections ---
+        try {
+          const today = new Date().toISOString().split("T")[0];
+          const plReport = await xero.accountingApi.getReportProfitAndLoss(
+            connection.tenantId, undefined, undefined, today, today, undefined, undefined, "true"
+          );
+          const plRows = plReport.body.reports?.[0]?.rows || [];
+
+          plRows.forEach(section => {
+            if (section.rowType === "Section" && section.title) {
+              const title = section.title;
+              const titleLower = title.toLowerCase();
+              const category = categorizeSection(title);
+              const accountCount = (section.rows || []).filter(r => r.rowType === "Row").length;
+
+              entityResult.plSections.push({ name: title, classification: category, accounts: accountCount });
+
+              // Flag sections that fall to catch-all "expense" and aren't known
+              if (category === "expense") {
+                const isKnownExpense = KNOWN_EXPENSE_SECTIONS.some(k => titleLower.includes(k));
+                if (!isKnownExpense) {
+                  const warning = {
+                    type: "pl_unknown_expense",
+                    severity: "warning",
+                    section: title,
+                    entity: connection.tenantName,
+                    message: `P&L section "${title}" classified as EXPENSE by catch-all. If this is revenue, it will be understated.`,
+                    accounts: accountCount
+                  };
+                  entityResult.warnings.push(warning);
+                  results.warnings.push(warning);
+                  entityResult.status = entityResult.status === "fail" ? "fail" : "warning";
+                }
+              }
+            }
+          });
+        } catch (plErr) {
+          entityResult.warnings.push({ type: "error", severity: "error", message: `P&L fetch failed: ${plErr.message}` });
+        }
+
+        // --- Check Balance Sheet sections ---
+        try {
+          const today = new Date().toISOString().split("T")[0];
+          const bsReport = await xero.accountingApi.getReportBalanceSheet(connection.tenantId, today);
+          const bsRows = bsReport.body.reports?.[0]?.rows || [];
+
+          bsRows.forEach(section => {
+            if (section.rowType === "Section" && section.title) {
+              const title = section.title;
+              const titleLower = title.toLowerCase();
+              const accountCount = (section.rows || []).filter(r => r.rowType === "Row").length;
+
+              let classification = "unknown";
+              if (titleLower.includes("bank") || titleLower.includes("asset")) classification = "asset";
+              else if (titleLower.includes("liabilit")) classification = "liability";
+              else if (titleLower.includes("equity")) classification = "equity";
+
+              entityResult.bsSections.push({ name: title, classification, accounts: accountCount });
+
+              if (classification === "unknown") {
+                const error = {
+                  type: "bs_invisible_section",
+                  severity: "error",
+                  section: title,
+                  entity: connection.tenantName,
+                  message: `Balance Sheet section "${title}" does NOT match any rule. These accounts are INVISIBLE to the dashboard.`,
+                  accounts: accountCount
+                };
+                entityResult.warnings.push(error);
+                results.errors.push(error);
+                entityResult.status = "fail";
+              }
+            }
+          });
+        } catch (bsErr) {
+          entityResult.warnings.push({ type: "error", severity: "error", message: `BS fetch failed: ${bsErr.message}` });
+        }
+
+      } catch (entityErr) {
+        entityResult.warnings.push({ type: "error", severity: "error", message: `Entity check failed: ${entityErr.message}` });
+        entityResult.status = "fail";
+      }
+
+      results.entities.push(entityResult);
+    }
+
+    // Set overall status
+    if (results.errors.length > 0) results.status = "fail";
+    else if (results.warnings.length > 0) results.status = "warning";
+
+    results.summary = {
+      entitiesChecked: results.entities.length,
+      totalPlSections: results.entities.reduce((sum, e) => sum + e.plSections.length, 0),
+      totalBsSections: results.entities.reduce((sum, e) => sum + e.bsSections.length, 0),
+      warningCount: results.warnings.length,
+      errorCount: results.errors.length,
+      rules: {
+        pl_revenue_keywords: ["income", "revenue", "trading", "sales", "royalties", "investment performance", "property maintenance"],
+        pl_cogs_keywords: ["cost of sales", "direct cost"],
+        pl_catch_all: "Everything else defaults to EXPENSE",
+        bs_asset_keywords: ["bank", "asset"],
+        bs_liability_keywords: ["liabilit"],
+        bs_equity_keywords: ["equity"],
+        bs_catch_all: "Everything else is INVISIBLE to dashboard"
+      }
+    };
+
+    console.log(`✅ Account validation: ${results.status} (${results.warnings.length} warnings, ${results.errors.length} errors across ${results.entities.length} entities)`);
+    res.json(results);
+
+  } catch (error) {
+    console.error("Account validation error:", error);
+    res.status(500).json({ status: "error", message: error.message, checkedAt: new Date().toISOString() });
+  }
+});
+
 // Enhanced health check for CEO dashboard - shows per-entity connection status
 app.get("/api/health-check", async (req, res) => {
   try {
@@ -4847,6 +5014,185 @@ app.get("/api/historical-metrics/:organizationName", async (req, res) => {
       error: "Failed to load historical metrics", 
       details: error.message 
     });
+  }
+});
+
+// ============================================================================
+// DAILY SNAPSHOT (triggered by 📸 button or automated schedule)
+// Captures: daily_metrics (balance sheet) + monthly_snapshots (P&L)
+// ============================================================================
+
+app.post("/api/run-daily-snapshot", async (req, res) => {
+  try {
+    const startTime = Date.now();
+    const today = new Date().toISOString().split("T")[0];
+    const triggeredBy = req.body?.triggeredBy || "api";
+
+    console.log(`📸 Daily snapshot triggered (${triggeredBy}) for ${today}`);
+
+    const connections = await tokenStorage.getAllXeroConnections();
+    const activeConnections = connections.filter(c => c.connected);
+
+    if (activeConnections.length === 0) {
+      return res.json({ success: false, error: "No active Xero connections" });
+    }
+
+    let orgsProcessed = 0;
+    let orgsFailed = 0;
+    const details = [];
+
+    // Determine FY start and completed months for P&L snapshots
+    const now = new Date();
+    const fyStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+    const fyStart = `${fyStartYear}-07-01`;
+
+    // Build list of completed months in current FY
+    const completedMonths = [];
+    let monthCursor = new Date(fyStartYear, 6, 1); // July
+    while (monthCursor < new Date(now.getFullYear(), now.getMonth(), 1)) {
+      const ym = monthCursor.toISOString().slice(0, 7); // e.g., "2025-07"
+      const lastDay = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0);
+      completedMonths.push({
+        periodMonth: ym,
+        startDate: `${ym}-01`,
+        endDate: lastDay.toISOString().split("T")[0],
+      });
+      monthCursor.setMonth(monthCursor.getMonth() + 1);
+    }
+
+    for (const conn of activeConnections) {
+      const orgShortName = getOrgShortName(conn.tenantName);
+
+      try {
+        const tokenData = await tokenStorage.getXeroToken(conn.tenantId);
+        if (!tokenData) throw new Error("Token not available");
+        await xero.setTokenSet(tokenData);
+
+        // ---- 1. DAILY METRICS (Balance Sheet snapshot) ----
+        const bsResponse = await xero.accountingApi.getReportBalanceSheet(conn.tenantId, today);
+        const bsRows = bsResponse.body.reports?.[0]?.rows || [];
+
+        let cashPosition = 0, receivablesTotal = 0;
+        let totalAssets = 0, totalLiabilities = 0, totalEquity = 0;
+
+        bsRows.forEach(section => {
+          if (section.rowType !== "Section" || !section.rows || !section.title) return;
+          const st = section.title.toLowerCase();
+          section.rows.forEach(row => {
+            if (row.rowType !== "Row" || !row.cells || row.cells.length < 2) return;
+            const acctName = row.cells[0]?.value || "";
+            const balance = parseFloat(row.cells[1]?.value || 0);
+            if (acctName.toLowerCase().includes("total") || balance === 0) return;
+
+            if (st === "bank" || st === "bank accounts") {
+              cashPosition += balance;
+              totalAssets += balance;
+            } else if (st.includes("asset")) {
+              if (acctName === "Trade Debtors") receivablesTotal += balance;
+              totalAssets += balance;
+            } else if (st.includes("liabilit")) {
+              totalLiabilities += balance;
+            } else if (st.includes("equity")) {
+              totalEquity += balance;
+            }
+          });
+        });
+
+        // Delete existing row for today (if any) then insert fresh
+        await pool.query(
+          `DELETE FROM daily_metrics WHERE org = $1 AND snapshot_date = $2`,
+          [orgShortName, today]
+        );
+        await pool.query(
+          `INSERT INTO daily_metrics
+           (snapshot_date, org, cash_position,
+            receivables_current, receivables_31_60, receivables_61_90, receivables_over_90, receivables_total,
+            total_assets, total_liabilities, total_equity,
+            job_status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'success', NOW())`,
+          [today, orgShortName, cashPosition,
+           receivablesTotal, 0, 0, 0, receivablesTotal,
+           totalAssets, totalLiabilities, totalEquity]
+        );
+
+        await new Promise(r => setTimeout(r, 400));
+
+        // ---- 2. MONTHLY P&L SNAPSHOTS (for completed months) ----
+        let monthsUpdated = 0;
+        for (const month of completedMonths) {
+          // Check if this month already has a snapshot
+          const existing = await pool.query(
+            `SELECT id FROM monthly_snapshots WHERE org = $1 AND period_month = $2`,
+            [orgShortName, month.periodMonth]
+          );
+          if (existing.rows.length > 0) continue; // Already captured
+
+          try {
+            // Fetch single-month P&L
+            const plResponse = await xero.accountingApi.getReportProfitAndLoss(
+              conn.tenantId, undefined, undefined,
+              month.startDate, month.endDate,
+              undefined, undefined, "true"
+            );
+            const plRows = plResponse.body.reports?.[0]?.rows || [];
+            const plData = parsePLData(plRows);
+
+            await pool.query(
+              `DELETE FROM monthly_snapshots WHERE org = $1 AND period_month = $2`,
+              [orgShortName, month.periodMonth]
+            );
+            await pool.query(
+              `INSERT INTO monthly_snapshots
+               (period_month, org, revenue, cogs, gross_profit, opex, net_profit, job_status, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, 'success', NOW())`,
+              [month.periodMonth, orgShortName,
+               plData.totalRevenue, plData.totalCOGS,
+               plData.totalRevenue - plData.totalCOGS,
+               plData.totalExpenses, plData.totalRevenue - plData.totalCOGS - plData.totalExpenses]
+            );
+
+            monthsUpdated++;
+            await new Promise(r => setTimeout(r, 400));
+          } catch (plErr) {
+            console.error(`  ⚠ ${orgShortName} P&L ${month.periodMonth}: ${plErr.message}`);
+          }
+        }
+
+        orgsProcessed++;
+        details.push({
+          org: orgShortName,
+          status: "success",
+          cash: Math.round(cashPosition),
+          receivables: Math.round(receivablesTotal),
+          assets: Math.round(totalAssets),
+          monthlySnapshotsAdded: monthsUpdated,
+        });
+
+        console.log(`  ✅ ${orgShortName}: Cash=$${cashPosition.toLocaleString()}, Recv=$${receivablesTotal.toLocaleString()}, +${monthsUpdated} monthly snapshots`);
+
+      } catch (err) {
+        orgsFailed++;
+        details.push({ org: orgShortName, status: "failed", error: err.message });
+        console.error(`  ❌ ${orgShortName}: ${err.message}`);
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    const durationSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`📸 Snapshot complete: ${orgsProcessed} success, ${orgsFailed} failed in ${durationSeconds}s`);
+
+    res.json({
+      success: true,
+      date: today,
+      orgsProcessed,
+      orgsFailed,
+      durationSeconds: parseFloat(durationSeconds),
+      details,
+    });
+
+  } catch (error) {
+    console.error("❌ Snapshot error:", error);
+    res.json({ success: false, error: error.message });
   }
 });
 
