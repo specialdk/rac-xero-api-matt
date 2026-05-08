@@ -4017,7 +4017,7 @@
             datasets: [{
               data: expenseData,
             borderColor: RAC_CHART.terraSoft,
-              backgroundColor: RAC_CHART.terraPale,
+              backgroundColor: RAC_CHART.fade(RAC_CHART.terra, 0.18),
               borderWidth: 2,
               fill: true,
               tension: 0.4,
@@ -4398,7 +4398,7 @@
               data: revenueData,
               borderColor: revenueData[revenueData.length - 1] >= 0 ? RAC_CHART.moss : RAC_CHART.terra,
               borderWidth: 2,
-              backgroundColor: revenueData[revenueData.length - 1] >= 0 ? RAC_CHART.mossPale : RAC_CHART.terraPale
+              backgroundColor: revenueData[revenueData.length - 1] >= 0 ? RAC_CHART.mossPale : RAC_CHART.fade(RAC_CHART.terra, 0.18)
             }]
           }
         });
@@ -4414,7 +4414,7 @@
               data: profitData,
               borderColor: latestProfit >= 0 ? RAC_CHART.moss : RAC_CHART.terra,
               borderWidth: 2,
-              backgroundColor: latestProfit >= 0 ? RAC_CHART.mossPale : RAC_CHART.terraPale
+              backgroundColor: latestProfit >= 0 ? RAC_CHART.mossPale : RAC_CHART.fade(RAC_CHART.terra, 0.18)
             }]
           }
         });
