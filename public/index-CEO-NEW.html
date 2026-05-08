@@ -190,10 +190,9 @@
       body {
         font-family: var(--rac-font-sans);
         background: var(--rac-paper);
-        height: 100vh;
-        overflow: hidden;
         display: flex;
         flex-direction: column;
+        min-height: 100vh;
       }
 
       /* ========== HEADER ========== */
@@ -640,13 +639,11 @@
       .main-container {
         flex: 1;
         display: flex;
-        overflow: hidden;
       }
 
       .dashboard {
         flex: 1;
         padding: var(--spacing-md);
-        overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: var(--spacing-md);
@@ -996,8 +993,6 @@
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         gap: var(--spacing-md);
-        flex: 1;
-        min-height: 0;
       }
 
      .summary-card {
@@ -1007,7 +1002,6 @@
         padding: var(--spacing-md);
         display: flex;
         flex-direction: column;
-        overflow: hidden;
       }
 
       .card-header {
@@ -1029,10 +1023,8 @@
       }
 
       .card-content {
-        flex: 1;
         display: flex;
         flex-direction: column;
-        overflow-y: auto;
       }
 
       /* Budget Progress Card */
