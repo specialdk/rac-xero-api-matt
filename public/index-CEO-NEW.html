@@ -4398,6 +4398,7 @@
               data: revenueData,
               borderColor: revenueData[revenueData.length - 1] >= 0 ? RAC_CHART.moss : RAC_CHART.terra,
               borderWidth: 2,
+              fill: true,
               backgroundColor: revenueData[revenueData.length - 1] >= 0 ? RAC_CHART.mossPale : RAC_CHART.fade(RAC_CHART.terra, 0.18)
             }]
           }
@@ -4414,6 +4415,7 @@
               data: profitData,
               borderColor: latestProfit >= 0 ? RAC_CHART.moss : RAC_CHART.terra,
               borderWidth: 2,
+              fill: true,
               backgroundColor: latestProfit >= 0 ? RAC_CHART.mossPale : RAC_CHART.fade(RAC_CHART.terra, 0.18)
             }]
           }
