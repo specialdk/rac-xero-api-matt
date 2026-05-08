@@ -3063,8 +3063,8 @@
         window.dashboardData.pl.gross = adjGross;
         window.dashboardData.pl.netProfit = adjNetProfit;
 
-        document.getElementById("kpi-revenue").textContent = "$" + adjRevenue.toLocaleString();
-        document.getElementById("kpi-profit").textContent = "$" + adjNetProfit.toLocaleString();
+        document.getElementById("kpi-revenue").textContent = fmtKpiAuto(adjRevenue);
+        document.getElementById("kpi-profit").textContent = fmtKpiAuto(adjNetProfit);
 
         const plRevEl = document.getElementById("pl-revenue");
         const plCogsEl = document.getElementById("pl-cogs");
@@ -3102,9 +3102,9 @@
         window.dashboardData.pl.gross = origPL.gross;
         window.dashboardData.pl.netProfit = origPL.netProfit;
 
-        document.getElementById("kpi-revenue").textContent = "$" + (origPL.revenue || 0).toLocaleString();
+        document.getElementById("kpi-revenue").textContent = fmtKpiAuto((origPL.revenue || 0));
         const netProfit = origPL.netProfit || 0;
-        document.getElementById("kpi-profit").textContent = fmtKpiSmart(netProfit, true);
+        document.getElementById("kpi-profit").textContent = fmtKpiAuto(netProfit);
 
         const plRevEl = document.getElementById("pl-revenue");
         const plCogsEl = document.getElementById("pl-cogs");
@@ -3643,7 +3643,7 @@
         }
 
         // Update consolidated KPIs
-        document.getElementById("kpi-cash").textContent = fmtKpiSmart(totalCash, true);
+        document.getElementById("kpi-cash").textContent = fmtKpiAuto(totalCash);
         document.getElementById("kpi-cash-trend").innerHTML = `&#x1F4B0; ${successCount} entities`;
         document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
 
@@ -3652,14 +3652,14 @@
 
         const grossProfit = totalRevenue - totalCogs;
         const netProfit = grossProfit - totalExpenses;
-        document.getElementById("kpi-revenue").textContent = fmtKpiSmart(totalRevenue, true);
+        document.getElementById("kpi-revenue").textContent = fmtKpiAuto(totalRevenue);
         document.getElementById("kpi-revenue-trend").textContent = "\u{1F4CA} Consolidated";
         
-        document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
+        document.getElementById("kpi-profit").textContent = fmtKpiAuto(netProfit);
         document.getElementById("kpi-profit-trend").textContent = netProfit < 0 ? "\u26A0 Loss position" : "\u2714 Profitable";
         document.getElementById("kpi-profit-trend").className = netProfit < 0 ? "kpi-trend negative" : "kpi-trend positive";
 
-        document.getElementById("kpi-receivables").textContent = fmtKpiSmart(totalReceivables, true);
+        document.getElementById("kpi-receivables").textContent = fmtKpiAuto(totalReceivables);
         document.getElementById("kpi-receivables-trend").textContent = `${allInvoices.length} invoices across all entities`;
 
         // Store consolidated receivables for drawer (calculate aging from allInvoices)
@@ -3711,19 +3711,19 @@
         };
 
         // Update Balance Sheet card
-        document.getElementById('bs-assets').textContent = fmtKpiSmart(totalAssets, true);
-        document.getElementById('bs-liabilities').textContent = fmtKpiSmart(totalLiabilities, true);
-        document.getElementById('bs-equity').textContent = fmtKpiSmart(totalEquity, true);
+        document.getElementById('bs-assets').textContent = fmtKpiAuto(totalAssets);
+        document.getElementById('bs-liabilities').textContent = fmtKpiAuto(totalLiabilities);
+        document.getElementById('bs-equity').textContent = fmtKpiAuto(totalEquity);
 
         // Update P&L Summary card
-        document.getElementById("pl-revenue").textContent = fmtKpiSmart(totalRevenue, true);
-        document.getElementById("pl-cogs").textContent = fmtKpiSmart(totalCogs, true);
-        document.getElementById("pl-gross").textContent = fmtKpiSmart(grossProfit, true);
-        document.getElementById("pl-opex").textContent = fmtKpiSmart(totalExpenses, true);
-        document.getElementById("pl-net").innerHTML = "<strong>" + fmtKpiSmart(netProfit, true) + "</strong>";
+        document.getElementById("pl-revenue").textContent = fmtKpiAuto(totalRevenue);
+        document.getElementById("pl-cogs").textContent = fmtKpiAuto(totalCogs);
+        document.getElementById("pl-gross").textContent = fmtKpiAuto(grossProfit);
+        document.getElementById("pl-opex").textContent = fmtKpiAuto(totalExpenses);
+        document.getElementById("pl-net").innerHTML = "<strong>" + fmtKpiAuto(netProfit) + "</strong>";
 
         // Update Operating Expenses card to match P&L OpEx exactly
-        document.getElementById("kpi-top-expense").textContent = fmtKpiSmart(totalExpenses, true);
+        document.getElementById("kpi-top-expense").textContent = fmtKpiAuto(totalExpenses);
 
         // Load live inventory data for Mining's quarry operation
         await loadInventory();
@@ -3760,7 +3760,7 @@
           const totalCash = data.totalCash || 0;
           window.dashboardData.cash = data;
 
-          document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
+          document.getElementById("kpi-cash").textContent = fmtKpiAuto(totalCash);
           document.getElementById("kpi-cash-trend").innerHTML = 
             `<span>&#x1F4B0;</span> ${data.bankAccounts?.length || 0} accounts`;
           document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
@@ -3825,7 +3825,7 @@
           window.dashboardData.pl = { revenue, totalExpenses, cogs, opex, gross, netProfit, revenueAccounts: data.summary?.revenueAccounts || [], cogsAccounts: data.summary?.cogsAccounts || [], expenseAccounts: data.summary?.expenseAccounts || [] };
 
           // Update KPI cards
-          document.getElementById("kpi-revenue").textContent = "$" + revenue.toLocaleString();
+          document.getElementById("kpi-revenue").textContent = fmtKpiAuto(revenue);
           document.getElementById("kpi-revenue-trend").innerHTML = 
             revenue >= 0 ? `<span>\u2191</span> Period revenue` : `<span>\u2193</span> Negative revenue`;
           document.getElementById("kpi-revenue-trend").className = 
@@ -3833,7 +3833,7 @@
           document.getElementById("kpi-revenue-status").className = 
             revenue >= 0 ? "kpi-status-bar healthy" : "kpi-status-bar warning";
 
-          document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
+          document.getElementById("kpi-profit").textContent = fmtKpiAuto(netProfit);
           document.getElementById("kpi-profit-trend").innerHTML = 
             netProfit >= 0 ? `<span>\u2191</span> Profitable` : `<span>\u2193</span> Loss position`;
           document.getElementById("kpi-profit-trend").className = 
@@ -3842,11 +3842,11 @@
             netProfit >= 0 ? "kpi-status-bar healthy" : "kpi-status-bar critical";
 
           // Update P&L summary card
-          document.getElementById("pl-revenue").textContent = "$" + revenue.toLocaleString();
-          document.getElementById("pl-cogs").textContent = "$" + cogs.toLocaleString();
-          document.getElementById("pl-gross").textContent = "$" + gross.toLocaleString();
-          document.getElementById("pl-opex").textContent = "$" + opex.toLocaleString();
-          document.getElementById("pl-net").textContent = "$" + netProfit.toLocaleString();
+          document.getElementById("pl-revenue").textContent = fmtKpiAuto(revenue);
+          document.getElementById("pl-cogs").textContent = fmtKpiAuto(cogs);
+          document.getElementById("pl-gross").textContent = fmtKpiAuto(gross);
+          document.getElementById("pl-opex").textContent = fmtKpiAuto(opex);
+          document.getElementById("pl-net").textContent = fmtKpiAuto(netProfit);
 
           // Update Operating Expenses card to match P&L OpEx (for non-Mining entities)
           const expCard = document.getElementById("kpi-top-expense");
@@ -4047,7 +4047,7 @@
             invoices: invoices
           };
 
-          document.getElementById("kpi-receivables").textContent = "$" + total.toLocaleString();
+          document.getElementById("kpi-receivables").textContent = fmtKpiAuto(total);
           
           const currentPct = total > 0 ? Math.round(current / total * 100) : 0;
           const overduePct = 100 - currentPct;
@@ -4297,7 +4297,7 @@
         }
 
         // Show Total Operating Expenses as the main value
-        document.getElementById("kpi-top-expense").textContent = "$" + totalExpenses.toLocaleString();
+        document.getElementById("kpi-top-expense").textContent = fmtKpiAuto(totalExpenses);
         
         // Show #1 expense as the subtitle
         const topExpense = topExpenses[0];
@@ -4457,9 +4457,9 @@
         const receivables = window.dashboardData.receivables;
 
         // Balance Sheet card
-        document.getElementById('bs-assets').textContent = '$' + (balance.totalAssets || 0).toLocaleString();
-        document.getElementById('bs-liabilities').textContent = '$' + (balance.totalLiabilities || 0).toLocaleString();
-        document.getElementById('bs-equity').textContent = '$' + (balance.totalEquity || 0).toLocaleString();
+        document.getElementById('bs-assets').textContent = fmtKpiAuto((balance.totalAssets || 0));
+        document.getElementById('bs-liabilities').textContent = fmtKpiAuto((balance.totalLiabilities || 0));
+        document.getElementById('bs-equity').textContent = fmtKpiAuto((balance.totalEquity || 0));
 
         // Key Ratios card
         const pl = window.dashboardData.pl || {};
@@ -5827,6 +5827,15 @@
         return `$${sign}${Math.round(abs).toLocaleString('en-AU')}`;
       }
 
+      // Auto-detect scope variant. Resolves the right formatting at call time
+      // based on the current entity selection — abbreviated for ALL/consolidated,
+      // full rounded integer for any single entity. Use this anywhere a KPI value
+      // is being written; never worry about which function path you are in.
+      function fmtKpiAuto(value) {
+        const entity = (typeof getSelectedEntity === 'function') ? getSelectedEntity() : '';
+        return fmtKpiSmart(value, entity === 'ALL');
+      }
+
       // Strip decimal places from all displayed dollar values when compact mode is on
       function applyCompactRounding() {
         // Always strip decimals from displayed dollar values (was previously
@@ -5839,7 +5848,7 @@
         while (walker.nextNode()) {
           const node = walker.currentNode;
           if (node.textContent.includes('$') && /\$[−\-]?[\d,]+\.\d/.test(node.textContent)) {
-            node.textContent = node.textContent.replace(/(\$[−\-]?[\d,]+)\.\d+(?![Mk])/g, '$1');
+            node.textContent = node.textContent.replace(/(\$[−\-]?[\d,]+)\.\d+(?![\dMk])/g, '$1');
           }
         }
       }
