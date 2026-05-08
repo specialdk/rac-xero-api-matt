@@ -2919,10 +2919,16 @@
           'Marrin': 'Marrin Square'
         };
 
-        if (entity === 'ALL') {
-          document.querySelector('.header h1').textContent = '\u{1F4CA} All RAC Entities - Executive Dashboard';
-        } else {
-          document.querySelector('.header h1').textContent = '\u26CF\uFE0F ' + (entityNames[entity] || entity) + ' - Executive Dashboard';
+        // Legacy header h1 was removed in step c2 (mast covers identity now).
+        // The mast title is currently static "RAC Finance" — entity name shown via the entity picker.
+        // Future: if the mast h1 should reflect entity selection, wire to a new ID here.
+        const legacyHeaderH1 = document.querySelector('.header h1');
+        if (legacyHeaderH1) {
+          if (entity === 'ALL') {
+            legacyHeaderH1.textContent = '\u{1F4CA} All RAC Entities - Executive Dashboard';
+          } else {
+            legacyHeaderH1.textContent = '\u26CF\uFE0F ' + (entityNames[entity] || entity) + ' - Executive Dashboard';
+          }
         }
 
         // Handle consolidated view when ALL selected
