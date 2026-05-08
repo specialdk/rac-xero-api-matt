@@ -2232,6 +2232,22 @@
         color: var(--rac-terra);
       }
 
+      /* ========== THREE-LANE SHELL (Design System §12.3) ========== */
+      /* Mast and ochre strip span full viewport (unchanged).
+         Dashboard content rows constrain to var(--rac-container-max) and
+         centre within the .dashboard scroll area, leaving paper-coloured
+         gutters on either side at wide displays.
+         (The .rac-controls-bar already has its own max-width applied.) */
+      .dashboard > .kpi-row,
+      .dashboard > .chart-row,
+      .dashboard > .summary-row,
+      .dashboard > .ai-panel-mount {
+        max-width: var(--rac-container-max);
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
  
       
     </style>
@@ -2348,7 +2364,7 @@
           <!-- Cash Position -->
           <div class="kpi-card" onclick="openDrawer('cash')">
             <div class="kpi-header">
-              <div class="kpi-label">Cash Position</div>
+              <div class="kpi-label">Cash Position (Today)</div>
               <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-cash">Loading...</div>
@@ -2376,7 +2392,7 @@
           <!-- Net Profit -->
           <div class="kpi-card" onclick="openDrawer('profit')">
             <div class="kpi-header">
-              <div class="kpi-label">Net Profit</div>
+              <div class="kpi-label">Net Profit (Period)</div>
               <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-profit">Loading...</div>
@@ -2390,7 +2406,7 @@
           <!-- Receivables -->
           <div class="kpi-card" onclick="openDrawer('receivables')">
             <div class="kpi-header">
-              <div class="kpi-label">Receivables</div>
+              <div class="kpi-label">Receivables (Today)</div>
               <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-receivables">Loading...</div>
@@ -2404,7 +2420,7 @@
           <!-- Inventory Value (Mining only) / Top Expenses (other entities) -->
           <div id="inventory-card" class="kpi-card" onclick="openDrawer('inventory')">
             <div class="kpi-header">
-              <div class="kpi-label">Inventory Value</div>
+              <div class="kpi-label">Inventory Value (Today)</div>
               <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-inventory">Loading...</div>
@@ -2418,7 +2434,7 @@
           <!-- Top Expenses (non-Mining entities) -->
           <div id="expenses-card" class="kpi-card" onclick="openDrawer('expenses')" style="display: none;">
             <div class="kpi-header">
-              <div class="kpi-label">OPERATING EXPENSES</div>
+              <div class="kpi-label">Operating Expenses (Period)</div>
               <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-top-expense">Loading...</div>
@@ -3709,6 +3725,10 @@
         // Load Top Customers from aggregated invoices
         await loadTopCustomers(quarterInfo);
 
+        // Load consolidated historical data so sparklines and trend chart
+        // show real Jul → today trajectories for the ALL view.
+        await loadConsolidatedHistoricalData(entities);
+
         updateHealthStatus();
         loadFinancialRatios();
         loadTopExpenses();
@@ -4507,6 +4527,69 @@
         } catch (error) {
           console.error('Error loading historical data:', error);
           return { daily: [], monthly: [] };
+        }
+      }
+
+      // Consolidated historical for ALL view: fetches each entity's monthly + daily
+      // snapshots in parallel, then aggregates them. Used to populate YTD sparklines
+      // when no single entity is selected. Sets window.historicalData with the same
+      // shape that loadHistoricalData produces for a single entity, so initSparklines
+      // and initTrendChart work without modification.
+      async function loadConsolidatedHistoricalData(entities) {
+        try {
+          const histPromises = entities.map(entity =>
+            fetch(`${API_BASE}/api/historical-metrics/${entity}`)
+              .then(r => r.ok ? r.json() : null)
+              .catch(() => null)
+          );
+          const allHistorical = await Promise.all(histPromises);
+
+          // Aggregate monthly by period_month (sum revenue, net_profit, inventory_value)
+          const monthlyMap = {};
+          allHistorical.forEach(h => {
+            if (!h || !Array.isArray(h.monthly)) return;
+            h.monthly.forEach(m => {
+              if (!monthlyMap[m.period_month]) {
+                monthlyMap[m.period_month] = {
+                  period_month: m.period_month,
+                  revenue: 0,
+                  net_profit: 0,
+                  inventory_value: 0,
+                };
+              }
+              monthlyMap[m.period_month].revenue        += parseFloat(m.revenue) || 0;
+              monthlyMap[m.period_month].net_profit     += parseFloat(m.net_profit) || 0;
+              monthlyMap[m.period_month].inventory_value += parseFloat(m.inventory_value) || 0;
+            });
+          });
+
+          // Aggregate daily by snapshot_date (sum cash_position, receivables_total)
+          const dailyMap = {};
+          allHistorical.forEach(h => {
+            if (!h || !Array.isArray(h.daily)) return;
+            h.daily.forEach(d => {
+              if (!dailyMap[d.snapshot_date]) {
+                dailyMap[d.snapshot_date] = {
+                  snapshot_date: d.snapshot_date,
+                  cash_position: 0,
+                  receivables_total: 0,
+                };
+              }
+              dailyMap[d.snapshot_date].cash_position     += parseFloat(d.cash_position) || 0;
+              dailyMap[d.snapshot_date].receivables_total += parseFloat(d.receivables_total) || 0;
+            });
+          });
+
+          const monthly = Object.values(monthlyMap).sort((a, b) => a.period_month.localeCompare(b.period_month));
+          const daily   = Object.values(dailyMap).sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date));
+
+          window.historicalData = { daily, monthly };
+          console.log(`Consolidated historical: ${monthly.length} months, ${daily.length} days from ${entities.length} entities`);
+          return window.historicalData;
+        } catch (error) {
+          console.error('Error loading consolidated historical:', error);
+          window.historicalData = { daily: [], monthly: [] };
+          return window.historicalData;
         }
       }
 
@@ -5900,17 +5983,16 @@
       // Per-scope state. Key: ${entity}::${period}::rev-${reversalActive}
       const _aiPanelState = {};
 
-      // Default period: last completed quarter (within current FY).
+      // Default period: current quarter.
       // FY = Jul-Jun. Q1 Jul-Sep, Q2 Oct-Dec, Q3 Jan-Mar, Q4 Apr-Jun.
-      // Mid-quarter data is incomplete and misleading for execs; we show the most
-      // recent fully-closed quarter instead. In Q1 itself there is no prior
-      // quarter inside the current FY, so we default to Q1 (current).
+      // Card values reflect the selected period. Sparklines always span Jul → today (YTD)
+      // so the user sees current-quarter values in context of the full year.
       function getCurrentFinancialPeriod() {
         const m = new Date().getMonth(); // 0-11
-        if (m >= 9 && m <= 11) return 'Q1';   // currently Q2 → Q1 just completed
-        if (m >= 0 && m <= 2)  return 'Q2';   // currently Q3 → Q2 just completed
-        if (m >= 3 && m <= 5)  return 'Q3';   // currently Q4 → Q3 just completed
-        return 'Q1';                            // currently Q1 (Jul-Sep) → no prior quarter in this FY, show Q1
+        if (m >= 6 && m <= 8)  return 'Q1';
+        if (m >= 9 && m <= 11) return 'Q2';
+        if (m >= 0 && m <= 2)  return 'Q3';
+        return 'Q4';                            // Apr-Jun (m=3-5)
       }
 
       // Reversal-active check (returns boolean)
