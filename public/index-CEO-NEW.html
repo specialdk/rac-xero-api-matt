@@ -1705,9 +1705,106 @@
           grid-template-columns: 1fr;
         }
       }
+
+      /* ========== RAC MASTHEAD (Design System §4.1) ========== */
+      .rac-mast {
+        background: var(--rac-ink);
+        color: var(--rac-paper);
+        padding: var(--rac-space-6);
+        font-family: var(--rac-font-sans);
+      }
+      .rac-mast-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--rac-space-5);
+      }
+      .rac-mast-row + .rac-mast-row {
+        margin-top: 6px;
+      }
+      .rac-mast h1 {
+        font-family: var(--rac-font-serif);
+        font-size: var(--rac-text-xl);
+        font-weight: var(--rac-weight-regular);
+        color: var(--rac-paper);
+        margin: 0;
+      }
+      .rac-mast .mast-title-cluster {
+        display: flex;
+        align-items: center;
+        gap: var(--rac-space-3);
+      }
+      .rac-mast .mast-subtitle,
+      .rac-mast .mast-breadcrumb,
+      .rac-mast .mast-meta {
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xs);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-wide);
+        color: var(--rac-ink-faint);
+      }
+      .rac-mast .mast-meta {
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      /* Terra accent strip — §4.1 names this as "not optional" */
+      .rac-mast-rule {
+        height: 4px;
+        background: var(--rac-terra);
+      }
+
+      /* Ochre mast-strip — context text band */
+      .rac-mast-strip {
+        background: var(--rac-ochre);
+        color: var(--rac-ink);
+        padding: var(--rac-space-2) var(--rac-space-6);
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xs);
+        font-weight: var(--rac-weight-medium);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-normal);
+        text-align: center;
+      }
+
+      /* ========== STATUS PILL (sharp) — Design System §9.1 ========== */
+      .rac-status-pill {
+        display: inline-block;
+        padding: 3px 10px;
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xxs);
+        font-weight: var(--rac-weight-medium);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-normal);
+        border-radius: var(--rac-radius-sharp);
+        vertical-align: middle;
+      }
+      .rac-status-pill.live    { background: var(--rac-moss);  color: var(--rac-paper); }
+      .rac-status-pill.loading { background: var(--rac-ochre); color: var(--rac-ink);
+                                 animation: var(--rac-pulse-loading); }
+      .rac-status-pill.error   { background: var(--rac-terra); color: var(--rac-paper); }
+
     </style>
   </head>
   <body>
+    <!-- ========== RAC MASTHEAD (Design System §4.1) ========== -->
+    <div class="rac-mast">
+      <div class="rac-mast-row">
+        <div class="mast-title-cluster">
+          <h1>RAC Finance</h1>
+          <span class="rac-status-pill live">LIVE</span>
+        </div>
+        <div class="mast-meta" id="mastDatetime">--</div>
+      </div>
+      <div class="rac-mast-row">
+        <div class="mast-subtitle">FY26 &middot; SOURCE OF TRUTH: XERO &middot; FINANCIAL INTELLIGENCE POWERED BY AI</div>
+        <div class="mast-breadcrumb">EXECUTIVE DASHBOARD</div>
+      </div>
+    </div>
+    <div class="rac-mast-rule"></div>
+    <div class="rac-mast-strip">
+      EXECUTIVE DASHBOARD &middot; CONSOLIDATED P&amp;L &middot; BALANCE SHEET &middot; CASH POSITION &middot; AI INSIGHTS POWERED BY CLAUDE
+    </div>
     <!-- ========== HEADER ========== -->
     <header class="header">
       <div class="header-left">
@@ -5468,6 +5565,21 @@
       document.addEventListener('DOMContentLoaded', () => {
         loadDashboard();
       });
+    </script>
+    <!-- Mast datetime — updates every minute (Design System §4.1) -->
+    <script>
+      (function () {
+        function updateMastDatetime() {
+          const el = document.getElementById('mastDatetime');
+          if (!el) return;
+          const now = new Date();
+          const date = now.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+          const time = now.toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase();
+          el.textContent = date + ', ' + time;
+        }
+        updateMastDatetime();
+        setInterval(updateMastDatetime, 60000);
+      })();
     </script>
   </body>
   </html>
