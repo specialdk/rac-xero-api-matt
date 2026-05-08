@@ -1341,240 +1341,7 @@
         padding: var(--spacing-lg);
         overflow-y: auto;
       }
-
-       /* ========== AI CHAT PANEL ========== */
-      .chat-panel {
-        width: 450px;
-        min-width: 450px;
-        background: var(--bg-card);
-        border-left: 1px solid var(--color-border);
-        display: none;
-        flex-direction: column;
-        z-index: 50;
-      }
-
-      .chat-panel.active {
-        display: flex;
-      }
-
-      .chat-panel.expanded {
-        width: 600px;
-        min-width: 600px;
-      }
-
-      .chat-header {
-        padding: var(--spacing-md);
-        border-bottom: 1px solid var(--color-border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-      }
-
-      .chat-header h3 {
-        font-size: 14px;
-        font-weight: 600;
-      }
-
-      .chat-header-actions {
-        display: flex;
-        gap: 6px;
-      }
-
-      .chat-header-actions button {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .chat-header-actions button:hover {
-        background: rgba(255,255,255,0.3);
-      }
-
-      .chat-context {
-        padding: 6px 12px;
-        background: rgba(102, 126, 234, 0.08);
-        border-bottom: 1px solid var(--color-border);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 11px;
-        color: var(--color-text-secondary);
-      }
-
-      .chat-context .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #10b981;
-        margin-left: auto;
-      }
-
-      .chat-context .status-dot.live {
-        animation: pulse-dot 2s infinite;
-      }
-
-      @keyframes pulse-dot {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
-      }
-
-      .chat-messages {
-        flex: 1;
-        padding: var(--spacing-md);
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-sm);
-      }
-
-      .chat-message {
-        max-width: 85%;
-        padding: 10px 14px;
-        border-radius: 12px;
-        font-size: 13px;
-        line-height: 1.5;
-      }
-
-      .chat-message.assistant {
-        background: var(--bg-page);
-        color: var(--color-text-primary);
-        align-self: flex-start;
-        border-bottom-left-radius: 4px;
-      }
-
-      .chat-message.user {
-        background: var(--color-primary);
-        color: white;
-        align-self: flex-end;
-        border-bottom-right-radius: 4px;
-      }
-
-      .message-content strong {
-        font-weight: 600;
-      }
-
-      .message-meta {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-top: 4px;
-        font-size: 10px;
-        color: var(--color-text-muted);
-      }
-
-      .chat-message.user .message-meta {
-        color: rgba(255,255,255,0.6);
-        justify-content: flex-end;
-      }
-
-      .copy-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 12px;
-        padding: 0;
-        opacity: 0.5;
-      }
-
-      .copy-btn:hover {
-        opacity: 1;
-      }
-
-      /* Typing indicator */
-      .typing-indicator {
-        display: flex;
-        gap: 4px;
-        padding: 12px 16px !important;
-        align-self: flex-start;
-        background: var(--bg-page);
-        border-radius: 12px;
-        border-bottom-left-radius: 4px;
-      }
-
-      .typing-indicator .dot {
-        width: 8px;
-        height: 8px;
-        background: var(--color-text-secondary);
-        border-radius: 50%;
-        animation: typing-bounce 1.4s infinite ease-in-out;
-      }
-
-      .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
-      .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
-
-      @keyframes typing-bounce {
-        0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-        40% { transform: translateY(-6px); opacity: 1; }
-      }
-
-      .chat-suggestions {
-        padding: var(--spacing-sm);
-        border-top: 1px solid var(--color-border);
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      .suggestion-chip {
-        padding: 6px 12px;
-        background: var(--bg-page);
-        border: 1px solid var(--color-border);
-        border-radius: 16px;
-        font-size: 11px;
-        color: var(--color-text-secondary);
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-
-      .suggestion-chip:hover {
-        border-color: var(--color-primary);
-        color: var(--color-primary);
-      }
-
-      .chat-input-area {
-        padding: var(--spacing-sm);
-        border-top: 1px solid var(--color-border);
-        display: flex;
-        gap: 6px;
-      }
-
-      .chat-input {
-        flex: 1;
-        padding: 10px 14px;
-        border: 1px solid var(--color-border);
-        border-radius: 20px;
-        font-size: 13px;
-        outline: none;
-      }
-
-      .chat-input:focus {
-        border-color: var(--color-primary);
-      }
-
-      .chat-send {
-        width: 38px;
-        height: 38px;
-        background: var(--color-primary);
-        border: none;
-        border-radius: 50%;
-        color: white;
-        cursor: pointer;
-        font-size: 16px;
-      }
-
-      
-
-      /* ========== DATA TABLE (for drawers) ========== */
+/* ========== DATA TABLE (for drawers) ========== */
       .data-table {
         width: 100%;
         border-collapse: collapse;
@@ -1691,6 +1458,16 @@
       }
       .rac-mast-row + .rac-mast-row {
         margin-top: 6px;
+      }
+      /* Three-lane shell extends to the masthead — title/byline align to
+         the same 1400px column as the dashboard content. The dark band
+         itself stays full-bleed (Design System §4.1: the rule crosses
+         the page; the content sits in the column). */
+      .rac-mast > .rac-mast-row {
+        max-width: var(--rac-container-max);
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
       }
       .rac-mast h1 {
         font-family: var(--rac-font-serif);
@@ -2762,42 +2539,6 @@
         </div>
         </div>
      
-      <!-- ========== AI CHAT PANEL ========== -->
-      <div class="chat-panel active" id="chatPanel">
-        <div class="chat-header">
-          <h3>&#x1F4AC; Ask about your finances</h3>
-          <div class="chat-header-actions">
-            <button onclick="toggleChatExpand()" title="Expand/Collapse">&#x2922;</button>
-            <button onclick="clearChat()" title="Clear chat">&#x1F5D1;</button>
-            <button onclick="toggleChat()" title="Close">&#x2715;</button>
-          </div>
-        </div>
-        <div class="chat-context" id="chatContext">
-          <span>&#x1F4CA; Loading...</span>
-          <span>&#x1F4C5; Current</span>
-          <span class="status-dot live"></span>
-        </div>
-        <div class="chat-messages" id="chatMessages">
-          <div class="chat-message assistant">
-            Hi! I'm your AI financial analyst. I can help you understand your dashboard data in real time.
-            <br><br>
-            &#x2022; "What's driving our revenue?"<br>
-            &#x2022; "Summarise our cash position"<br>
-            &#x2022; "Any concerns I should know about?"
-          </div>
-        </div>
-        <div class="chat-suggestions" id="chatSuggestions">
-          <span class="suggestion-chip" onclick="sendSuggestion('Top 3 expenses?')">Top expenses</span>
-          <span class="suggestion-chip" onclick="sendSuggestion('How is revenue tracking?')">Revenue trend</span>
-          <span class="suggestion-chip" onclick="sendSuggestion('What is our cash position?')">Cash position</span>
-          <span class="suggestion-chip" onclick="sendSuggestion('Any concerns?')">Risk check</span>
-        </div>
-        <div class="chat-input-area">
-          <input type="text" class="chat-input" id="chatInput" placeholder="Ask about your finances..." onkeypress="handleChatKeypress(event)">
-          <button class="chat-send" onclick="sendChat()">&#x27A4;</button>
-        </div>
-      </div>
-
     <!-- ========== DRAWER OVERLAY ========== -->
     <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
 
@@ -3510,8 +3251,6 @@
         // Initialize charts
         initSparklines();
         initTrendChart();
-        updateChatContext();
-        updateSuggestions();
         applyCompactRounding();
 
         // Render the inline AI panel (re-renders for current scope after data load)
@@ -5853,41 +5592,6 @@
         }
       }
 
-      // ========== CHAT FUNCTIONS ==========
-      let chatHistory = [];
-
-      function toggleChat() {
-        const panel = document.getElementById('chatPanel');
-        const btn = document.getElementById('chatToggleBtn');
-        panel.classList.toggle('active');
-        const isOpen = panel.classList.contains('active');
-        if (btn) {
-          btn.style.opacity = isOpen ? '1' : '0.6';
-          btn.title = isOpen ? 'Hide AI Pad' : 'Show AI Pad';
-        }
-      }
-
-      function toggleChatExpand() {
-        document.getElementById('chatPanel').classList.toggle('expanded');
-      }
-
-      function clearChat() {
-        chatHistory = [];
-        const messages = document.getElementById('chatMessages');
-        messages.innerHTML = `
-          <div class="chat-message assistant">
-            Chat cleared. Ask me anything about your financial data!
-          </div>`;
-        updateSuggestions();
-      }
-
-      function updateChatContext() {
-        const contextBar = document.getElementById('chatContext');
-        if (!contextBar) return;
-        const entity = getSelectedEntity();
-        const period = document.getElementById('periodSelector')?.value || 'Current';
-        contextBar.innerHTML = `<span>\u{1F4CA} ${entity}</span><span>\u{1F4C5} ${period}</span><span class="status-dot live"></span>`;
-      }
 
       function getDashboardMetrics() {
         const metrics = {};
@@ -5902,58 +5606,6 @@
           });
         } catch (e) { /* metrics are optional context */ }
         return metrics;
-      }
-
-      function updateSuggestions() {
-        const entity = getSelectedEntity();
-        const suggestions = document.getElementById('chatSuggestions');
-        if (!suggestions) return;
-
-        const isMining = entity.toLowerCase().includes('mining');
-        const isConsolidated = entity.toLowerCase().includes('all') || entity.toLowerCase().includes('consolidated');
-
-        let chips;
-        if (isConsolidated) {
-          chips = [
-            { text: 'Which entity has the most cash?', label: 'Cash comparison' },
-            { text: 'Total group revenue?', label: 'Group revenue' },
-            { text: 'Any entities losing money?', label: 'Loss check' },
-            { text: 'Group financial health?', label: 'Health check' },
-          ];
-        } else if (isMining) {
-          chips = [
-            { text: 'Top 3 expenses?', label: 'Top expenses' },
-            { text: 'How is revenue tracking?', label: 'Revenue trend' },
-            { text: 'What is our cash position?', label: 'Cash position' },
-            { text: 'Compare to last quarter', label: 'QoQ compare' },
-          ];
-        } else {
-          chips = [
-            { text: 'Summarise this entity', label: 'Summary' },
-            { text: 'Any concerns?', label: 'Risk check' },
-            { text: 'Cash position?', label: 'Cash position' },
-            { text: 'What are the key metrics?', label: 'Key metrics' },
-          ];
-        }
-
-        suggestions.innerHTML = chips
-          .map(c => `<span class="suggestion-chip" onclick="sendSuggestion('${c.text}')">${c.label}</span>`)
-          .join('');
-      }
-
-      function showTypingIndicator() {
-        const messages = document.getElementById('chatMessages');
-        const typing = document.createElement('div');
-        typing.className = 'typing-indicator';
-        typing.id = 'typingIndicator';
-        typing.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-        messages.appendChild(typing);
-        messages.scrollTop = messages.scrollHeight;
-      }
-
-      function hideTypingIndicator() {
-        const el = document.getElementById('typingIndicator');
-        if (el) el.remove();
       }
 
       function getAdjustedAccountBreakdowns() {
@@ -6091,9 +5743,8 @@
         };
       }
 
-      // ============ Context builder (refactored from sendChat) ============
-      // Used by BOTH the inline panel and the existing chat Pad. Single source of truth
-      // for what context we send to /api/ai-chat. Pulls live values from window.dashboardData
+      // ============ Context builder ============
+      // Single source of truth for the financial context we send to /api/ai-chat. Pulls live values from window.dashboardData
       // and the dashboard DOM (so the AI sees what the user sees, including reversal-adjusted figures).
       function buildAIContext() {
         const entity = (typeof getSelectedEntity === 'function') ? getSelectedEntity() : 'ALL';
@@ -6396,136 +6047,6 @@
         renderAIPanel();
       }
 
-      async function sendChat() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
-        if (!message) return;
-
-        // Add user message
-        addChatMessage(message, 'user');
-        chatHistory.push({ role: 'user', content: message });
-        input.value = '';
-
-        // Show typing animation
-        showTypingIndicator();
-
-        try {
-          const entity = getSelectedEntity();
-          const period = document.getElementById('periodSelector')?.value || 'Q3';
-          const quarterInfo = getQuarterDates(period);
-          const metrics = getDashboardMetrics();
-          
-          // Include reversal state so AI knows what the user is seeing
-          const reversalContext = window.reversalState?.active ? {
-            active: true,
-            reversalCount: window.reversalState.data?.reversalCount || 0,
-            plImpact: window.reversalState.data?.plImpact || {},
-            adjustedPL: { ...window.dashboardData.pl },
-            originalPL: window.reversalState.originalPL || {},
-            adjustedRatios: {
-              currentRatio: document.getElementById('ratio-current')?.textContent || '',
-              grossMargin: document.getElementById('ratio-gross-margin')?.textContent || '',
-              netProfitMargin: document.getElementById('ratio-net-margin')?.textContent || '',
-              debtToEquity: document.getElementById('ratio-debt-equity')?.textContent || '',
-            },
-            adjustedAccounts: getAdjustedAccountBreakdowns(),
-          } : { active: false };
-
-          const response = await fetch(`${API_BASE}/api/ai-chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message,
-              context: {
-                entity, period, metrics, quarterInfo, reversals: reversalContext,
-                // When ALL entities, pass pre-loaded data so server doesn't need to re-fetch
-                consolidatedData: (entity === 'ALL') ? {
-                  cash: {
-                    total: document.getElementById('kpi-cash')?.textContent || '',
-                    bankAccounts: window.dashboardData?.cash?.bankAccounts || [],
-                  },
-                  pl: {
-                    revenue: window.dashboardData?.pl?.revenue || 0,
-                    cogs: window.dashboardData?.pl?.cogs || 0,
-                    gross: window.dashboardData?.pl?.gross || 0,
-                    opex: window.dashboardData?.pl?.opex || 0,
-                    netProfit: window.dashboardData?.pl?.netProfit || 0,
-                    entityBreakdown: window.dashboardData?.pl?.entityBreakdown || [],
-                  },
-                  balance: {
-                    totalAssets: document.getElementById('bs-assets')?.textContent || '',
-                    totalLiabilities: document.getElementById('bs-liabilities')?.textContent || '',
-                    totalEquity: document.getElementById('bs-equity')?.textContent || '',
-                  },
-                  receivables: {
-                    total: document.getElementById('aged-total')?.textContent || '',
-                    current: document.getElementById('aged-current')?.textContent || '',
-                    days31_60: document.getElementById('aged-31-60')?.textContent || '',
-                    days61_90: document.getElementById('aged-61-90')?.textContent || '',
-                    days90plus: document.getElementById('aged-90plus')?.textContent || '',
-                  },
-                  ratios: {
-                    currentRatio: document.getElementById('ratio-current')?.textContent || '',
-                    grossMargin: document.getElementById('ratio-gross-margin')?.textContent || '',
-                    netProfitMargin: document.getElementById('ratio-net-margin')?.textContent || '',
-                    debtToEquity: document.getElementById('ratio-debt-equity')?.textContent || '',
-                  },
-                  topCustomers: Array.from(document.querySelectorAll('#customerList .customer-item')).slice(0, 5).map(el => ({
-                    name: el.querySelector('.customer-name')?.textContent || '',
-                    value: el.querySelector('.customer-value')?.textContent || '',
-                  })),
-                } : undefined,
-              },
-              history: chatHistory.slice(-6),
-            }),
-          });
-
-          hideTypingIndicator();
-
-          if (!response.ok) throw new Error(`Server returned ${response.status}`);
-
-          const data = await response.json();
-          const reply = data.response || 'Sorry, I couldn\'t generate a response.';
-
-          addChatMessage(reply, 'assistant');
-          chatHistory.push({ role: 'assistant', content: reply });
-
-        } catch (error) {
-          hideTypingIndicator();
-          addChatMessage('Sorry, I couldn\'t connect to the AI service. Check that the server is running and ANTHROPIC_API_KEY is set in Railway.', 'assistant');
-          console.error('Chat error:', error);
-        }
-      }
-
-      function sendSuggestion(text) {
-        document.getElementById('chatInput').value = text;
-        sendChat();
-      }
-
-      function addChatMessage(text, type) {
-        const messages = document.getElementById('chatMessages');
-        const div = document.createElement('div');
-        div.className = `chat-message ${type}`;
-
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
-
-        // Simple markdown: **bold** and newlines
-        const formatted = text
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\n/g, '<br>');
-
-        div.innerHTML = `
-          <div class="message-content">${formatted}</div>
-          <div class="message-meta">
-            <span class="message-time">${timeStr}</span>
-            ${type === 'assistant' ? '<button class="copy-btn" onclick="copyMessage(this)" title="Copy">\u{1F4CB}</button>' : ''}
-          </div>`;
-
-        messages.appendChild(div);
-        messages.scrollTop = messages.scrollHeight;
-      }
-
       function copyMessage(btn) {
         const content = btn.closest('.chat-message').querySelector('.message-content').textContent;
         navigator.clipboard.writeText(content).then(() => {
@@ -6534,9 +6055,6 @@
         });
       }
 
-      function handleChatKeypress(event) {
-        if (event.key === 'Enter') sendChat();
-      }
       
 // ========== SNAPSHOT FUNCTIONS ==========
       async function runDailySnapshot() {
