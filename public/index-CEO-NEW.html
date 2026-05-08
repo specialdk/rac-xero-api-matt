@@ -2521,15 +2521,19 @@
           return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         };
         return {
-          moss:      get('--rac-moss'),
-          mossSoft:  get('--rac-moss-soft'),
-          terra:     get('--rac-terra'),
-          terraSoft: get('--rac-terra-soft'),
-          inkSoft:   get('--rac-ink-soft'),
-          inkFaint:  get('--rac-ink-faint'),
-          ochre:     get('--rac-ochre'),
-          ochreSoft: get('--rac-ochre-soft'),
-          indigo:    get('--rac-indigo'),
+          moss:        get('--rac-moss'),
+          mossSoft:    get('--rac-moss-soft'),
+          mossPale:    get('--rac-moss-pale'),
+          terra:       get('--rac-terra'),
+          terraSoft:   get('--rac-terra-soft'),
+          terraPale:   get('--rac-terra-pale'),
+          inkSoft:     get('--rac-ink-soft'),
+          inkFaint:    get('--rac-ink-faint'),
+          ochre:       get('--rac-ochre'),
+          ochreSoft:   get('--rac-ochre-soft'),
+          ochrePale:   get('--rac-ochre-pale'),
+          indigo:      get('--rac-indigo'),
+          indigoPale:  get('--rac-indigo-pale'),
           fade,
         };
       })();
@@ -4013,7 +4017,7 @@
             datasets: [{
               data: expenseData,
             borderColor: RAC_CHART.terraSoft,
-              backgroundColor: RAC_CHART.fade(RAC_CHART.terraSoft, 0.1),
+              backgroundColor: RAC_CHART.terraPale,
               borderWidth: 2,
               fill: true,
               tension: 0.4,
@@ -4379,7 +4383,7 @@
               data: cashData.length > 1 ? cashData : Array(labels.length).fill(cashData[0]),
               borderColor: RAC_CHART.moss,
               fill: true,
-              backgroundColor: RAC_CHART.fade(RAC_CHART.moss, 0.1)
+              backgroundColor: RAC_CHART.mossPale
             }]
           }
         });
@@ -4394,7 +4398,7 @@
               data: revenueData,
               borderColor: revenueData[revenueData.length - 1] >= 0 ? RAC_CHART.moss : RAC_CHART.terra,
               borderWidth: 2,
-              backgroundColor: revenueData[revenueData.length - 1] >= 0 ? RAC_CHART.fade(RAC_CHART.moss, 0.1) : RAC_CHART.fade(RAC_CHART.terra, 0.1)
+              backgroundColor: revenueData[revenueData.length - 1] >= 0 ? RAC_CHART.mossPale : RAC_CHART.terraPale
             }]
           }
         });
@@ -4410,7 +4414,7 @@
               data: profitData,
               borderColor: latestProfit >= 0 ? RAC_CHART.moss : RAC_CHART.terra,
               borderWidth: 2,
-              backgroundColor: latestProfit >= 0 ? RAC_CHART.fade(RAC_CHART.moss, 0.1) : RAC_CHART.fade(RAC_CHART.terra, 0.1)
+              backgroundColor: latestProfit >= 0 ? RAC_CHART.mossPale : RAC_CHART.terraPale
             }]
           }
         });
@@ -4439,7 +4443,7 @@
               data: receivablesData.length > 1 ? receivablesData : Array(labels.length).fill(receivablesData[0]),
               borderColor: RAC_CHART.indigo,
               fill: true,
-              backgroundColor: RAC_CHART.fade(RAC_CHART.indigo, 0.1)
+              backgroundColor: RAC_CHART.indigoPale
             }]
           }
         });
@@ -4469,7 +4473,7 @@
               data: invData,
               borderColor: RAC_CHART.moss,
               fill: true,
-              backgroundColor: RAC_CHART.fade(RAC_CHART.moss, 0.1)
+              backgroundColor: RAC_CHART.mossPale
             }]
           }
         });
