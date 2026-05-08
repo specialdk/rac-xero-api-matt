@@ -163,8 +163,8 @@
         
         /* Typography */
         --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        --font-size-kpi: 36px;
-        --font-size-kpi-secondary: 24px;
+        --font-size-kpi: 28px;          /* aligned to Design System --rac-text-xl */
+        --font-size-kpi-secondary: 22px;
         --font-size-label: 12px;
         --font-size-body: 14px;
         --font-size-heading: 18px;
@@ -2232,6 +2232,15 @@
         color: var(--rac-terra);
       }
 
+      /* ========== SUMMARY CARD VALUE SIZING ==========
+         Summary cards have narrower columns and a label-on-left,
+         value-on-right layout. Use a smaller value size so labels
+         don't wrap when the dashboard is constrained to max-width. */
+      .summary-card .budget-actual,
+      .summary-card .ratio-value {
+        font-size: 22px;
+      }
+
       /* ========== THREE-LANE SHELL (Design System §12.3) ========== */
       /* Mast and ochre strip span full viewport (unchanged).
          Dashboard content rows constrain to var(--rac-container-max) and
@@ -3095,7 +3104,7 @@
 
         document.getElementById("kpi-revenue").textContent = "$" + (origPL.revenue || 0).toLocaleString();
         const netProfit = origPL.netProfit || 0;
-        document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
+        document.getElementById("kpi-profit").textContent = fmtKpiSmart(netProfit, true);
 
         const plRevEl = document.getElementById("pl-revenue");
         const plCogsEl = document.getElementById("pl-cogs");
@@ -3634,7 +3643,7 @@
         }
 
         // Update consolidated KPIs
-        document.getElementById("kpi-cash").textContent = "$" + totalCash.toLocaleString();
+        document.getElementById("kpi-cash").textContent = fmtKpiSmart(totalCash, true);
         document.getElementById("kpi-cash-trend").innerHTML = `&#x1F4B0; ${successCount} entities`;
         document.getElementById("kpi-cash-trend").className = "kpi-trend positive";
 
@@ -3643,14 +3652,14 @@
 
         const grossProfit = totalRevenue - totalCogs;
         const netProfit = grossProfit - totalExpenses;
-        document.getElementById("kpi-revenue").textContent = "$" + totalRevenue.toLocaleString();
+        document.getElementById("kpi-revenue").textContent = fmtKpiSmart(totalRevenue, true);
         document.getElementById("kpi-revenue-trend").textContent = "\u{1F4CA} Consolidated";
         
         document.getElementById("kpi-profit").textContent = "$" + netProfit.toLocaleString();
         document.getElementById("kpi-profit-trend").textContent = netProfit < 0 ? "\u26A0 Loss position" : "\u2714 Profitable";
         document.getElementById("kpi-profit-trend").className = netProfit < 0 ? "kpi-trend negative" : "kpi-trend positive";
 
-        document.getElementById("kpi-receivables").textContent = "$" + totalReceivables.toLocaleString();
+        document.getElementById("kpi-receivables").textContent = fmtKpiSmart(totalReceivables, true);
         document.getElementById("kpi-receivables-trend").textContent = `${allInvoices.length} invoices across all entities`;
 
         // Store consolidated receivables for drawer (calculate aging from allInvoices)
@@ -3702,19 +3711,19 @@
         };
 
         // Update Balance Sheet card
-        document.getElementById('bs-assets').textContent = '$' + totalAssets.toLocaleString();
-        document.getElementById('bs-liabilities').textContent = '$' + totalLiabilities.toLocaleString();
-        document.getElementById('bs-equity').textContent = '$' + totalEquity.toLocaleString();
+        document.getElementById('bs-assets').textContent = fmtKpiSmart(totalAssets, true);
+        document.getElementById('bs-liabilities').textContent = fmtKpiSmart(totalLiabilities, true);
+        document.getElementById('bs-equity').textContent = fmtKpiSmart(totalEquity, true);
 
         // Update P&L Summary card
-        document.getElementById("pl-revenue").textContent = "$" + totalRevenue.toLocaleString();
-        document.getElementById("pl-cogs").textContent = "$" + totalCogs.toLocaleString();
-        document.getElementById("pl-gross").textContent = "$" + grossProfit.toLocaleString();
-        document.getElementById("pl-opex").textContent = "$" + totalExpenses.toLocaleString();
-        document.getElementById("pl-net").innerHTML = "<strong>$" + netProfit.toLocaleString() + "</strong>";
+        document.getElementById("pl-revenue").textContent = fmtKpiSmart(totalRevenue, true);
+        document.getElementById("pl-cogs").textContent = fmtKpiSmart(totalCogs, true);
+        document.getElementById("pl-gross").textContent = fmtKpiSmart(grossProfit, true);
+        document.getElementById("pl-opex").textContent = fmtKpiSmart(totalExpenses, true);
+        document.getElementById("pl-net").innerHTML = "<strong>" + fmtKpiSmart(netProfit, true) + "</strong>";
 
         // Update Operating Expenses card to match P&L OpEx exactly
-        document.getElementById("kpi-top-expense").textContent = "$" + totalExpenses.toLocaleString();
+        document.getElementById("kpi-top-expense").textContent = fmtKpiSmart(totalExpenses, true);
 
         // Load live inventory data for Mining's quarry operation
         await loadInventory();
@@ -5802,9 +5811,27 @@
         loadDashboard();
       }
 
+      // Smart KPI value formatter (Procurement-pattern).
+      // Portfolio/consolidated scope: abbreviate to $X.XXM or $Xk for big numbers.
+      // Single-entity scope: full rounded integers.
+      // Negative values keep the conventional "$-1.23M" form used elsewhere
+      // in this dashboard (sign inside the currency, after the $).
+      function fmtKpiSmart(value, abbreviate) {
+        if (value === null || value === undefined || isNaN(value)) return '$0';
+        const sign = value < 0 ? '-' : '';
+        const abs = Math.abs(value);
+        if (abbreviate) {
+          if (abs >= 1e6) return `$${sign}${(abs / 1e6).toFixed(2)}M`;
+          if (abs >= 1e3) return `$${sign}${Math.round(abs / 1e3).toLocaleString('en-AU')}k`;
+        }
+        return `$${sign}${Math.round(abs).toLocaleString('en-AU')}`;
+      }
+
       // Strip decimal places from all displayed dollar values when compact mode is on
       function applyCompactRounding() {
-        if (!window.compactMode) return;
+        // Always strip decimals from displayed dollar values (was previously
+        // gated behind compactMode; now it's the default — execs read big
+        // numbers without trailing .58 / .87 noise).
         const container = document.querySelector('.main-container');
         if (!container) return;
         // Walk all text nodes inside the dashboard
@@ -5812,7 +5839,7 @@
         while (walker.nextNode()) {
           const node = walker.currentNode;
           if (node.textContent.includes('$') && /\$[−\-]?[\d,]+\.\d/.test(node.textContent)) {
-            node.textContent = node.textContent.replace(/(\$[−\-]?[\d,]+)\.\d+/g, '$1');
+            node.textContent = node.textContent.replace(/(\$[−\-]?[\d,]+)\.\d+(?![Mk])/g, '$1');
           }
         }
       }
