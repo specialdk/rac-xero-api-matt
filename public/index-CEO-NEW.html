@@ -275,20 +275,7 @@
         background: var(--color-primary-dark);
       }
 
-  .btn-chat {
-        padding: 6px 14px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
+ 
       .btn-dashboard {
         padding: 6px 14px;
         background: rgba(255,255,255,0.15);
@@ -639,19 +626,9 @@
         color: #059669;
         font-weight: 600;
       }
-      .btn-save-overrides {
-        background: linear-gradient(135deg, #0078D4 0%, #106EBE 100%);
-        color: white;
-        border: none;
-        padding: 8px 20px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: opacity 0.2s;
-      }
-      .btn-save-overrides:hover { opacity: 0.9; }
-      .btn-save-overrides:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      /* .btn-save-overrides: visual chrome moved to canonical .btn-sm .btn-primary (Design System §4.8).
+         Class kept on element for JS selector compatibility; rule retained empty for clarity. */
       .snapshot-status.error { color: #F87171; }
 
 
@@ -1334,22 +1311,27 @@
         color: var(--color-text-primary);
       }
 
-      .drawer-close {
+     .drawer-close {
         width: 32px;
         height: 32px;
-        border: none;
-        background: var(--bg-page);
-        border-radius: 50%;
+        padding: 0;
+        background: transparent;
+        color: var(--rac-ink-mute);
+        border: 1px solid var(--rac-line-2);
+        border-radius: var(--rac-radius-sharp);
         cursor: pointer;
         font-size: 18px;
+        line-height: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--color-text-secondary);
+        transition: var(--rac-transition-base);
       }
 
       .drawer-close:hover {
-        background: var(--color-border);
+        background: var(--rac-paper-2);
+        color: var(--rac-ink);
+        border-color: var(--rac-ink-mute);
       }
 
       .drawer-content {
@@ -1672,20 +1654,6 @@
         font-size: 13px;
       }
 
-      .btn-compact {
-        padding: 6px 14px;
-        background: rgba(255,255,255,0.15);
-        color: white;
-        border: 1px solid rgba(255,255,255,0.3);
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-      .btn-compact:hover {
-        background: rgba(255,255,255,0.25);
-      }
       .btn-compact.active {
         background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
         border-color: transparent;
@@ -1933,6 +1901,56 @@
         font-size: 8px;
         color: var(--rac-ink-mute);
       }
+
+    /* ========== CANONICAL BUTTONS (Design System §4.8) ========== */
+
+      /* Shared base — applies to all sizes */
+      .btn, .btn-sm, .btn-xs {
+        font-family: var(--rac-font-sans);
+        font-weight: var(--rac-weight-semibold);
+        border-radius: var(--rac-radius-sharp);
+        cursor: pointer;
+        transition: var(--rac-transition-base);
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--rac-space-1);
+        white-space: nowrap;
+        text-decoration: none;
+      }
+
+      /* Sizes */
+      .btn    { padding: var(--rac-space-3) var(--rac-space-5);
+                font-size: var(--rac-text-base); }
+      .btn-sm { padding: var(--rac-space-2) var(--rac-space-4);
+                font-size: var(--rac-text-sm); }
+      .btn-xs { padding: var(--rac-space-1) var(--rac-space-2);
+                font-size: var(--rac-text-xs); }
+
+      /* Colour variants */
+      .btn-primary       { background: var(--rac-ink);       color: var(--rac-paper); }
+      .btn-primary:hover { background: var(--rac-ink-soft); }
+
+      .btn-secondary       { background: transparent;        color: var(--rac-ink);
+                             border-color: var(--rac-line-2); }
+      .btn-secondary:hover { background: var(--rac-paper-2);
+                             border-color: var(--rac-ink-mute); }
+
+      .btn-success         { background: var(--rac-moss);    color: var(--rac-paper); }
+      .btn-success:hover   { background: var(--rac-moss-soft); }
+
+      .btn-danger          { background: var(--rac-terra);   color: var(--rac-paper); }
+      .btn-danger:hover    { background: var(--rac-terra-soft); }
+
+      .btn-hero            { background: var(--rac-highlight); color: var(--rac-ink); }
+      .btn-hero:hover      { filter: brightness(0.95); }
+
+      /* Disabled state — applies to all variants */
+      .btn:disabled, .btn-sm:disabled, .btn-xs:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      } 
       
     </style>
   </head>
@@ -2864,7 +2882,7 @@
         html += `
           <div class="reversal-save-bar">
             <span class="save-status" id="overrideSaveStatus">Unsaved changes apply live — click Save to persist</span>
-            <button class="btn-save-overrides" onclick="saveReversalOverrides()">Save Selections</button>
+           <button class="btn-save-overrides btn-sm btn-primary" onclick="saveReversalOverrides()">Save Selections</button>
           </div>
         `;
 
