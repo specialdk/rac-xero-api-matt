@@ -3477,6 +3477,10 @@
         // show real Jul → today trajectories for the ALL view.
         await loadConsolidatedHistoricalData(entities);
 
+        // Budget vs Actual — sums the 7 entity budgets and compares to
+        // consolidated actuals (loadBudget detects ALL scope itself).
+        await loadBudget(quarterInfo);
+
         updateHealthStatus();
         loadFinancialRatios();
         loadTopExpenses();
@@ -3597,66 +3601,82 @@
       }
 
       // ========== BUDGET ==========
+      // Single-shot fetch for one entity at one date — extracted from loadBudget
+      // so we can fan out across the 7 entities in consolidated mode.
+      async function fetchBudgetForEntity(entityName, date) {
+        try {
+          const resp = await fetch(`${API_BASE}/api/budget-summary`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              organizationName: entityName,
+              date: date,
+              periods: 3,
+            }),
+          });
+          if (!resp.ok) return { revenue: 0, expenses: 0 };
+          const data = await resp.json();
+          return parseBudgetFromReport(data.report);
+        } catch (e) {
+          console.warn(`Budget fetch failed for ${entityName} @ ${date}:`, e);
+          return { revenue: 0, expenses: 0 };
+        }
+      }
+
       async function loadBudget(quarterInfo) {
         try {
-          let totalBudgetRevenue = 0;
-          let totalBudgetExpenses = 0;
+          // Determine scope. ALL view → fan out to all 7 entities and sum.
+          // Single entity view → just that one.
+          const selected = getSelectedEntity();
+          const isConsolidated = selected === 'ALL';
+          const entityList = isConsolidated
+            ? ['Mining', 'Aboriginal Corporation', 'Enterprises', 'Property', 'Ngarrkuwuy', 'Invest', 'Marrin']
+            : [selected];
 
+          // Determine dates. YTD = every elapsed quarter start in the current FY.
+          // Single quarter = the quarter's start date.
+          let dateList;
           if (quarterInfo.isYTD) {
-            // YTD: fetch each elapsed quarter's budget and sum them
             const today = new Date();
             const year = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
-            const quartersToFetch = [
-              { start: `${year}-07-01`, label: 'Q1' },
-              { start: `${year}-10-01`, label: 'Q2' },
-              { start: `${year + 1}-01-01`, label: 'Q3' },
-              { start: `${year + 1}-04-01`, label: 'Q4' },
-            ].filter(q => new Date(q.start) <= today);
-
-            for (const q of quartersToFetch) {
-              try {
-                const resp = await fetch(`${API_BASE}/api/budget-summary`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    organizationName: getSelectedEntity(),
-                    date: q.start,
-                    periods: 3,
-                  }),
-                });
-                const data = await resp.json();
-                const budget = parseBudgetFromReport(data.report);
-                totalBudgetRevenue += budget.revenue || 0;
-                totalBudgetExpenses += budget.expenses || 0;
-              } catch (e) {
-                console.warn(`Budget fetch failed for ${q.label}:`, e);
-              }
-            }
+            dateList = [
+              `${year}-07-01`,
+              `${year}-10-01`,
+              `${year + 1}-01-01`,
+              `${year + 1}-04-01`,
+            ].filter(d => new Date(d) <= today);
           } else {
-            // Single quarter
-            const response = await fetch(`${API_BASE}/api/budget-summary`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                organizationName: getSelectedEntity(),
-                date: quarterInfo.startDate,
-                periods: 3,
-              }),
-            });
-            const data = await response.json();
-            console.log("Budget API response:", JSON.stringify(data).substring(0, 500));
-            const budget = parseBudgetFromReport(data.report);
-            console.log("Parsed budget:", budget);
-            totalBudgetRevenue = budget.revenue || 0;
-            totalBudgetExpenses = budget.expenses || 0;
+            dateList = [quarterInfo.startDate];
+          }
+
+          // Fan out: entity × date in parallel. Worst case in this app is
+          // 7 × 4 = 28 requests (YTD ALL view); single-quarter ALL is 7;
+          // single-quarter single-entity is 1.
+          const requests = [];
+          for (const e of entityList) {
+            for (const d of dateList) {
+              requests.push(fetchBudgetForEntity(e, d));
+            }
+          }
+          const results = await Promise.all(requests);
+
+          let totalBudgetRevenue = 0;
+          let totalBudgetExpenses = 0;
+          for (const b of results) {
+            totalBudgetRevenue += b.revenue || 0;
+            totalBudgetExpenses += b.expenses || 0;
           }
 
           const proRatedRevenue = Math.round(totalBudgetRevenue * quarterInfo.proRateFactor);
           const proRatedExpenses = Math.round(totalBudgetExpenses * quarterInfo.proRateFactor);
           const proRatedGrossProfit = proRatedRevenue - (proRatedExpenses * 0.55);
 
+          // Field-tolerant read: standard path stores `totalExpenses`,
+          // consolidated path stores the same value under `opex`.
           const actualRevenue = window.dashboardData.pl?.revenue || 0;
-          const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
+          const actualExpenses =
+            window.dashboardData.pl?.totalExpenses ??
+            window.dashboardData.pl?.opex ?? 0;
           const actualGross = window.dashboardData.pl?.gross || 0;
 
           const revVar = proRatedRevenue > 0 ? ((actualRevenue - proRatedRevenue) / proRatedRevenue) * 100 : 0;
