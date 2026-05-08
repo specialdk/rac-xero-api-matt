@@ -6,7 +6,134 @@
     <title>RAC Mining - Executive Dashboard</title>
     <!-- Chart.js for visualizations v3-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- RAC Design System v0.2.1 — IBM Plex triple (Plex Serif / Plex Sans / Plex Mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Serif:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+
     <style>
+      /* ========== RAC DESIGN SYSTEM v0.2.1 — DASHBOARD THEME ========== */
+      /* Canonical tokens per RAC_Design_System_v0.2.1.md §2 (register) + §3.2 (dashboard theme). */
+      /* Migration step (a): tokens declared; components migrate to them in subsequent steps.    */
+      :root {
+        /* --- Typography (register §2.1) --- */
+        --rac-font-serif: 'IBM Plex Serif', Georgia, serif;
+        --rac-font-sans:  'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        --rac-font-mono:  'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+        /* --- Type scale (§2.2) --- */
+        --rac-text-xxs:  0.5625rem;  /*  9px — annotation tier */
+        --rac-text-xs:   0.75rem;    /* 12px — KPI labels, kickers, mast subtitle */
+        --rac-text-sm:   0.875rem;   /* 14px — default body UI */
+        --rac-text-base: 1rem;       /* 16px — primary buttons, AI panel h3 */
+        --rac-text-md:   1.125rem;   /* 18px — sub-section titles */
+        --rac-text-lg:   1.5rem;     /* 24px — section h2 */
+        --rac-text-xl:   1.75rem;    /* 28px — KPI values, mast title */
+        --rac-text-xxl:  2.25rem;    /* 36px — entity hero h1 */
+
+        /* --- Weight, leading, tracking (§2.3) --- */
+        --rac-weight-light:    300;
+        --rac-weight-regular:  400;
+        --rac-weight-medium:   500;
+        --rac-weight-semibold: 600;
+
+        --rac-leading-tight:   1.1;
+        --rac-leading-snug:    1.3;
+        --rac-leading-normal:  1.5;
+        --rac-leading-relaxed: 1.65;
+        --rac-leading-loose:   1.7;
+
+        --rac-tracking-mono-tight:  1.5px;
+        --rac-tracking-mono-normal: 2px;
+        --rac-tracking-mono-wide:   2.5px;
+
+        /* --- Surface model (§2.4) — DASHBOARD THEME values --- */
+        --rac-paper:   #f7f4ed;  /* warm cream — page background */
+        --rac-paper-2: #efeadf;  /* soft callout / footnote bg */
+        --rac-card:    #ffffff;  /* elevated surface — AI panel, modals */
+
+        /* --- Ink scale (§3.2) --- */
+        --rac-ink:        #141a2a;  /* navy-leaning ink — primary text, mast bg */
+        --rac-ink-soft:   #2a3248;
+        --rac-ink-mute:   #5b6178;
+        --rac-ink-faint:  #8b90a3;
+
+        /* --- Lines (§3.2) --- */
+        --rac-line:    #e0dcd1;
+        --rac-line-2:  #c9c4b5;
+
+        /* --- Brand accents (§3.2) --- */
+        --rac-terra:      #a23e2c;  /* deep terracotta — alerts, mast accent */
+        --rac-terra-soft: #c96b55;  /* intercompany / cross-charge data */
+        --rac-terra-pale: #f3e3dc;  /* errored card bg */
+
+        --rac-ochre:      #b88628;  /* muted ochre — warnings */
+        --rac-ochre-soft: #d4a256;
+        --rac-ochre-pale: #f4e8c9;
+
+        --rac-moss:       #4a6741;  /* deep olive moss — positive / data freshness */
+        --rac-moss-soft:  #6e8a64;
+        --rac-moss-pale:  #e1e8d8;
+
+        --rac-indigo:      #324a6d;  /* navy indigo — AI / annotation */
+        --rac-indigo-pale: #d9e0eb;
+
+        /* --- Hero accent (used sparingly) --- */
+        --rac-highlight:  #d4a839;
+
+        /* --- Functional aliases (§3.1) --- */
+        --rac-alert: var(--rac-terra);
+        --rac-warn:  var(--rac-ochre);
+        --rac-ok:    var(--rac-moss);
+
+        /* --- Structural greys (§3.1 — register-level chrome) --- */
+        --rac-grey-50:  #F7FAFC;
+        --rac-grey-100: #EDF2F7;
+        --rac-grey-200: #E2E8F0;
+        --rac-grey-400: #A0AEC0;
+        --rac-grey-600: #4A5568;
+        --rac-grey-800: #2D3748;
+
+        /* --- Radii (§2.5) --- */
+        --rac-radius-sharp:   2px;
+        --rac-radius-sharper: 1px;
+        --rac-radius-circle:  50%;
+
+        /* --- Spacing (§2.6) --- */
+        --rac-space-1: 0.25rem;   /*  4px */
+        --rac-space-2: 0.5rem;    /*  8px */
+        --rac-space-3: 0.75rem;   /* 12px */
+        --rac-space-4: 1.125rem;  /* 18px */
+        --rac-space-5: 1.5rem;    /* 24px */
+        --rac-space-6: 2rem;      /* 32px */
+
+        --rac-gap-newspaper: 1px;
+        --rac-container-max: 1400px;
+        --rac-container-pad: 0.5rem;
+
+        /* --- Shadow & focus (§2.7) --- */
+        --rac-shadow-sm: 0 1px 3px rgba(0,0,0,0.10);
+        --rac-shadow-md: 0 2px 8px rgba(0,0,0,0.15);
+        --rac-shadow-lg: 0 4px 6px rgba(0,0,0,0.10);
+        --rac-shadow-xl: 0 8px 32px rgba(0,0,0,0.20);
+
+        --rac-focus-ring: 0 0 0 3px rgba(196, 101, 26, 0.20);
+
+        /* --- Motion (§2.8) --- */
+        --rac-transition-fast: 0.15s ease;
+        --rac-transition-base: 0.2s ease;
+        --rac-transition-slow: 0.3s ease;
+        --rac-pulse-loading:   pulse 1.6s ease-in-out infinite;
+      }
+
+      /* Mandatory in v0.2: honour reduced-motion preference. */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
       /* ========== CSS VARIABLES (Design System) ========== */
       :root {
         /* Semantic Colors */
@@ -59,7 +186,7 @@
       }
 
       body {
-        font-family: var(--font-family);
+        font-family: var(--rac-font-sans);
         background: var(--bg-page);
         height: 100vh;
         overflow: hidden;
