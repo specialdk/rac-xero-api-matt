@@ -187,7 +187,7 @@
 
       body {
         font-family: var(--rac-font-sans);
-        background: var(--bg-page);
+        background: var(--rac-paper);
         height: 100vh;
         overflow: hidden;
         display: flex;
@@ -681,12 +681,12 @@
       }
 
       .kpi-card {
-        background: var(--bg-card);
-        border-radius: 10px;
+        background: var(--rac-paper);
+        border: 1px solid var(--rac-line);
+        border-radius: var(--rac-radius-sharp);
         padding: var(--spacing-md);
-        box-shadow: var(--shadow-card);
         cursor: pointer;
-        transition: box-shadow 0.2s, transform 0.2s;
+        transition: var(--rac-transition-base);
         position: relative;
         overflow: hidden;
         display: flex;
@@ -694,8 +694,8 @@
       }
 
       .kpi-card:hover {
-        box-shadow: var(--shadow-card-hover);
-        transform: translateY(-2px);
+        background: var(--rac-card);
+        box-shadow: inset 0 0 0 1px var(--rac-moss-soft);
       }
 
       .kpi-header {
@@ -781,10 +781,10 @@
       }
 
       .chart-card {
-        background: var(--bg-card);
-        border-radius: 10px;
+        background: var(--rac-paper);
+        border: 1px solid var(--rac-line);
+        border-radius: var(--rac-radius-sharp);
         padding: var(--spacing-md);
-        box-shadow: var(--shadow-card);
         display: flex;
         flex-direction: column;
       }
@@ -1021,11 +1021,11 @@
         min-height: 0;
       }
 
-      .summary-card {
-        background: var(--bg-card);
-        border-radius: 10px;
+     .summary-card {
+        background: var(--rac-paper);
+        border: 1px solid var(--rac-line);
+        border-radius: var(--rac-radius-sharp);
         padding: var(--spacing-md);
-        box-shadow: var(--shadow-card);
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -1164,8 +1164,8 @@
         justify-content: space-between;
         align-items: center;
         padding: 8px 10px;
-        background: var(--bg-page);
-        border-radius: 6px;
+        background: var(--rac-paper-2);
+        border-radius: var(--rac-radius-sharp);
         font-size: 12px;
       }
 
@@ -1190,9 +1190,9 @@
       }
 
       .ratio-item {
-        background: var(--bg-page);
+        background: var(--rac-paper-2);
         padding: 12px;
-        border-radius: 8px;
+        border-radius: var(--rac-radius-sharp);
         text-align: center;
       }
 
@@ -1226,8 +1226,8 @@
         align-items: center;
         gap: var(--spacing-sm);
         padding: 10px;
-        background: var(--bg-page);
-        border-radius: 8px;
+        background: var(--rac-paper-2);
+        border-radius: var(--rac-radius-sharp);
       }
 
       .customer-rank {
