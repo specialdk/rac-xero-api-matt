@@ -1952,7 +1952,287 @@
       .btn:disabled, .btn-sm:disabled, .btn-xs:disabled {
         opacity: 0.5;
         cursor: not-allowed;
-      } 
+      }
+
+      /* ========== INLINE AI PANEL (Design System §6) ========== */
+
+      /* Container the JS renders into; sits in dashboard flow */
+      .ai-panel-mount {
+        margin: 0 0 var(--rac-space-5);
+      }
+
+      /* The panel itself */
+      .ai-panel {
+        background: var(--rac-card);
+        border: 1px solid var(--rac-line);
+        border-left: 4px solid var(--rac-indigo);
+        border-radius: var(--rac-radius-sharp);
+        padding: var(--rac-space-5) var(--rac-space-6);
+        position: relative;
+        transition: var(--rac-transition-base);
+      }
+      .ai-panel.ai-empty {
+        padding: var(--rac-space-4) var(--rac-space-5);
+        border-left-style: dashed;
+        background: transparent;
+      }
+
+      /* Collapsed bar — replaces the full panel when user has dismissed it */
+      .ai-panel-collapsed {
+        background: transparent;
+        border: 1px dashed var(--rac-line-2);
+        border-left: 4px dashed var(--rac-indigo);
+        border-radius: var(--rac-radius-sharp);
+        padding: var(--rac-space-2) var(--rac-space-4);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xs);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+        color: var(--rac-ink-mute);
+        transition: var(--rac-transition-base);
+      }
+      .ai-panel-collapsed:hover {
+        background: var(--rac-paper-2);
+        color: var(--rac-ink);
+        border-color: var(--rac-indigo);
+      }
+      .ai-panel-collapsed .ai-collapsed-arrow {
+        font-size: 10px;
+      }
+
+      /* Header row — title, tag, close button */
+      .ai-panel-head {
+        display: flex;
+        align-items: center;
+        gap: var(--rac-space-3);
+        margin-bottom: var(--rac-space-3);
+      }
+      .ai-panel-head h3 {
+        font-family: var(--rac-font-serif);
+        font-size: var(--rac-text-base);
+        font-weight: var(--rac-weight-regular);
+        color: var(--rac-ink);
+        margin: 0;
+      }
+      .ai-panel-tag {
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xxs);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-normal);
+        background: var(--rac-indigo-pale);
+        color: var(--rac-indigo);
+        padding: 2px var(--rac-space-2);
+        border-radius: var(--rac-radius-sharp);
+      }
+      .ai-panel-scope {
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xxs);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+        color: var(--rac-ink-faint);
+        margin-left: auto;
+      }
+      .ai-panel-close {
+        background: transparent;
+        border: 1px solid var(--rac-line-2);
+        border-radius: var(--rac-radius-sharp);
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+        color: var(--rac-ink-mute);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--rac-transition-base);
+      }
+      .ai-panel-close:hover {
+        background: var(--rac-paper-2);
+        color: var(--rac-ink);
+        border-color: var(--rac-ink-mute);
+      }
+
+      /* Empty state — Generate button + hint */
+      .ai-cta-row {
+        display: flex;
+        align-items: center;
+        gap: var(--rac-space-4);
+        flex-wrap: wrap;
+      }
+      .ai-button {
+        background: var(--rac-ink);
+        color: var(--rac-paper);
+        border: 1px solid transparent;
+        border-radius: var(--rac-radius-sharp);
+        padding: var(--rac-space-2) var(--rac-space-4);
+        font-family: var(--rac-font-sans);
+        font-size: var(--rac-text-sm);
+        font-weight: var(--rac-weight-semibold);
+        cursor: pointer;
+        transition: var(--rac-transition-base);
+        white-space: nowrap;
+      }
+      .ai-button:hover { background: var(--rac-ink-soft); }
+      .ai-button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .ai-button.ai-ghost {
+        background: transparent;
+        color: var(--rac-ink);
+        border-color: var(--rac-line-2);
+      }
+      .ai-button.ai-ghost:hover {
+        background: var(--rac-paper-2);
+        border-color: var(--rac-ink-mute);
+      }
+      .ai-hint {
+        font-family: var(--rac-font-sans);
+        font-size: var(--rac-text-sm);
+        font-weight: var(--rac-weight-light);
+        color: var(--rac-ink-mute);
+        line-height: var(--rac-leading-relaxed);
+      }
+
+      /* Loading state */
+      .ai-spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        margin-right: var(--rac-space-2);
+        border: 2px solid var(--rac-indigo-pale);
+        border-top-color: var(--rac-indigo);
+        border-radius: 50%;
+        animation: ai-spin 0.8s linear infinite;
+        vertical-align: -2px;
+      }
+      @keyframes ai-spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* Success state — prose body */
+      .ai-content {
+        margin-top: var(--rac-space-2);
+      }
+      .ai-prose {
+        font-family: var(--rac-font-sans);
+        font-weight: var(--rac-weight-light);
+        font-size: var(--rac-text-sm);
+        line-height: var(--rac-leading-relaxed);
+        color: var(--rac-ink);
+        white-space: pre-wrap;
+      }
+      .ai-prose strong {
+        font-weight: var(--rac-weight-medium);
+        color: var(--rac-ink);
+      }
+      .ai-prose p { margin: 0 0 var(--rac-space-3); }
+      .ai-prose p:last-child { margin-bottom: 0; }
+
+      /* Meta strip — model + cached/fresh */
+      .ai-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xxs);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+        color: var(--rac-ink-faint);
+        border-top: 1px dashed var(--rac-line);
+        padding-top: var(--rac-space-2);
+        margin-top: var(--rac-space-4);
+      }
+
+      /* Q&A list */
+      .ai-qa-list {
+        margin-top: var(--rac-space-4);
+        display: flex;
+        flex-direction: column;
+        gap: var(--rac-space-3);
+      }
+      .ai-qa-item {
+        background: var(--rac-paper-2);
+        border: 1px solid var(--rac-line);
+        border-radius: var(--rac-radius-sharp);
+        padding: var(--rac-space-3) var(--rac-space-4);
+      }
+      .ai-qa-question {
+        font-family: var(--rac-font-sans);
+        font-size: var(--rac-text-sm);
+        font-weight: var(--rac-weight-medium);
+        color: var(--rac-ink);
+        margin-bottom: var(--rac-space-2);
+      }
+      .ai-qa-question::before {
+        content: 'Q · ';
+        font-family: var(--rac-font-mono);
+        color: var(--rac-indigo);
+        font-weight: var(--rac-weight-regular);
+      }
+      .ai-qa-answer {
+        font-family: var(--rac-font-sans);
+        font-weight: var(--rac-weight-light);
+        font-size: var(--rac-text-sm);
+        line-height: var(--rac-leading-relaxed);
+        color: var(--rac-ink);
+        white-space: pre-wrap;
+      }
+      .ai-qa-answer strong {
+        font-weight: var(--rac-weight-medium);
+      }
+
+      /* Follow-up form */
+      .ai-followup {
+        margin-top: var(--rac-space-4);
+        border-top: 1px dashed var(--rac-line);
+        padding-top: var(--rac-space-3);
+      }
+      .ai-followup-label {
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xs);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+        color: var(--rac-ink-mute);
+        margin-bottom: var(--rac-space-2);
+      }
+      .ai-followup-form {
+        display: flex;
+        gap: var(--rac-space-2);
+      }
+      .ai-followup-input {
+        flex: 1;
+        background: var(--rac-card);
+        color: var(--rac-ink);
+        border: 1px solid var(--rac-line-2);
+        border-radius: var(--rac-radius-sharp);
+        padding: var(--rac-space-2) var(--rac-space-3);
+        font-family: var(--rac-font-sans);
+        font-size: var(--rac-text-sm);
+        font-weight: var(--rac-weight-light);
+        transition: var(--rac-transition-base);
+      }
+      .ai-followup-input:focus {
+        outline: none;
+        border-color: var(--rac-indigo);
+        box-shadow: var(--rac-focus-ring);
+      }
+
+      /* Error message */
+      .ai-error {
+        margin-top: var(--rac-space-3);
+        padding: var(--rac-space-2) var(--rac-space-3);
+        background: var(--rac-terra-pale);
+        border-left: 3px solid var(--rac-terra);
+        font-family: var(--rac-font-sans);
+        font-size: var(--rac-text-sm);
+        color: var(--rac-terra);
+      }
+
+ 
       
     </style>
   </head>
@@ -1989,18 +2269,18 @@
             <div class="rac-controls-label">Entity</div>
             <div class="entity-picker" id="entityPicker">
               <button class="entity-picker-btn" onclick="toggleEntityPicker(event)">
-                <span id="entityPickerLabel">⛏️ Rirratjingu Mining</span>
+                <span id="entityPickerLabel">📊 All Entities (Consolidated)</span>
                 <span class="arrow">▼</span>
               </button>
               <div class="entity-picker-dropdown" id="entityDropdown">
-                <label class="entity-option" data-value="ALL">
-                  <input type="radio" name="entity" value="ALL">
+                <label class="entity-option selected" data-value="ALL">
+                  <input type="radio" name="entity" value="ALL" checked>
                   <span class="entity-emoji">📊</span>
                   <span>All Entities (Consolidated)</span>
                 </label>
                 <div class="entity-option-divider"></div>
-                <label class="entity-option selected" data-value="Mining">
-                  <input type="radio" name="entity" value="Mining" checked>
+                <label class="entity-option" data-value="Mining">
+                  <input type="radio" name="entity" value="Mining">
                   <span class="entity-emoji">⛏️</span>
                   <span>Rirratjingu Mining</span>
                 </label>
@@ -2044,7 +2324,7 @@
             <select class="period-selector" id="periodSelector" onchange="loadDashboard()">
               <option value="Q1">Q1 FY25/26 (Jul-Sep)</option>
               <option value="Q2">Q2 FY25/26 (Oct-Dec)</option>
-              <option value="Q3" selected>Q3 FY25/26 (Jan-Mar)</option>
+              <option value="Q3">Q3 FY25/26 (Jan-Mar)</option>
               <option value="Q4">Q4 FY25/26 (Apr-Jun)</option>
             </select>
           </div>
@@ -2149,6 +2429,9 @@
             <div class="kpi-status-bar" id="kpi-expense-status"></div>
           </div>
         </div>
+
+        <!-- ========== INLINE AI PANEL (Design System §6) ========== -->
+        <div id="aiInlinePanel" class="ai-panel-mount"></div>
 
         <!-- Chart Row - Visual Impact -->
         <div class="chart-row">
@@ -3199,6 +3482,9 @@
         updateChatContext();
         updateSuggestions();
         applyCompactRounding();
+
+        // Render the inline AI panel (re-renders for current scope after data load)
+        renderAIPanel();
       }
 
       // ========== CONSOLIDATED DASHBOARD (All Entities) ==========
@@ -5587,6 +5873,392 @@
         };
       }
 
+
+      // ============================================================================
+      // INLINE AI PANEL (Design System §6)
+      // State machine + render + generate + follow-up + collapse/expand
+      // Calls existing /api/ai-chat endpoint with Generate-Insights message and
+      // scope-aware history. Per-scope state cached in memory for the session.
+      // ============================================================================
+
+      // Per-scope state. Key: ${entity}::${period}::rev-${reversalActive}
+      const _aiPanelState = {};
+
+      // Compute current financial period from today's date.
+      // FY = Jul-Jun. Q1 Jul-Sep, Q2 Oct-Dec, Q3 Jan-Mar, Q4 Apr-Jun.
+      function getCurrentFinancialPeriod() {
+        const m = new Date().getMonth(); // 0-11
+        if (m >= 6 && m <= 8)  return 'Q1';
+        if (m >= 9 && m <= 11) return 'Q2';
+        if (m >= 0 && m <= 2)  return 'Q3';
+        return 'Q4';
+      }
+
+      // Reversal-active check (returns boolean)
+      function isReversalActive() {
+        return !!(window.reversalState && window.reversalState.active);
+      }
+
+      // Scope key: encodes entity × period × reversal-state. Each combination is its own panel state.
+      function currentAIScopeKey() {
+        const entity = (typeof getSelectedEntity === 'function') ? getSelectedEntity() : 'ALL';
+        const period = document.getElementById('periodSelector')?.value || 'Q3';
+        return `${entity}::${period}::rev-${isReversalActive()}`;
+      }
+
+      // State accessor with default initialiser
+      function aiPanelState(scopeKey) {
+        if (!_aiPanelState[scopeKey]) {
+          _aiPanelState[scopeKey] = {
+            openness: 'open',     // 'open' | 'closed' — survives scope switches
+            insights: null,
+            insightsMeta: null,
+            qaList: [],
+            loading: false,
+            error: null,
+          };
+        }
+        return _aiPanelState[scopeKey];
+      }
+
+      // Scope-aware copy
+      function aiPanelCopy(scopeKey) {
+        const parts = scopeKey.split('::');
+        const entity = parts[0] || 'ALL';
+        const period = parts[1] || '';
+
+        const entityDisplay = {
+          'ALL': 'All Entities (Consolidated)',
+          'Mining': 'Rirratjingu Mining',
+          'Aboriginal Corporation': 'Aboriginal Corporation',
+          'Enterprises': 'Enterprises',
+          'Property': 'Property Management',
+          'Ngarrkuwuy': 'Ngarrkuwuy Developments',
+          'Invest': 'Miliditjpi Trust',
+          'Marrin': 'Marrin Square'
+        };
+        const niceEntity = entityDisplay[entity] || entity;
+        const reversalBit = isReversalActive() ? ' · Reversals filtered' : '';
+
+        if (entity === 'ALL') {
+          return {
+            scopeLabel: `${niceEntity} · ${period}${reversalBit}`,
+            hint: `Click to get a 2-3 paragraph analysis of consolidated finances for ${period}. Then ask follow-up questions.`,
+            placeholder: 'e.g. Which entity is the most profitable this quarter?',
+          };
+        }
+        return {
+          scopeLabel: `${niceEntity} · ${period}${reversalBit}`,
+          hint: `Click to get a 2-3 paragraph analysis of ${niceEntity} for ${period}. Follow-up questions stay scoped to this entity.`,
+          placeholder: `e.g. Why are expenses high in ${niceEntity}?`,
+        };
+      }
+
+      // ============ Context builder (refactored from sendChat) ============
+      // Used by BOTH the inline panel and the existing chat Pad. Single source of truth
+      // for what context we send to /api/ai-chat. Pulls live values from window.dashboardData
+      // and the dashboard DOM (so the AI sees what the user sees, including reversal-adjusted figures).
+      function buildAIContext() {
+        const entity = (typeof getSelectedEntity === 'function') ? getSelectedEntity() : 'ALL';
+        const period = document.getElementById('periodSelector')?.value || 'Q3';
+        const quarterInfo = (typeof getQuarterDates === 'function') ? getQuarterDates(period) : null;
+        const metrics = (typeof getDashboardMetrics === 'function') ? getDashboardMetrics() : {};
+
+        const reversalContext = (window.reversalState && window.reversalState.active) ? {
+          active: true,
+          reversalCount: window.reversalState.data?.reversalCount || 0,
+          plImpact: window.reversalState.data?.plImpact || {},
+          adjustedPL: { ...(window.dashboardData?.pl || {}) },
+          originalPL: window.reversalState.originalPL || {},
+          adjustedRatios: {
+            currentRatio: document.getElementById('ratio-current')?.textContent || '',
+            grossMargin: document.getElementById('ratio-gross-margin')?.textContent || '',
+            netProfitMargin: document.getElementById('ratio-net-margin')?.textContent || '',
+            debtToEquity: document.getElementById('ratio-debt-equity')?.textContent || '',
+          },
+          adjustedAccounts: (typeof getAdjustedAccountBreakdowns === 'function') ? getAdjustedAccountBreakdowns() : null,
+        } : { active: false };
+
+        const consolidatedData = (entity === 'ALL') ? {
+          cash: {
+            total: document.getElementById('kpi-cash')?.textContent || '',
+            bankAccounts: window.dashboardData?.cash?.bankAccounts || [],
+          },
+          pl: {
+            revenue: window.dashboardData?.pl?.revenue || 0,
+            cogs: window.dashboardData?.pl?.cogs || 0,
+            gross: window.dashboardData?.pl?.gross || 0,
+            opex: window.dashboardData?.pl?.opex || 0,
+            netProfit: window.dashboardData?.pl?.netProfit || 0,
+            entityBreakdown: window.dashboardData?.pl?.entityBreakdown || [],
+          },
+          balance: {
+            totalAssets: document.getElementById('bs-assets')?.textContent || '',
+            totalLiabilities: document.getElementById('bs-liabilities')?.textContent || '',
+            totalEquity: document.getElementById('bs-equity')?.textContent || '',
+          },
+          receivables: {
+            total: document.getElementById('aged-total')?.textContent || '',
+            current: document.getElementById('aged-current')?.textContent || '',
+            days31_60: document.getElementById('aged-31-60')?.textContent || '',
+            days61_90: document.getElementById('aged-61-90')?.textContent || '',
+            days90plus: document.getElementById('aged-90plus')?.textContent || '',
+          },
+          ratios: {
+            currentRatio: document.getElementById('ratio-current')?.textContent || '',
+            grossMargin: document.getElementById('ratio-gross-margin')?.textContent || '',
+            netProfitMargin: document.getElementById('ratio-net-margin')?.textContent || '',
+            debtToEquity: document.getElementById('ratio-debt-equity')?.textContent || '',
+          },
+          topCustomers: Array.from(document.querySelectorAll('#customerList .customer-item')).slice(0, 5).map(el => ({
+            name: el.querySelector('.customer-name')?.textContent || '',
+            value: el.querySelector('.customer-value')?.textContent || '',
+          })),
+        } : undefined;
+
+        return { entity, period, metrics, quarterInfo, reversals: reversalContext, consolidatedData };
+      }
+
+      // ============ Prose rendering ============
+      // Convert the AI's markdown-flavoured response to safe HTML.
+      // Supports **bold**, paragraphs (double newline). Anything else stays as text.
+      function renderAIProse(text) {
+        if (!text) return '';
+        // Escape HTML first, then add markdown-bold + paragraphs
+        const escaped = text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        const paragraphs = withBold.split(/\n\s*\n/).map(p => `<p>${p.trim()}</p>`).join('');
+        return paragraphs;
+      }
+
+      function escapeHtmlAttr(s) {
+        return String(s || '')
+          .replace(/&/g, '&amp;')
+          .replace(/"/g, '&quot;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      // ============ The renderer ============
+      function renderAIPanel() {
+        const mount = document.getElementById('aiInlinePanel');
+        if (!mount) return;
+
+        const scopeKey = currentAIScopeKey();
+        const state = aiPanelState(scopeKey);
+        const copy = aiPanelCopy(scopeKey);
+
+        // Closed state — render as collapsed bar
+        if (state.openness === 'closed') {
+          mount.innerHTML = `
+            <button class="ai-panel-collapsed" type="button" onclick="expandAIPanel()">
+              <span>AI insights · ${escapeHtmlAttr(copy.scopeLabel)}</span>
+              <span class="ai-collapsed-arrow">▼ click to expand</span>
+            </button>
+          `;
+          return;
+        }
+
+        // Open state — full panel
+        const isLoading = state.loading;
+        const hasInsights = !!state.insights;
+        const empty = !hasInsights && state.qaList.length === 0 && !isLoading;
+
+        let inner = `
+          <div class="ai-panel${empty ? ' ai-empty' : ''}">
+            <div class="ai-panel-head">
+              <h3>AI insights</h3>
+              <span class="ai-panel-tag">Powered by Claude</span>
+              <span class="ai-panel-scope">${escapeHtmlAttr(copy.scopeLabel)}</span>
+              <button class="ai-panel-close" type="button" onclick="collapseAIPanel()" title="Hide AI panel">×</button>
+            </div>
+        `;
+
+        if (empty) {
+          inner += `
+            <div class="ai-cta-row">
+              <button class="ai-button" type="button" onclick="generateAIInsights()">Generate insights</button>
+              <span class="ai-hint">${escapeHtmlAttr(copy.hint)}</span>
+            </div>
+          `;
+        } else {
+          if (isLoading && !hasInsights) {
+            inner += `
+              <div class="ai-content">
+                <div class="ai-prose"><span class="ai-spinner"></span>Reading the dashboard… typically 5-10 seconds.</div>
+              </div>
+            `;
+          } else if (hasInsights) {
+            const meta = state.insightsMeta || {};
+            inner += `
+              <div class="ai-content">
+                <div class="ai-prose">${renderAIProse(state.insights)}</div>
+                <div class="ai-meta">
+                  <span>Model: ${escapeHtmlAttr(meta.model || 'claude')}</span>
+                  <span>${escapeHtmlAttr(meta.generatedAt || '')}</span>
+                </div>
+              </div>
+            `;
+          }
+
+          if (state.error) {
+            inner += `<div class="ai-error">${escapeHtmlAttr(state.error)}</div>`;
+          }
+
+          if (state.qaList.length > 0) {
+            inner += `
+              <div class="ai-qa-list">
+                ${state.qaList.map(qa => `
+                  <div class="ai-qa-item">
+                    <div class="ai-qa-question">${escapeHtmlAttr(qa.question)}</div>
+                    <div class="ai-qa-answer">${
+                      qa.answer
+                        ? renderAIProse(qa.answer)
+                        : '<span class="ai-spinner"></span>Thinking…'
+                    }</div>
+                  </div>
+                `).join('')}
+              </div>
+            `;
+          }
+
+          if (hasInsights) {
+            inner += `
+              <div class="ai-followup">
+                <div class="ai-followup-label">Ask a follow-up question</div>
+                <form class="ai-followup-form" onsubmit="handleAIFollowupSubmit(event); return false;">
+                  <input type="text" class="ai-followup-input" id="aiFollowupInput"
+                         placeholder="${escapeHtmlAttr(copy.placeholder)}"
+                         ${isLoading ? 'disabled' : ''}
+                         maxlength="500" />
+                  <button class="ai-button ai-ghost" type="submit" ${isLoading ? 'disabled' : ''}>Ask</button>
+                </form>
+              </div>
+            `;
+          }
+        }
+
+        inner += '</div>';
+        mount.innerHTML = inner;
+      }
+
+      // ============ Async actions ============
+      async function generateAIInsights() {
+        const scopeKey = currentAIScopeKey();
+        const state = aiPanelState(scopeKey);
+        state.loading = true;
+        state.error = null;
+        renderAIPanel();
+
+        try {
+          const context = buildAIContext();
+          const message = `Provide a 2-3 paragraph executive summary of this period's financial performance. Highlight the most important insights, notable trends, and any concerns or opportunities the CEO should be aware of. Use the actual numbers from the data provided. Bold key figures using **markdown**.`;
+
+          const res = await fetch(`${API_BASE}/api/ai-chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, context, history: [] }),
+          });
+
+          state.loading = false;
+
+          if (!res.ok) {
+            state.error = `Server returned ${res.status}`;
+          } else {
+            const data = await res.json();
+            if (data.fallback) {
+              state.error = data.response || 'AI is not configured.';
+            } else if (data.response) {
+              state.insights = data.response;
+              state.insightsMeta = {
+                model: 'claude-sonnet-4',
+                generatedAt: new Date().toLocaleString('en-AU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+              };
+              // Seed history-equivalent so follow-ups have full context
+              state._initialMessage = message;
+            } else {
+              state.error = 'Unexpected response from AI service.';
+            }
+          }
+        } catch (err) {
+          state.loading = false;
+          state.error = `Network error: ${err.message}`;
+        }
+
+        renderAIPanel();
+      }
+
+      async function askAIFollowUp(question) {
+        const scopeKey = currentAIScopeKey();
+        const state = aiPanelState(scopeKey);
+        if (!state.insights) return; // no initial insight to follow up on
+
+        const qaItem = { question, answer: null };
+        state.qaList.push(qaItem);
+        state.loading = true;
+        renderAIPanel();
+
+        try {
+          const context = buildAIContext();
+          // Build history: the original generate request + response, then prior Q&As
+          const history = [
+            { role: 'user', content: state._initialMessage || 'Provide a 2-3 paragraph executive summary.' },
+            { role: 'assistant', content: state.insights },
+          ];
+          // Include previous Q&As (everything except the current one we just pushed)
+          state.qaList.slice(0, -1).forEach(qa => {
+            history.push({ role: 'user', content: qa.question });
+            history.push({ role: 'assistant', content: qa.answer || '' });
+          });
+
+          const res = await fetch(`${API_BASE}/api/ai-chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: question, context, history: history.slice(-6) }),
+          });
+
+          state.loading = false;
+
+          if (!res.ok) {
+            qaItem.answer = `(Server returned ${res.status})`;
+          } else {
+            const data = await res.json();
+            qaItem.answer = data.response || '(No answer returned)';
+          }
+        } catch (err) {
+          state.loading = false;
+          qaItem.answer = `(Network error: ${err.message})`;
+        }
+
+        renderAIPanel();
+      }
+
+      // Form submission handler — wired via inline onsubmit
+      function handleAIFollowupSubmit(event) {
+        event.preventDefault();
+        const input = document.getElementById('aiFollowupInput');
+        const question = input?.value.trim();
+        if (question) {
+          askAIFollowUp(question);
+          if (input) input.value = '';
+        }
+      }
+
+      // Open/close
+      function collapseAIPanel() {
+        const scopeKey = currentAIScopeKey();
+        aiPanelState(scopeKey).openness = 'closed';
+        renderAIPanel();
+      }
+      function expandAIPanel() {
+        const scopeKey = currentAIScopeKey();
+        aiPanelState(scopeKey).openness = 'open';
+        renderAIPanel();
+      }
+
       async function sendChat() {
         const input = document.getElementById('chatInput');
         const message = input.value.trim();
@@ -5778,6 +6450,14 @@
 
       // ========== INITIALIZE ==========
       document.addEventListener('DOMContentLoaded', () => {
+        // Set period selector to current financial period
+        const currentPeriod = getCurrentFinancialPeriod();
+        const periodSel = document.getElementById('periodSelector');
+        if (periodSel) periodSel.value = currentPeriod;
+
+        // Initial render of the AI panel (empty state) so it appears before data loads
+        renderAIPanel();
+
         loadDashboard();
       });
     </script>
