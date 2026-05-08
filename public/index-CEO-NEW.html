@@ -3379,7 +3379,13 @@
       async function loadDashboard() {
         // Reset reversal filter when dashboard reloads
         resetReversalState();
-        
+
+        // Clear stale historical data from a previous entity selection.
+        // Without this, switching Mining → ALL shows Mining's monthly history
+        // labelled as "all entities" — misleading. Sparklines will fall back
+        // to flat single-point lines until the per-entity historical loader runs again.
+        window.historicalData = { daily: [], monthly: [] };
+
         const entity = getSelectedEntity();
         const period = document.getElementById("periodSelector").value;
         const quarterInfo = getQuarterDates(period);
@@ -3490,7 +3496,17 @@
       // ========== CONSOLIDATED DASHBOARD (All Entities) ==========
      async function loadConsolidatedDashboard(quarterInfo, entityList) {
         const entities = entityList || ['Mining', 'Aboriginal Corporation', 'Enterprises', 'Property', 'Ngarrkuwuy', 'Invest', 'Marrin'];
-        
+
+        // Sync period-driven subtitle text (the standard loadDashboard path does this
+        // before calling its loaders; the consolidated path bypasses that, so do it here).
+        const period = document.getElementById("periodSelector").value;
+        const budgetPeriodEl = document.getElementById("budget-period");
+        const plPeriodEl = document.getElementById("pl-period");
+        const customersPeriodEl = document.getElementById("customers-period");
+        if (budgetPeriodEl) budgetPeriodEl.textContent = `${period} (${Math.round(quarterInfo.proRateFactor * 100)}% elapsed)`;
+        if (plPeriodEl) plPeriodEl.textContent = `${period} FY25/26`;
+        if (customersPeriodEl) customersPeriodEl.textContent = `${period} FY25/26`;
+
         let totalCash = 0;
         let totalRevenue = 0;
         let totalExpenses = 0;
@@ -5884,14 +5900,17 @@
       // Per-scope state. Key: ${entity}::${period}::rev-${reversalActive}
       const _aiPanelState = {};
 
-      // Compute current financial period from today's date.
+      // Default period: last completed quarter (within current FY).
       // FY = Jul-Jun. Q1 Jul-Sep, Q2 Oct-Dec, Q3 Jan-Mar, Q4 Apr-Jun.
+      // Mid-quarter data is incomplete and misleading for execs; we show the most
+      // recent fully-closed quarter instead. In Q1 itself there is no prior
+      // quarter inside the current FY, so we default to Q1 (current).
       function getCurrentFinancialPeriod() {
         const m = new Date().getMonth(); // 0-11
-        if (m >= 6 && m <= 8)  return 'Q1';
-        if (m >= 9 && m <= 11) return 'Q2';
-        if (m >= 0 && m <= 2)  return 'Q3';
-        return 'Q4';
+        if (m >= 9 && m <= 11) return 'Q1';   // currently Q2 → Q1 just completed
+        if (m >= 0 && m <= 2)  return 'Q2';   // currently Q3 → Q2 just completed
+        if (m >= 3 && m <= 5)  return 'Q3';   // currently Q4 → Q3 just completed
+        return 'Q1';                            // currently Q1 (Jul-Sep) → no prior quarter in this FY, show Q1
       }
 
       // Reversal-active check (returns boolean)
