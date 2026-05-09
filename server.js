@@ -5550,7 +5550,7 @@ app.post('/api/finalize-month', async (req, res) => {
       skippedAlreadyFinal,
       errors,
       summary: {
-        requested: periodMonths.length * workingConnections.length,
+        requested: workItems.length,
         finalized: finalized.length,
         skippedAlreadyFinal: skippedAlreadyFinal.length,
         errors: errors.length,
