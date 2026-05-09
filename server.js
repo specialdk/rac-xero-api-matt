@@ -5442,19 +5442,30 @@ app.post('/api/finalize-month', async (req, res) => {
           const opex = s.totalExpenses || 0;
           const netProfit = s.netProfit ?? gross - opex;
 
-          // Wipe the existing draft (if any) and write the final.
-          await pool.query(
-            `DELETE FROM monthly_snapshots
-             WHERE org = $1 AND period_month = $2 AND snapshot_status = 'draft'`,
-            [orgShortName, periodMonth]
-          );
-
-          await pool.query(
-            `INSERT INTO monthly_snapshots
-              (org, period_month, revenue, cogs, gross_profit, opex, net_profit, job_status, snapshot_status, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 'success', 'final', NOW())`,
-            [orgShortName, periodMonth, revenue, cogs, gross, opex, netProfit]
-          );
+          // Atomic delete-then-insert. If the INSERT fails we must NOT leave the
+          // database with the draft already gone — that would be data loss.
+          // Single connection + BEGIN/COMMIT keeps it all-or-nothing.
+          const client = await pool.connect();
+          try {
+            await client.query('BEGIN');
+            await client.query(
+              `DELETE FROM monthly_snapshots
+               WHERE org = $1 AND period_month = $2 AND snapshot_status = 'draft'`,
+              [orgShortName, periodMonth]
+            );
+            await client.query(
+              `INSERT INTO monthly_snapshots
+                (org, period_month, revenue, cogs, gross_profit, opex, net_profit, job_status, snapshot_status, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, 'success', 'final', NOW())`,
+              [orgShortName, periodMonth, revenue, cogs, gross, opex, netProfit]
+            );
+            await client.query('COMMIT');
+          } catch (txErr) {
+            await client.query('ROLLBACK');
+            throw txErr; // bubble to outer catch — pushes onto errors[]
+          } finally {
+            client.release();
+          }
 
           finalized.push({
             org: orgShortName,
