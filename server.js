@@ -5722,6 +5722,241 @@ app.post('/api/backfill-historical-months', async (req, res) => {
   }
 });
 
+// ============================================================================
+// ACCOUNT VARIANCE
+// Compares two date periods at the account-level. Returns top contributors to
+// revenue / cogs / expense / net-profit changes. Drives Tier 2 AI commentary
+// — instead of "revenue dropped 60%", AI can say "revenue dropped 60% with
+// $X driven by Account 4100 'Aggregate Sales - RIO'".
+// ============================================================================
+
+// Helper: months between two dates inclusive (used to translate a date range
+// into the periodMonths parameter the existing P&L endpoint expects).
+function monthsBetween(startDate, endDate) {
+  const s = new Date(startDate);
+  const e = new Date(endDate);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+  return Math.max(1, (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1);
+}
+
+// Aggregate account arrays across entities/periods. Sums by account name.
+// Returns array of {name, amount} sorted by amount descending.
+function aggregateAccounts(...arrays) {
+  const map = {};
+  for (const arr of arrays) {
+    if (!Array.isArray(arr)) continue;
+    for (const a of arr) {
+      if (!a || !a.name) continue;
+      if (!map[a.name]) map[a.name] = 0;
+      map[a.name] += parseFloat(a.amount) || 0;
+    }
+  }
+  return Object.entries(map)
+    .map(([name, amount]) => ({ name, amount }))
+    .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+}
+
+// Diff two account arrays by name. Returns {name, current, prior, delta, deltaPct}
+// sorted by absolute delta descending. Names appearing in only one period
+// still show up — current=0 or prior=0 indicates new/discontinued lines.
+function diffAccounts(currentAccounts, priorAccounts) {
+  const map = {};
+  (currentAccounts || []).forEach(a => {
+    if (!map[a.name]) map[a.name] = { name: a.name, current: 0, prior: 0 };
+    map[a.name].current += parseFloat(a.amount) || 0;
+  });
+  (priorAccounts || []).forEach(a => {
+    if (!map[a.name]) map[a.name] = { name: a.name, current: 0, prior: 0 };
+    map[a.name].prior += parseFloat(a.amount) || 0;
+  });
+  return Object.values(map)
+    .map(r => {
+      const delta = r.current - r.prior;
+      const deltaPct = r.prior !== 0 ? (delta / Math.abs(r.prior)) * 100 : (r.current !== 0 ? null : 0);
+      return { ...r, delta, deltaPct };
+    })
+    .filter(r => Math.abs(r.delta) > 0.01) // drop zero-delta noise
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+}
+
+app.post('/api/account-variance', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const {
+      organizationName,
+      currentStartDate,
+      currentEndDate,
+      priorStartDate,
+      priorEndDate,
+      topN = 10,
+    } = req.body || {};
+
+    if (!organizationName || !currentStartDate || !currentEndDate || !priorStartDate || !priorEndDate) {
+      return res.status(400).json({
+        error: 'organizationName, currentStartDate, currentEndDate, priorStartDate, priorEndDate are all required',
+      });
+    }
+
+    const currentMonths = monthsBetween(currentStartDate, currentEndDate);
+    const priorMonths = monthsBetween(priorStartDate, priorEndDate);
+
+    // Resolve entities. 'ALL' / 'All Entities' fan out to every active connection.
+    const isAll = ['all', 'all entities', 'consolidated'].includes(String(organizationName).toLowerCase());
+    let tenantNames;
+    if (isAll) {
+      const conns = await tokenStorage.getAllXeroConnections();
+      tenantNames = conns.filter(c => c.connected).map(c => c.tenantName);
+    } else {
+      // Resolve short name → full tenant name via existing connections
+      const conns = await tokenStorage.getAllXeroConnections();
+      const match = conns.find(c =>
+        c.connected && (
+          c.tenantName.toLowerCase().includes(String(organizationName).toLowerCase()) ||
+          getOrgShortName(c.tenantName) === organizationName
+        )
+      );
+      if (!match) {
+        return res.status(404).json({ error: `No active connection found for "${organizationName}"` });
+      }
+      tenantNames = [match.tenantName];
+    }
+
+    console.log(`[variance] ${tenantNames.length} entit${tenantNames.length === 1 ? 'y' : 'ies'}: current=${currentStartDate}..${currentEndDate} (${currentMonths}mo), prior=${priorStartDate}..${priorEndDate} (${priorMonths}mo)`);
+
+    // Fetch P&L for both periods, all entities. Entity-by-entity so we can
+    // attribute account variance to the entity it came from.
+    const byEntity = [];
+    for (const tenantName of tenantNames) {
+      const orgShortName = getOrgShortName(tenantName);
+      try {
+        const [curResp, priorResp] = await Promise.all([
+          snapshotFetchInternal('/api/profit-loss-summary', {
+            organizationName: tenantName,
+            date: currentEndDate,
+            periodMonths: currentMonths,
+          }),
+          snapshotFetchInternal('/api/profit-loss-summary', {
+            organizationName: tenantName,
+            date: priorEndDate,
+            periodMonths: priorMonths,
+          }),
+        ]);
+
+        if (curResp.error || !curResp.summary || priorResp.error || !priorResp.summary) {
+          console.warn(`[variance] ${orgShortName}: skip — current=${curResp.error || 'ok'}, prior=${priorResp.error || 'ok'}`);
+          continue;
+        }
+
+        byEntity.push({
+          entity: orgShortName,
+          current: {
+            totalRevenue: curResp.summary.totalRevenue || 0,
+            totalCOGS: curResp.summary.totalCOGS || 0,
+            grossProfit: curResp.summary.grossProfit || 0,
+            totalExpenses: curResp.summary.totalExpenses || 0,
+            netProfit: curResp.summary.netProfit || 0,
+            revenueAccounts: curResp.summary.revenueAccounts || [],
+            cogsAccounts: curResp.summary.cogsAccounts || [],
+            expenseAccounts: curResp.summary.expenseAccounts || [],
+          },
+          prior: {
+            totalRevenue: priorResp.summary.totalRevenue || 0,
+            totalCOGS: priorResp.summary.totalCOGS || 0,
+            grossProfit: priorResp.summary.grossProfit || 0,
+            totalExpenses: priorResp.summary.totalExpenses || 0,
+            netProfit: priorResp.summary.netProfit || 0,
+            revenueAccounts: priorResp.summary.revenueAccounts || [],
+            cogsAccounts: priorResp.summary.cogsAccounts || [],
+            expenseAccounts: priorResp.summary.expenseAccounts || [],
+          },
+        });
+      } catch (err) {
+        console.error(`[variance] ${orgShortName} failed:`, err.message);
+      }
+      // Polite delay between entities
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    if (byEntity.length === 0) {
+      return res.status(500).json({ error: 'No P&L data could be fetched for any entity in either period' });
+    }
+
+    // Per-entity account-level diff (attribution stays attached to entity)
+    const entityVariance = byEntity.map(e => {
+      const revDiff = diffAccounts(e.current.revenueAccounts, e.prior.revenueAccounts).slice(0, topN);
+      const cogsDiff = diffAccounts(e.current.cogsAccounts, e.prior.cogsAccounts).slice(0, topN);
+      const expDiff = diffAccounts(e.current.expenseAccounts, e.prior.expenseAccounts).slice(0, topN);
+      return {
+        entity: e.entity,
+        totals: {
+          revenue: { current: e.current.totalRevenue, prior: e.prior.totalRevenue, delta: e.current.totalRevenue - e.prior.totalRevenue },
+          cogs:    { current: e.current.totalCOGS, prior: e.prior.totalCOGS, delta: e.current.totalCOGS - e.prior.totalCOGS },
+          expenses:{ current: e.current.totalExpenses, prior: e.prior.totalExpenses, delta: e.current.totalExpenses - e.prior.totalExpenses },
+          netProfit:{current: e.current.netProfit, prior: e.prior.netProfit, delta: e.current.netProfit - e.prior.netProfit },
+        },
+        topRevenueChanges: revDiff,
+        topCOGSChanges: cogsDiff,
+        topExpenseChanges: expDiff,
+      };
+    });
+
+    // Consolidated totals across all entities
+    const consolidated = {
+      revenue:  { current: 0, prior: 0, delta: 0 },
+      cogs:     { current: 0, prior: 0, delta: 0 },
+      expenses: { current: 0, prior: 0, delta: 0 },
+      netProfit:{ current: 0, prior: 0, delta: 0 },
+    };
+    entityVariance.forEach(e => {
+      ['revenue', 'cogs', 'expenses', 'netProfit'].forEach(k => {
+        consolidated[k].current += e.totals[k].current;
+        consolidated[k].prior   += e.totals[k].prior;
+      });
+    });
+    Object.keys(consolidated).forEach(k => {
+      consolidated[k].delta = consolidated[k].current - consolidated[k].prior;
+      consolidated[k].deltaPct = consolidated[k].prior !== 0
+        ? (consolidated[k].delta / Math.abs(consolidated[k].prior)) * 100
+        : null;
+    });
+
+    // For consolidated view, surface the top movers across all entities
+    // (account name + entity, since the same account name can exist in multiple entities)
+    const flatRevChanges = [];
+    const flatExpChanges = [];
+    entityVariance.forEach(e => {
+      e.topRevenueChanges.forEach(c => flatRevChanges.push({ ...c, entity: e.entity }));
+      e.topExpenseChanges.forEach(c => flatExpChanges.push({ ...c, entity: e.entity }));
+    });
+    const topRevenueMoversConsolidated = flatRevChanges
+      .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+      .slice(0, topN);
+    const topExpenseMoversConsolidated = flatExpChanges
+      .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+      .slice(0, topN);
+
+    const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+    console.log(`[variance] complete in ${durationSeconds}s: ${byEntity.length} entities analysed`);
+
+    res.json({
+      success: true,
+      durationSeconds,
+      periods: {
+        current: { startDate: currentStartDate, endDate: currentEndDate, months: currentMonths },
+        prior:   { startDate: priorStartDate, endDate: priorEndDate, months: priorMonths },
+      },
+      organizationName,
+      consolidated,
+      byEntity: entityVariance,
+      topRevenueMoversConsolidated,
+      topExpenseMoversConsolidated,
+    });
+  } catch (error) {
+    console.error('[variance] endpoint error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // One-time fix: Delete a specific daily_metrics row
 app.post("/api/delete-metrics-row", async (req, res) => {
   try {
@@ -5729,14 +5964,14 @@ app.post("/api/delete-metrics-row", async (req, res) => {
     if (!org || !date) {
       return res.status(400).json({ error: "org and date required" });
     }
-    
+
     const result = await pool.query(
       `DELETE FROM daily_metrics WHERE org = $1 AND snapshot_date = $2`,
       [org, date]
     );
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       deleted: result.rowCount,
       message: `Deleted ${result.rowCount} row(s) for ${org} @ ${date}`
     });

@@ -6295,9 +6295,10 @@
           `;
         } else {
           if (isLoading && !hasInsights) {
+            const loadingText = state.loadingMessage || 'Reading the dashboard… typically 5-10 seconds.';
             inner += `
               <div class="ai-content">
-                <div class="ai-prose"><span class="ai-spinner"></span>Reading the dashboard… typically 5-10 seconds.</div>
+                <div class="ai-prose"><span class="ai-spinner"></span>${escapeHtmlAttr(loadingText)}</div>
               </div>
             `;
           } else if (hasInsights) {
@@ -6355,16 +6356,76 @@
       }
 
       // ============ Async actions ============
+      // Helper: shift an ISO date string by N years (used to derive prior-year period bounds)
+      function shiftYearByDelta(dateStr, yearDelta) {
+        if (!dateStr) return null;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return null;
+        d.setFullYear(d.getFullYear() + yearDelta);
+        return d.toISOString().slice(0, 10);
+      }
+
       async function generateAIInsights() {
         const scopeKey = currentAIScopeKey();
         const state = aiPanelState(scopeKey);
         state.loading = true;
         state.error = null;
+        state.loadingMessage = 'Reading the dashboard…';
         renderAIPanel();
 
         try {
-          const context = buildAIContext();
-          const message = `Provide a 2-3 paragraph executive summary of this period's financial performance. Highlight the most important insights, notable trends, and any concerns or opportunities the CEO should be aware of. Use the actual numbers from the data provided. Bold key figures using **markdown**.`;
+          const baseContext = buildAIContext();
+
+          // Compute matched-period dates: selected period this FY vs same-period last FY.
+          // Cap currentEndDate at today so in-progress quarters don't compare against a
+          // full prior quarter (which would distort the variance commentary).
+          let varianceData = null;
+          const qi = baseContext.quarterInfo;
+          if (qi && qi.startDate && qi.endDate) {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const curStart = qi.startDate;
+            const curEnd = (qi.endDate < todayStr) ? qi.endDate : todayStr;
+            const priorStart = shiftYearByDelta(curStart, -1);
+            const priorEnd = shiftYearByDelta(curEnd, -1);
+
+            if (curStart && curEnd && priorStart && priorEnd) {
+              // Update loading message — variance fetch is the slow bit
+              const isAll = baseContext.entity === 'ALL';
+              state.loadingMessage = isAll
+                ? 'Analysing variance across all entities and accounts… ~30-60 sec.'
+                : 'Analysing variance across accounts… ~10-20 sec.';
+              renderAIPanel();
+
+              try {
+                const varRes = await fetch(`${API_BASE}/api/account-variance`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    organizationName: baseContext.entity,
+                    currentStartDate: curStart,
+                    currentEndDate: curEnd,
+                    priorStartDate: priorStart,
+                    priorEndDate: priorEnd,
+                    topN: 8,
+                  }),
+                });
+                if (varRes.ok) {
+                  varianceData = await varRes.json();
+                }
+              } catch (varErr) {
+                console.warn('[ai] variance fetch failed (continuing without):', varErr);
+              }
+            }
+          }
+
+          state.loadingMessage = 'Writing commentary…';
+          renderAIPanel();
+
+          const context = { ...baseContext, accountVariance: varianceData };
+
+          const message = varianceData
+            ? `Provide a 2-3 paragraph executive summary. You have account-level variance data comparing the selected period to the same period last year. Lead with the dollar story — cite SPECIFIC accounts that drove the largest revenue and expense changes (account name, dollar amount, percentage). Be concrete and direct. If a single account or entity is responsible for most of a swing, name it. Avoid generic statements. Bold key figures using **markdown**.`
+            : `Provide a 2-3 paragraph executive summary of this period's financial performance. Highlight the most important insights, notable trends, and any concerns or opportunities the CEO should be aware of. Use the actual numbers from the data provided. Bold key figures using **markdown**.`;
 
           const res = await fetch(`${API_BASE}/api/ai-chat`, {
             method: 'POST',
@@ -6373,6 +6434,7 @@
           });
 
           state.loading = false;
+          state.loadingMessage = null;
 
           if (!res.ok) {
             state.error = `Server returned ${res.status}`;
@@ -6385,8 +6447,8 @@
               state.insightsMeta = {
                 model: 'claude-sonnet-4',
                 generatedAt: new Date().toLocaleString('en-AU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+                varianceUsed: !!varianceData,
               };
-              // Seed history-equivalent so follow-ups have full context
               state._initialMessage = message;
             } else {
               state.error = 'Unexpected response from AI service.';
@@ -6394,6 +6456,7 @@
           }
         } catch (err) {
           state.loading = false;
+          state.loadingMessage = null;
           state.error = `Network error: ${err.message}`;
         }
 
