@@ -5368,13 +5368,7 @@ app.post('/api/finalize-month', async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const { periodMonths, entities = 'all' } = req.body || {};
-
-    if (!Array.isArray(periodMonths) || periodMonths.length === 0) {
-      return res.status(400).json({
-        error: 'periodMonths is required and must be a non-empty array of "YYYY-MM" strings',
-      });
-    }
+    const { periodMonths, entities = 'all', targets } = req.body || {};
 
     // Resolve which entities to process. Always work from active connections
     // so we have current tenantName/tenantId for the Xero fetch.
@@ -5384,109 +5378,163 @@ app.post('/api/finalize-month', async (req, res) => {
       return res.status(400).json({ error: 'No active Xero connections.' });
     }
 
-    let workingConnections = activeConnections;
-    if (entities !== 'all' && Array.isArray(entities) && entities.length > 0) {
-      workingConnections = activeConnections.filter((c) =>
-        entities.includes(getOrgShortName(c.tenantName))
-      );
+    // Build a flat list of work items: {tenantName, orgShortName, periodMonth}.
+    // Two input modes are supported:
+    //   1. targets[] — explicit (org, periodMonth) pairs (preferred for granular UI)
+    //   2. periodMonths[] + entities — cartesian product (kept for backward compat)
+    const workItems = [];
+
+    if (Array.isArray(targets) && targets.length > 0) {
+      // Per-target mode
+      for (const t of targets) {
+        if (!t || !t.periodMonth || !t.org) {
+          return res.status(400).json({
+            error: 'each targets entry must have {periodMonth, org}',
+          });
+        }
+        const conn = activeConnections.find(
+          (c) => getOrgShortName(c.tenantName) === t.org
+        );
+        if (!conn) {
+          // Don't fail the whole request — surface as a per-target error
+          // so the caller sees which orgs couldn't be resolved.
+          workItems.push({
+            tenantName: null,
+            orgShortName: t.org,
+            periodMonth: t.periodMonth,
+            resolveError: `No active connection for org "${t.org}"`,
+          });
+          continue;
+        }
+        workItems.push({
+          tenantName: conn.tenantName,
+          orgShortName: t.org,
+          periodMonth: t.periodMonth,
+        });
+      }
+    } else if (Array.isArray(periodMonths) && periodMonths.length > 0) {
+      // Per-period mode (cartesian product of periodMonths × entities)
+      let workingConnections = activeConnections;
+      if (entities !== 'all' && Array.isArray(entities) && entities.length > 0) {
+        workingConnections = activeConnections.filter((c) =>
+          entities.includes(getOrgShortName(c.tenantName))
+        );
+      }
+      for (const conn of workingConnections) {
+        const orgShortName = getOrgShortName(conn.tenantName);
+        for (const periodMonth of periodMonths) {
+          workItems.push({
+            tenantName: conn.tenantName,
+            orgShortName,
+            periodMonth,
+          });
+        }
+      }
+    } else {
+      return res.status(400).json({
+        error: 'Provide either targets[] (preferred) or periodMonths[] + entities',
+      });
     }
 
-    console.log(
-      `[finalize] starting: ${periodMonths.length} months x ${workingConnections.length} entities`
-    );
+    console.log(`[finalize] starting: ${workItems.length} work items`);
 
     const finalized = [];
     const skippedAlreadyFinal = [];
     const errors = [];
 
-    for (const conn of workingConnections) {
-      const orgShortName = getOrgShortName(conn.tenantName);
+    for (const item of workItems) {
+      const { tenantName, orgShortName, periodMonth, resolveError } = item;
 
-      for (const periodMonth of periodMonths) {
-        try {
-          // Skip if already finalized — finals are locked.
-          const existing = await pool.query(
-            `SELECT id, snapshot_status FROM monthly_snapshots
-             WHERE org = $1 AND period_month = $2`,
-            [orgShortName, periodMonth]
-          );
-          if (existing.rows.some((r) => r.snapshot_status === 'final')) {
-            skippedAlreadyFinal.push({ org: orgShortName, periodMonth });
-            continue;
-          }
+      // Couldn't resolve org → no Xero call possible
+      if (resolveError) {
+        errors.push({ org: orgShortName, periodMonth, error: resolveError });
+        console.warn(`[finalize] ${orgShortName} ${periodMonth} skipped: ${resolveError}`);
+        continue;
+      }
 
-          // Re-fetch P&L for this exact month
-          const endDate = periodMonthToEndDate(periodMonth);
-          const plResp = await snapshotFetchInternal('/api/profit-loss-summary', {
-            organizationName: conn.tenantName,
-            date: endDate,
-            periodMonths: 1,
-          });
+      try {
+        // Skip if already finalized — finals are locked.
+        const existing = await pool.query(
+          `SELECT id, snapshot_status FROM monthly_snapshots
+           WHERE org = $1 AND period_month = $2`,
+          [orgShortName, periodMonth]
+        );
+        if (existing.rows.some((r) => r.snapshot_status === 'final')) {
+          skippedAlreadyFinal.push({ org: orgShortName, periodMonth });
+          continue;
+        }
 
-          if (plResp.error || !plResp.summary) {
-            errors.push({
-              org: orgShortName,
-              periodMonth,
-              error: plResp.error || 'no summary returned',
-            });
-            console.warn(
-              `[finalize] ${orgShortName} ${periodMonth} skipped: ${plResp.error || 'no summary'}`
-            );
-            continue;
-          }
+        // Re-fetch P&L for this exact month
+        const endDate = periodMonthToEndDate(periodMonth);
+        const plResp = await snapshotFetchInternal('/api/profit-loss-summary', {
+          organizationName: tenantName,
+          date: endDate,
+          periodMonths: 1,
+        });
 
-          const s = plResp.summary;
-          const revenue = s.totalRevenue || 0;
-          const cogs = s.totalCOGS || 0;
-          const gross = s.grossProfit ?? revenue - cogs;
-          const opex = s.totalExpenses || 0;
-          const netProfit = s.netProfit ?? gross - opex;
-
-          // Atomic delete-then-insert. If the INSERT fails we must NOT leave the
-          // database with the draft already gone — that would be data loss.
-          // Single connection + BEGIN/COMMIT keeps it all-or-nothing.
-          const client = await pool.connect();
-          try {
-            await client.query('BEGIN');
-            await client.query(
-              `DELETE FROM monthly_snapshots
-               WHERE org = $1 AND period_month = $2 AND snapshot_status = 'draft'`,
-              [orgShortName, periodMonth]
-            );
-            await client.query(
-              `INSERT INTO monthly_snapshots
-                (org, period_month, revenue, cogs, gross_profit, opex, net_profit, snapshot_date, job_status, snapshot_status, created_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'success', 'final', NOW())`,
-              [orgShortName, periodMonth, revenue, cogs, gross, opex, netProfit]
-            );
-            await client.query('COMMIT');
-          } catch (txErr) {
-            await client.query('ROLLBACK');
-            throw txErr; // bubble to outer catch — pushes onto errors[]
-          } finally {
-            client.release();
-          }
-
-          finalized.push({
+        if (plResp.error || !plResp.summary) {
+          errors.push({
             org: orgShortName,
             periodMonth,
-            revenue,
-            netProfit,
+            error: plResp.error || 'no summary returned',
           });
-          console.log(
-            `[finalize] ${orgShortName} ${periodMonth}: rev=$${Math.round(revenue).toLocaleString()}, np=$${Math.round(netProfit).toLocaleString()}`
+          console.warn(
+            `[finalize] ${orgShortName} ${periodMonth} skipped: ${plResp.error || 'no summary'}`
           );
-
-          // Brief pause to be polite to Xero rate limits
-          await new Promise((r) => setTimeout(r, 500));
-        } catch (err) {
-          errors.push({ org: orgShortName, periodMonth, error: err.message });
-          console.error(
-            `[finalize] ${orgShortName} ${periodMonth} FAILED:`,
-            err.message
-          );
-          await new Promise((r) => setTimeout(r, 1000));
+          continue;
         }
+
+        const s = plResp.summary;
+        const revenue = s.totalRevenue || 0;
+        const cogs = s.totalCOGS || 0;
+        const gross = s.grossProfit ?? revenue - cogs;
+        const opex = s.totalExpenses || 0;
+        const netProfit = s.netProfit ?? gross - opex;
+
+        // Atomic delete-then-insert. If the INSERT fails we must NOT leave the
+        // database with the draft already gone — that would be data loss.
+        // Single connection + BEGIN/COMMIT keeps it all-or-nothing.
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query(
+            `DELETE FROM monthly_snapshots
+             WHERE org = $1 AND period_month = $2 AND snapshot_status = 'draft'`,
+            [orgShortName, periodMonth]
+          );
+          await client.query(
+            `INSERT INTO monthly_snapshots
+              (org, period_month, revenue, cogs, gross_profit, opex, net_profit, snapshot_date, job_status, snapshot_status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'success', 'final', NOW())`,
+            [orgShortName, periodMonth, revenue, cogs, gross, opex, netProfit]
+          );
+          await client.query('COMMIT');
+        } catch (txErr) {
+          await client.query('ROLLBACK');
+          throw txErr; // bubble to outer catch — pushes onto errors[]
+        } finally {
+          client.release();
+        }
+
+        finalized.push({
+          org: orgShortName,
+          periodMonth,
+          revenue,
+          netProfit,
+        });
+        console.log(
+          `[finalize] ${orgShortName} ${periodMonth}: rev=$${Math.round(revenue).toLocaleString()}, np=$${Math.round(netProfit).toLocaleString()}`
+        );
+
+        // Brief pause to be polite to Xero rate limits
+        await new Promise((r) => setTimeout(r, 500));
+      } catch (err) {
+        errors.push({ org: orgShortName, periodMonth, error: err.message });
+        console.error(
+          `[finalize] ${orgShortName} ${periodMonth} FAILED:`,
+          err.message
+        );
+        await new Promise((r) => setTimeout(r, 1000));
       }
     }
 

@@ -1728,6 +1728,100 @@
         font-size: var(--rac-text-xxs);
         text-align: right;
       }
+
+      /* Entity-detail layout — checkbox per draft, grouped by month */
+      .finalize-select-toolbar {
+        display: flex;
+        gap: var(--rac-space-2);
+        margin-bottom: var(--rac-space-3);
+        padding-bottom: var(--rac-space-3);
+        border-bottom: 1px solid var(--rac-line);
+      }
+      .finalize-select-btn {
+        background: transparent;
+        border: 1px solid var(--rac-line-2);
+        border-radius: var(--rac-radius-sharp);
+        padding: 4px 10px;
+        font-family: var(--rac-font-sans);
+        font-size: var(--rac-text-xxs);
+        color: var(--rac-ink-mute);
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+        transition: var(--rac-transition-base);
+      }
+      .finalize-select-btn:hover {
+        background: var(--rac-paper-2);
+        color: var(--rac-ink);
+      }
+      .finalize-month-group {
+        margin-bottom: var(--rac-space-4);
+      }
+      .finalize-month-group:last-child { margin-bottom: 0; }
+      .finalize-month-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding-bottom: var(--rac-space-2);
+        border-bottom: 1px solid var(--rac-line);
+        margin-bottom: var(--rac-space-2);
+      }
+      .finalize-month-toggle {
+        background: transparent;
+        border: none;
+        padding: 0;
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-sm);
+        font-weight: var(--rac-weight-medium);
+        color: var(--rac-ink);
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+      }
+      .finalize-month-toggle:hover { color: var(--rac-ochre); }
+      .finalize-month-count {
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xxs);
+        color: var(--rac-ink-mute);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+      }
+      .finalize-entity-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: var(--rac-space-3);
+        align-items: center;
+        padding: var(--rac-space-2) var(--rac-space-2);
+        border-radius: var(--rac-radius-sharp);
+        cursor: pointer;
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-sm);
+        transition: var(--rac-transition-base);
+      }
+      .finalize-entity-row:hover {
+        background: var(--rac-paper-2);
+      }
+      .finalize-entity-check {
+        cursor: pointer;
+        accent-color: var(--rac-ink);
+        width: 14px;
+        height: 14px;
+      }
+      .finalize-entity-name {
+        color: var(--rac-ink);
+      }
+      .finalize-entity-meta {
+        color: var(--rac-ink-mute);
+        font-size: var(--rac-text-xxs);
+        text-align: right;
+        white-space: nowrap;
+      }
+      /* Visually fade unchecked rows so the eye lands on what will be acted on */
+      .finalize-entity-row:has(.finalize-entity-check:not(:checked)) .finalize-entity-name,
+      .finalize-entity-row:has(.finalize-entity-check:not(:checked)) .finalize-entity-meta {
+        opacity: 0.45;
+      }
+
       .finalize-modal-footer {
         padding: var(--rac-space-4) var(--rac-space-5);
         border-top: 1px solid var(--rac-line);
@@ -6367,9 +6461,12 @@
           grouped[r.period_month].push(r);
         });
         const months = Object.keys(grouped).sort();
+        // Sort entities within each month alphabetically for stable ordering
+        months.forEach(pm => grouped[pm].sort((a, b) => (a.org || '').localeCompare(b.org || '')));
 
-        // Build body markup
         const body = document.getElementById('finalizeModalBody');
+        const confirmBtn = document.getElementById('finalizeConfirmBtn');
+
         if (months.length === 0) {
           body.innerHTML = `
             <p class="finalize-modal-intro">No draft months in <strong>${period} FY25/26</strong>.</p>
@@ -6377,49 +6474,76 @@
               All months in this period are already finalized.<br>
               Switch periods to find drafts elsewhere.
             </div>`;
-          document.getElementById('finalizeConfirmBtn').disabled = true;
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = 'Finalize';
         } else {
-          let totalEntities = 0;
-          let totalRev = 0;
-          let totalNP = 0;
-          drafts.forEach(r => {
-            totalEntities++;
-            totalRev += parseFloat(r.revenue) || 0;
-            totalNP += parseFloat(r.net_profit) || 0;
-          });
-
-          const rowsHtml = months.map(pm => {
+          // Build per-draft rows with checkboxes. Each checkbox keyed by `${org}::${pm}`.
+          const monthBlocks = months.map(pm => {
             const entries = grouped[pm];
-            const monthRev = entries.reduce((s, r) => s + (parseFloat(r.revenue) || 0), 0);
-            const monthNP = entries.reduce((s, r) => s + (parseFloat(r.net_profit) || 0), 0);
+            const monthLabel = formatMonthLabel(pm);
+            const entityRows = entries.map(r => {
+              const key = `${r.org}::${r.period_month}`;
+              const rev = Math.round(parseFloat(r.revenue) || 0).toLocaleString();
+              const np = Math.round(parseFloat(r.net_profit) || 0).toLocaleString();
+              return `
+                <label class="finalize-entity-row" data-key="${key}">
+                  <input type="checkbox" class="finalize-entity-check" checked
+                         data-org="${r.org}" data-pm="${r.period_month}"
+                         data-rev="${parseFloat(r.revenue) || 0}" data-np="${parseFloat(r.net_profit) || 0}">
+                  <span class="finalize-entity-name">${r.org}</span>
+                  <span class="finalize-entity-meta">Rev $${rev} · NP $${np}</span>
+                </label>`;
+            }).join('');
             return `
-              <div class="finalize-month-row">
-                <span class="finalize-month-label">${formatMonthLabel(pm)} — ${entries.length} ${entries.length === 1 ? 'entity' : 'entities'}</span>
-                <span class="finalize-month-meta">
-                  Rev $${Math.round(monthRev).toLocaleString()}<br>
-                  NP $${Math.round(monthNP).toLocaleString()}
-                </span>
+              <div class="finalize-month-group">
+                <div class="finalize-month-header">
+                  <button type="button" class="finalize-month-toggle" data-month="${pm}" title="Toggle all in this month">${monthLabel}</button>
+                  <span class="finalize-month-count">${entries.length} ${entries.length === 1 ? 'entity' : 'entities'}</span>
+                </div>
+                ${entityRows}
               </div>`;
           }).join('');
 
           body.innerHTML = `
             <p class="finalize-modal-intro">
-              These months will be re-fetched from Xero and locked as <strong>final</strong>.
-              Once finalized, the daily auto-snapshot will no longer overwrite them.
+              Select what to lock as <strong>final</strong>. Once finalized, the daily auto-snapshot will no longer overwrite these.
             </p>
-            ${rowsHtml}
-            <div class="finalize-month-row" style="border-top: 2px solid var(--rac-line-2); margin-top: 8px; padding-top: 12px; font-weight: var(--rac-weight-medium);">
-              <span class="finalize-month-label">Total: ${totalEntities} draft snapshots</span>
-              <span class="finalize-month-meta">
-                Rev $${Math.round(totalRev).toLocaleString()}<br>
-                NP $${Math.round(totalNP).toLocaleString()}
-              </span>
-            </div>`;
-          document.getElementById('finalizeConfirmBtn').disabled = false;
-        }
+            <div class="finalize-select-toolbar">
+              <button type="button" class="finalize-select-btn" id="finalizeSelectAll">Select all</button>
+              <button type="button" class="finalize-select-btn" id="finalizeSelectNone">Select none</button>
+            </div>
+            ${monthBlocks}`;
 
-        // Stash the months we'll send when Finalize is clicked.
-        window.finalizeTargetMonths = months;
+          // Wire up the toolbar buttons
+          document.getElementById('finalizeSelectAll').onclick = () => {
+            body.querySelectorAll('.finalize-entity-check').forEach(cb => { cb.checked = true; });
+            updateFinalizeFooter();
+          };
+          document.getElementById('finalizeSelectNone').onclick = () => {
+            body.querySelectorAll('.finalize-entity-check').forEach(cb => { cb.checked = false; });
+            updateFinalizeFooter();
+          };
+
+          // Per-month toggle buttons (click month name to toggle all entities in that month)
+          body.querySelectorAll('.finalize-month-toggle').forEach(btn => {
+            btn.onclick = () => {
+              const pm = btn.dataset.month;
+              const monthChecks = body.querySelectorAll(`.finalize-entity-check[data-pm="${pm}"]`);
+              const allChecked = Array.from(monthChecks).every(cb => cb.checked);
+              monthChecks.forEach(cb => { cb.checked = !allChecked; });
+              updateFinalizeFooter();
+            };
+          });
+
+          // Live update on any checkbox change (delegated)
+          body.addEventListener('change', (e) => {
+            if (e.target.classList.contains('finalize-entity-check')) {
+              updateFinalizeFooter();
+            }
+          });
+
+          updateFinalizeFooter();
+        }
 
         // Reset status text and open
         document.getElementById('finalizeModalStatus').textContent = '';
@@ -6427,34 +6551,67 @@
         document.getElementById('finalizeModalBackdrop').classList.add('open');
       }
 
+      // Recalculate footer total + button label from current checkbox state
+      function updateFinalizeFooter() {
+        const checks = document.querySelectorAll('.finalize-entity-check:checked');
+        let totalRev = 0;
+        let totalNP = 0;
+        checks.forEach(cb => {
+          totalRev += parseFloat(cb.dataset.rev) || 0;
+          totalNP += parseFloat(cb.dataset.np) || 0;
+        });
+
+        const status = document.getElementById('finalizeModalStatus');
+        const confirmBtn = document.getElementById('finalizeConfirmBtn');
+        const count = checks.length;
+
+        if (count === 0) {
+          status.textContent = 'Nothing selected';
+          status.className = 'finalize-modal-status';
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = 'Finalize';
+        } else {
+          status.textContent = `${count} selected · Rev $${Math.round(totalRev).toLocaleString()} · NP $${Math.round(totalNP).toLocaleString()}`;
+          status.className = 'finalize-modal-status';
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = `Finalize ${count}`;
+        }
+      }
+
       function closeFinalizeModal() {
         document.getElementById('finalizeModalBackdrop').classList.remove('open');
       }
 
-      // Calls /api/finalize-month with the currently-staged months.
+      // Calls /api/finalize-month with the currently-checked targets.
       async function runFinalize() {
-        const months = window.finalizeTargetMonths || [];
-        if (months.length === 0) {
+        // Build targets from checked checkboxes
+        const checks = document.querySelectorAll('.finalize-entity-check:checked');
+        const targets = Array.from(checks).map(cb => ({
+          org: cb.dataset.org,
+          periodMonth: cb.dataset.pm,
+        }));
+
+        if (targets.length === 0) {
           closeFinalizeModal();
           return;
         }
 
         const confirmBtn = document.getElementById('finalizeConfirmBtn');
         const status = document.getElementById('finalizeModalStatus');
+        const requestedCount = targets.length;
 
         confirmBtn.disabled = true;
         status.className = 'finalize-modal-status';
-        status.textContent = 'Finalizing — re-fetching from Xero...';
+        status.textContent = `Finalizing ${requestedCount} — re-fetching from Xero...`;
 
         try {
           const resp = await fetch(`${API_BASE}/api/finalize-month`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ periodMonths: months, entities: 'all' }),
+            body: JSON.stringify({ targets }),
           });
           const result = await resp.json();
 
-          // Network/HTTP-level failure (not just business-level error)
           if (!resp.ok) {
             throw new Error(result.error || `Server returned HTTP ${resp.status}`);
           }
