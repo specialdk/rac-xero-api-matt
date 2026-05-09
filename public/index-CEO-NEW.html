@@ -3198,6 +3198,15 @@
         loadFinancialRatios();
         updateSummaryCards();
         applyCompactRounding();
+        // Refresh budget bars (they read from window.dashboardData.pl which we just mutated)
+        // and the YoY chart (its getAdjustedMonthly helper now applies the reversal impact
+        // to the latest FY26 month).
+        if (window.currentQuarterInfo) {
+          loadBudget(window.currentQuarterInfo).catch(e => console.warn('budget refresh failed:', e));
+        }
+        if (typeof initTrendChart === 'function' && document.getElementById('trendChart')) {
+          try { initTrendChart(); } catch (e) { console.warn('trend chart refresh failed:', e); }
+        }
       }
 
       function restoreOriginalPL() {
@@ -3239,6 +3248,13 @@
         loadFinancialRatios();
         updateSummaryCards();
         applyCompactRounding();
+        // Refresh budget bars and YoY chart back to un-adjusted state
+        if (window.currentQuarterInfo) {
+          loadBudget(window.currentQuarterInfo).catch(e => console.warn('budget refresh failed:', e));
+        }
+        if (typeof initTrendChart === 'function' && document.getElementById('trendChart')) {
+          try { initTrendChart(); } catch (e) { console.warn('trend chart refresh failed:', e); }
+        }
       }
 
       function showReversalDrawer() {
@@ -5023,6 +5039,48 @@
         return { fyKey, fyIndex };
       }
 
+      // Returns the historical monthly array, with the latest FY26 month adjusted
+      // by the active reversal impact. Historical months are left unchanged because
+      // they were captured at month-end and reflect what Xero reported then. Only
+      // the in-progress / most-recent month gets adjusted to match what KPIs and
+      // the AI panel show.
+      //
+      // Tier 3 will replace this with per-month reversal snapshots for full
+      // historical accuracy. For now this gives a consistent view across the
+      // top KPIs, the YoY summary, and the chart's current data point — which
+      // is what users care about when toggling.
+      function getAdjustedMonthly() {
+        const monthly = (window.historicalData?.monthly) || [];
+        const r = window.reversalState;
+        if (!r || !r.active || !r.data || !r.data.plImpact) return monthly;
+
+        // Find the highest FY26 period_month with data (FY26 = 2025-07 .. 2026-06)
+        let latestIdx = -1;
+        let latestPM = '';
+        monthly.forEach((m, i) => {
+          const pm = m.period_month; // 'YYYY-MM' or 'YYYY-MM-01'
+          const pmKey = (pm || '').slice(0, 7);
+          if (pmKey >= '2025-07' && pmKey <= '2026-06' && pmKey > latestPM) {
+            latestPM = pmKey;
+            latestIdx = i;
+          }
+        });
+        if (latestIdx === -1) return monthly;
+
+        const impact = r.data.plImpact;
+        const revAdj = impact.revenueAdjustment || 0;
+        const npAdj  = impact.netProfitAdjustment || 0;
+
+        return monthly.map((m, i) => {
+          if (i !== latestIdx) return m;
+          return {
+            ...m,
+            revenue: (parseFloat(m.revenue) || 0) + revAdj,
+            net_profit: (parseFloat(m.net_profit) || 0) + npAdj,
+          };
+        });
+      }
+
       // Pivot the flat monthly array into FY-keyed structure with 12-element arrays per metric.
       // Missing months become null (Chart.js skips nulls in line charts).
       function pivotMonthlyToFY(monthly) {
@@ -5150,7 +5208,7 @@
 
       function initTrendChart() {
         const ctx = document.getElementById('trendChart').getContext('2d');
-        const monthly = window.historicalData?.monthly || [];
+        const monthly = getAdjustedMonthly();
         const fyData = pivotMonthlyToFY(monthly);
 
         // Update the YoY summary regardless of which series are toggled on
