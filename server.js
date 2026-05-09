@@ -5320,6 +5320,191 @@ app.post('/api/run-daily-snapshot', async (req, res) => {
   }
 });
 
+// ============================================================================
+// FINALIZE MONTH — promote 'draft' monthly snapshots to 'final'
+// Drafts get auto-overwritten by the daily scheduler. Finals are locked and
+// will not be touched by the auto-snapshot — they represent post-close numbers.
+// ============================================================================
+
+// Helper: derive last-day-of-month "YYYY-MM-DD" from "YYYY-MM"
+function periodMonthToEndDate(periodMonth) {
+  const [yearStr, monthStr] = periodMonth.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  // day 0 of next month = last day of this month
+  const lastDay = new Date(year, month, 0);
+  return lastDay.toISOString().slice(0, 10);
+}
+
+// GET /api/draft-months
+// Lightweight read for the dashboard to know which months are still draft.
+// Dashboard polls this on load to decide whether to show the "Finalize" button.
+app.get('/api/draft-months', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT period_month, org, revenue, net_profit, created_at
+       FROM monthly_snapshots
+       WHERE snapshot_status = 'draft' AND job_status = 'success'
+       ORDER BY period_month ASC, org ASC`
+    );
+
+    res.json({
+      draftRows: result.rows,
+      totalDrafts: result.rows.length,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[draft-months] error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/finalize-month
+// Body: { periodMonths: ['2026-04', '2026-05'], entities: 'all' | ['Mining', ...] }
+// Re-fetches P&L from Xero for each draft (org, periodMonth) pair and writes
+// it back as 'final'. Existing 'final' rows are left alone (locked).
+// Reuses snapshotFetchInternal so we don't duplicate Xero P&L parsing logic.
+app.post('/api/finalize-month', async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { periodMonths, entities = 'all' } = req.body || {};
+
+    if (!Array.isArray(periodMonths) || periodMonths.length === 0) {
+      return res.status(400).json({
+        error: 'periodMonths is required and must be a non-empty array of "YYYY-MM" strings',
+      });
+    }
+
+    // Resolve which entities to process. Always work from active connections
+    // so we have current tenantName/tenantId for the Xero fetch.
+    const connections = await tokenStorage.getAllXeroConnections();
+    const activeConnections = connections.filter((c) => c.connected);
+    if (activeConnections.length === 0) {
+      return res.status(400).json({ error: 'No active Xero connections.' });
+    }
+
+    let workingConnections = activeConnections;
+    if (entities !== 'all' && Array.isArray(entities) && entities.length > 0) {
+      workingConnections = activeConnections.filter((c) =>
+        entities.includes(getOrgShortName(c.tenantName))
+      );
+    }
+
+    console.log(
+      `[finalize] starting: ${periodMonths.length} months x ${workingConnections.length} entities`
+    );
+
+    const finalized = [];
+    const skippedAlreadyFinal = [];
+    const errors = [];
+
+    for (const conn of workingConnections) {
+      const orgShortName = getOrgShortName(conn.tenantName);
+
+      for (const periodMonth of periodMonths) {
+        try {
+          // Skip if already finalized — finals are locked.
+          const existing = await pool.query(
+            `SELECT id, snapshot_status FROM monthly_snapshots
+             WHERE org = $1 AND period_month = $2`,
+            [orgShortName, periodMonth]
+          );
+          if (existing.rows.some((r) => r.snapshot_status === 'final')) {
+            skippedAlreadyFinal.push({ org: orgShortName, periodMonth });
+            continue;
+          }
+
+          // Re-fetch P&L for this exact month
+          const endDate = periodMonthToEndDate(periodMonth);
+          const plResp = await snapshotFetchInternal('/api/profit-loss-summary', {
+            organizationName: conn.tenantName,
+            date: endDate,
+            periodMonths: 1,
+          });
+
+          if (plResp.error || !plResp.summary) {
+            errors.push({
+              org: orgShortName,
+              periodMonth,
+              error: plResp.error || 'no summary returned',
+            });
+            console.warn(
+              `[finalize] ${orgShortName} ${periodMonth} skipped: ${plResp.error || 'no summary'}`
+            );
+            continue;
+          }
+
+          const s = plResp.summary;
+          const revenue = s.totalRevenue || 0;
+          const cogs = s.totalCOGS || 0;
+          const gross = s.grossProfit ?? revenue - cogs;
+          const opex = s.totalExpenses || 0;
+          const netProfit = s.netProfit ?? gross - opex;
+
+          // Wipe the existing draft (if any) and write the final.
+          await pool.query(
+            `DELETE FROM monthly_snapshots
+             WHERE org = $1 AND period_month = $2 AND snapshot_status = 'draft'`,
+            [orgShortName, periodMonth]
+          );
+
+          await pool.query(
+            `INSERT INTO monthly_snapshots
+              (org, period_month, revenue, cogs, gross_profit, opex, net_profit, job_status, snapshot_status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'success', 'final', NOW())`,
+            [orgShortName, periodMonth, revenue, cogs, gross, opex, netProfit]
+          );
+
+          finalized.push({
+            org: orgShortName,
+            periodMonth,
+            revenue,
+            netProfit,
+          });
+          console.log(
+            `[finalize] ${orgShortName} ${periodMonth}: rev=$${Math.round(revenue).toLocaleString()}, np=$${Math.round(netProfit).toLocaleString()}`
+          );
+
+          // Brief pause to be polite to Xero rate limits
+          await new Promise((r) => setTimeout(r, 500));
+        } catch (err) {
+          errors.push({ org: orgShortName, periodMonth, error: err.message });
+          console.error(
+            `[finalize] ${orgShortName} ${periodMonth} FAILED:`,
+            err.message
+          );
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+    }
+
+    const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+    console.log(
+      `[finalize] complete in ${durationSeconds}s: finalized=${finalized.length}, skipped=${skippedAlreadyFinal.length}, errors=${errors.length}`
+    );
+
+    res.json({
+      success: errors.length === 0,
+      durationSeconds,
+      finalized,
+      skippedAlreadyFinal,
+      errors,
+      summary: {
+        requested: periodMonths.length * workingConnections.length,
+        finalized: finalized.length,
+        skippedAlreadyFinal: skippedAlreadyFinal.length,
+        errors: errors.length,
+      },
+    });
+  } catch (error) {
+    console.error('[finalize] endpoint error:', error);
+    res
+      .status(500)
+      .json({ success: false, error: error.message });
+  }
+});
+
 // One-time fix: Delete a specific daily_metrics row
 app.post("/api/delete-metrics-row", async (req, res) => {
   try {
