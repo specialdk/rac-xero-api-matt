@@ -5564,6 +5564,164 @@ app.post('/api/finalize-month', async (req, res) => {
   }
 });
 
+// ============================================================================
+// BACKFILL HISTORICAL MONTHS
+// One-shot endpoint to populate monthly_snapshots for prior fiscal years.
+// Inserts as 'final' (historical periods are stable; no point treating them
+// as draft). Skips any (org, period_month) pair that already has a row —
+// will never overwrite existing data, so safe to re-run.
+// ============================================================================
+
+// Helper: enumerate "YYYY-MM" strings between two month bounds (inclusive)
+function enumerateMonths(startMonth, endMonth) {
+  const months = [];
+  let [year, month] = startMonth.split('-').map(Number);
+  const [endYear, endMonthNum] = endMonth.split('-').map(Number);
+  while (year < endYear || (year === endYear && month <= endMonthNum)) {
+    months.push(`${year}-${String(month).padStart(2, '0')}`);
+    month += 1;
+    if (month > 12) { month = 1; year += 1; }
+  }
+  return months;
+}
+
+app.post('/api/backfill-historical-months', async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { startMonth, endMonth } = req.body || {};
+
+    // Basic validation: both required, format YYYY-MM, start <= end
+    const monthRe = /^\d{4}-(0[1-9]|1[0-2])$/;
+    if (!startMonth || !endMonth || !monthRe.test(startMonth) || !monthRe.test(endMonth)) {
+      return res.status(400).json({
+        error: 'startMonth and endMonth required, format "YYYY-MM"',
+      });
+    }
+    if (startMonth > endMonth) {
+      return res.status(400).json({ error: 'startMonth must be <= endMonth' });
+    }
+    // Don't allow backfill into the future or current month — that's the
+    // auto-snapshot's job.
+    const today = new Date();
+    const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    if (endMonth >= currentMonthStr) {
+      return res.status(400).json({
+        error: `endMonth must be earlier than current month (${currentMonthStr}). Backfill is for historical data only.`,
+      });
+    }
+
+    const periodMonths = enumerateMonths(startMonth, endMonth);
+
+    const connections = await tokenStorage.getAllXeroConnections();
+    const activeConnections = connections.filter((c) => c.connected);
+    if (activeConnections.length === 0) {
+      return res.status(400).json({ error: 'No active Xero connections.' });
+    }
+
+    console.log(
+      `[backfill] starting: ${periodMonths.length} months x ${activeConnections.length} entities = ${periodMonths.length * activeConnections.length} potential inserts`
+    );
+
+    const inserted = [];
+    const skippedExists = [];
+    const errors = [];
+
+    for (const conn of activeConnections) {
+      const orgShortName = getOrgShortName(conn.tenantName);
+
+      for (const periodMonth of periodMonths) {
+        try {
+          // Skip if ANY row exists for this (org, periodMonth) — drafts and
+          // finals alike. Backfill is purely additive; never touches existing.
+          const existing = await pool.query(
+            `SELECT id FROM monthly_snapshots
+             WHERE org = $1 AND period_month = $2`,
+            [orgShortName, periodMonth]
+          );
+          if (existing.rows.length > 0) {
+            skippedExists.push({ org: orgShortName, periodMonth });
+            continue;
+          }
+
+          // Fetch P&L for that month
+          const endDate = periodMonthToEndDate(periodMonth);
+          const plResp = await snapshotFetchInternal('/api/profit-loss-summary', {
+            organizationName: conn.tenantName,
+            date: endDate,
+            periodMonths: 1,
+          });
+
+          if (plResp.error || !plResp.summary) {
+            errors.push({
+              org: orgShortName,
+              periodMonth,
+              error: plResp.error || 'no summary returned',
+            });
+            console.warn(
+              `[backfill] ${orgShortName} ${periodMonth} skipped: ${plResp.error || 'no summary'}`
+            );
+            continue;
+          }
+
+          const s = plResp.summary;
+          const revenue = s.totalRevenue || 0;
+          const cogs = s.totalCOGS || 0;
+          const gross = s.grossProfit ?? revenue - cogs;
+          const opex = s.totalExpenses || 0;
+          const netProfit = s.netProfit ?? gross - opex;
+
+          await pool.query(
+            `INSERT INTO monthly_snapshots
+              (org, period_month, revenue, cogs, gross_profit, opex, net_profit, snapshot_date, job_status, snapshot_status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'success', 'final', NOW())`,
+            [orgShortName, periodMonth, revenue, cogs, gross, opex, netProfit]
+          );
+
+          inserted.push({ org: orgShortName, periodMonth, revenue, netProfit });
+          console.log(
+            `[backfill] ${orgShortName} ${periodMonth}: rev=$${Math.round(revenue).toLocaleString()}, np=$${Math.round(netProfit).toLocaleString()}`
+          );
+
+          // Polite delay to keep well under Xero's 60/min rate limit
+          await new Promise((r) => setTimeout(r, 600));
+        } catch (err) {
+          errors.push({ org: orgShortName, periodMonth, error: err.message });
+          console.error(
+            `[backfill] ${orgShortName} ${periodMonth} FAILED:`,
+            err.message
+          );
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+    }
+
+    const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+    console.log(
+      `[backfill] complete in ${durationSeconds}s: inserted=${inserted.length}, skipped=${skippedExists.length}, errors=${errors.length}`
+    );
+
+    res.json({
+      success: errors.length === 0,
+      durationSeconds,
+      inserted,
+      skippedExists,
+      errors,
+      summary: {
+        range: { startMonth, endMonth, monthCount: periodMonths.length },
+        entityCount: activeConnections.length,
+        attempted: periodMonths.length * activeConnections.length,
+        inserted: inserted.length,
+        skippedExists: skippedExists.length,
+        errors: errors.length,
+      },
+    });
+  } catch (error) {
+    console.error('[backfill] endpoint error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // One-time fix: Delete a specific daily_metrics row
 app.post("/api/delete-metrics-row", async (req, res) => {
   try {
