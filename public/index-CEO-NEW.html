@@ -3109,10 +3109,10 @@
                 });
                 state.data = await resp.json();
               }
-
-              const countEl = document.getElementById('reversalCount');
-              countEl.textContent = state.data.reversalCount;
-              countEl.style.display = state.data.reversalCount > 0 ? 'inline' : 'none';
+              // Note: don't try to update reversalCount span here — line above set
+              // btn.innerHTML to "Loading..." which destroyed it. The proper rebuild
+              // happens below in each branch (no-reversals at 3128, active at 3142,
+              // off at 3153) and includes the count value inline.
             } catch (error) {
               console.error("Failed to fetch reversal journals:", error);
               state.loading = false;
