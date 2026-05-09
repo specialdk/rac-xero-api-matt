@@ -6454,24 +6454,43 @@
           });
           const result = await resp.json();
 
-          if (!resp.ok || result.success === false) {
-            throw new Error(result.error || `HTTP ${resp.status}`);
+          // Network/HTTP-level failure (not just business-level error)
+          if (!resp.ok) {
+            throw new Error(result.error || `Server returned HTTP ${resp.status}`);
           }
 
           const s = result.summary || {};
-          status.className = 'finalize-modal-status success';
-          status.textContent = `✓ ${s.finalized || 0} finalized · ${s.skippedAlreadyFinal || 0} skipped · ${s.errors || 0} errors · ${result.durationSeconds || 0}s`;
+          const finalizedCount = s.finalized || 0;
+          const errCount = (result.errors || []).length;
+          const firstErr = (result.errors || [])[0];
+          const firstErrText = firstErr
+            ? `${firstErr.org} ${firstErr.periodMonth}: ${firstErr.error}`
+            : '';
 
-          // Refresh draft state and dashboard so the user sees fresh numbers
+          // Total failure — nothing was finalized AND we have errors
+          if (finalizedCount === 0 && errCount > 0) {
+            throw new Error(firstErrText || 'Finalize failed (no detail returned)');
+          }
+
+          // Full success
+          if (errCount === 0) {
+            status.className = 'finalize-modal-status success';
+            status.textContent = `✓ ${finalizedCount} finalized · ${s.skippedAlreadyFinal || 0} skipped · ${result.durationSeconds || 0}s`;
+            await loadDraftMonths();
+            await loadDashboard();
+            setTimeout(closeFinalizeModal, 1800);
+            return;
+          }
+
+          // Partial success — some finalized, some failed. Don't auto-close.
+          status.className = 'finalize-modal-status error';
+          status.textContent = `⚠ ${finalizedCount} done, ${errCount} failed — ${firstErrText}`;
           await loadDraftMonths();
-          await loadDashboard();
-
-          // Close after a short pause so the user can read the success line
-          setTimeout(closeFinalizeModal, 1800);
+          confirmBtn.disabled = false;
         } catch (err) {
           console.error('[finalize] failed:', err);
           status.className = 'finalize-modal-status error';
-          status.textContent = `✗ Failed: ${err.message}`;
+          status.textContent = `✗ ${err.message}`;
           confirmBtn.disabled = false;
         }
       }
