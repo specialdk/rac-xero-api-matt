@@ -2485,6 +2485,9 @@
           <div class="rac-controls-group">
             <div class="rac-controls-label">Period</div>
             <select class="period-selector" id="periodSelector" onchange="loadDashboard()">
+              <option value="LAST_MONTH">Last Month</option>
+              <option value="THIS_MONTH">This Month (MTD)</option>
+              <option value="YTD">YTD FY25/26</option>
               <option value="Q1">Q1 FY25/26 (Jul-Sep)</option>
               <option value="Q2">Q2 FY25/26 (Oct-Dec)</option>
               <option value="Q3">Q3 FY25/26 (Jan-Mar)</option>
@@ -3459,11 +3462,67 @@
       }
 
       // ========== QUARTER DATE CALCULATIONS ==========
+      // Returns a quarterInfo object describing the selected period.
+      // Supported codes: YTD, Q1-Q4, LAST_MONTH, THIS_MONTH
+      // periodLabel is a human-readable label used in subheadings (e.g. "Apr 2026", "Q4 FY25/26", "May 2026 (MTD)")
       function getQuarterDates(quarter) {
         const today = new Date();
         const year = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
+        const fyLabel = `FY${String(year).slice(-2)}/${String(year + 1).slice(-2)}`;
 
-        // YTD = July 1 to today
+        // ---- LAST_MONTH ----
+        // The most recent COMPLETED calendar month. Good default — no in-progress noise.
+        if (quarter === 'LAST_MONTH') {
+          const firstOfThis = new Date(today.getFullYear(), today.getMonth(), 1);
+          const lastOfLast = new Date(firstOfThis.getTime() - 24 * 60 * 60 * 1000);
+          const firstOfLast = new Date(lastOfLast.getFullYear(), lastOfLast.getMonth(), 1);
+          const startStr = `${firstOfLast.getFullYear()}-${String(firstOfLast.getMonth() + 1).padStart(2, '0')}-01`;
+          const endStr   = `${lastOfLast.getFullYear()}-${String(lastOfLast.getMonth() + 1).padStart(2, '0')}-${String(lastOfLast.getDate()).padStart(2, '0')}`;
+          const monthName = firstOfLast.toLocaleString('en-AU', { month: 'short', year: 'numeric' });
+          const totalDays = lastOfLast.getDate();
+          return {
+            quarterCode: 'LAST_MONTH',
+            periodLabel: monthName,                 // e.g. "Apr 2026"
+            startDate: startStr,
+            endDate: endStr,
+            totalDays: totalDays,
+            daysElapsed: totalDays,
+            isComplete: true,
+            hasStarted: true,
+            proRateFactor: 1.0,
+            periodMonths: 1,
+            isYTD: false,
+            isMonth: true,
+          };
+        }
+
+        // ---- THIS_MONTH (MTD) ----
+        // In-progress current calendar month.
+        if (quarter === 'THIS_MONTH') {
+          const firstOfThis = new Date(today.getFullYear(), today.getMonth(), 1);
+          const lastOfThis  = new Date(today.getFullYear(), today.getMonth() + 1, 0); // 0th of next month
+          const startStr = `${firstOfThis.getFullYear()}-${String(firstOfThis.getMonth() + 1).padStart(2, '0')}-01`;
+          const endStr   = today.toISOString().split('T')[0]; // capped at today
+          const monthName = today.toLocaleString('en-AU', { month: 'short', year: 'numeric' });
+          const totalDays = lastOfThis.getDate();
+          const daysElapsed = today.getDate();
+          return {
+            quarterCode: 'THIS_MONTH',
+            periodLabel: `${monthName} (MTD)`,      // e.g. "May 2026 (MTD)"
+            startDate: startStr,
+            endDate: endStr,
+            totalDays: totalDays,
+            daysElapsed: daysElapsed,
+            isComplete: false,
+            hasStarted: true,
+            proRateFactor: daysElapsed / totalDays,
+            periodMonths: 1,
+            isYTD: false,
+            isMonth: true,
+          };
+        }
+
+        // ---- YTD ----
         if (quarter === 'YTD') {
           const startDate = `${year}-07-01`;
           const start = new Date(startDate);
@@ -3475,6 +3534,7 @@
 
           return {
             quarterCode: 'YTD',
+            periodLabel: `YTD ${fyLabel}`,
             startDate: startDate,
             endDate: today.toISOString().split("T")[0],
             totalDays: totalDays,
@@ -3484,9 +3544,11 @@
             proRateFactor: daysElapsed / totalDays,
             periodMonths: periodMonths,
             isYTD: true,
+            isMonth: false,
           };
         }
 
+        // ---- Q1-Q4 ----
         const quarters = {
           Q1: { start: `${year}-07-01`, end: `${year}-09-30`, days: 92 },
           Q2: { start: `${year}-10-01`, end: `${year}-12-31`, days: 92 },
@@ -3513,6 +3575,7 @@
 
         return {
           quarterCode: quarter,
+          periodLabel: `${quarter} ${fyLabel}`,     // e.g. "Q4 FY25/26"
           startDate: q.start,
           endDate: isComplete ? q.end : today.toISOString().split("T")[0],
           totalDays: q.days,
@@ -3522,6 +3585,7 @@
           proRateFactor: daysElapsed / q.days,
           periodMonths: periodMonths,
           isYTD: false,
+          isMonth: false,
         };
       }
 
@@ -3596,10 +3660,10 @@
         const historical = await loadHistoricalData(entity);
 
         // Update period displays
-        document.getElementById("budget-period").textContent = 
-          `${period} (${Math.round(quarterInfo.proRateFactor * 100)}% elapsed)`;
-        document.getElementById("pl-period").textContent = 
-          `${period} FY25/26`;
+        const periodLbl = quarterInfo.periodLabel || `${period} FY25/26`;
+        document.getElementById("budget-period").textContent =
+          `${periodLbl} (${Math.round(quarterInfo.proRateFactor * 100)}% elapsed)`;
+        document.getElementById("pl-period").textContent = periodLbl;
 
         // Load all data
         await Promise.all([
@@ -3651,9 +3715,12 @@
         const budgetPeriodEl = document.getElementById("budget-period");
         const plPeriodEl = document.getElementById("pl-period");
         const customersPeriodEl = document.getElementById("customers-period");
-        if (budgetPeriodEl) budgetPeriodEl.textContent = `${period} (${Math.round(quarterInfo.proRateFactor * 100)}% elapsed)`;
-        if (plPeriodEl) plPeriodEl.textContent = `${period} FY25/26`;
-        if (customersPeriodEl) customersPeriodEl.textContent = `${period} FY25/26`;
+        if (budgetPeriodEl) {
+          const periodLbl = quarterInfo.periodLabel || `${period} FY25/26`;
+          budgetPeriodEl.textContent = `${periodLbl} (${Math.round(quarterInfo.proRateFactor * 100)}% elapsed)`;
+        }
+        if (plPeriodEl) plPeriodEl.textContent = quarterInfo.periodLabel || `${period} FY25/26`;
+        if (customersPeriodEl) customersPeriodEl.textContent = quarterInfo.periodLabel || `${period} FY25/26`;
 
         let totalCash = 0;
         let totalRevenue = 0;
@@ -3987,7 +4054,9 @@
       // ========== BUDGET ==========
       // Single-shot fetch for one entity at one date — extracted from loadBudget
       // so we can fan out across the 7 entities in consolidated mode.
-      async function fetchBudgetForEntity(entityName, date) {
+      // periods = how many months of budget to fetch (1 for month modes, 3 for quarters).
+      async function fetchBudgetForEntity(entityName, date, periods) {
+        const periodsToFetch = periods || 3;
         try {
           const resp = await fetch(`${API_BASE}/api/budget-summary`, {
             method: "POST",
@@ -3995,7 +4064,7 @@
             body: JSON.stringify({
               organizationName: entityName,
               date: date,
-              periods: 3,
+              periods: periodsToFetch,
             }),
           });
           if (!resp.ok) return { revenue: 0, expenses: 0 };
@@ -4033,13 +4102,17 @@
             dateList = [quarterInfo.startDate];
           }
 
+          // Months of budget to fetch per call. Month modes fetch 1; quarter modes
+          // (and YTD which iterates quarter-by-quarter) fetch the full quarter (3).
+          const monthsPerFetch = quarterInfo.isMonth ? 1 : 3;
+
           // Fan out: entity × date in parallel. Worst case in this app is
           // 7 × 4 = 28 requests (YTD ALL view); single-quarter ALL is 7;
           // single-quarter single-entity is 1.
           const requests = [];
           for (const e of entityList) {
             for (const d of dateList) {
-              requests.push(fetchBudgetForEntity(e, d));
+              requests.push(fetchBudgetForEntity(e, d, monthsPerFetch));
             }
           }
           const results = await Promise.all(requests);
@@ -4281,7 +4354,7 @@
 
           // Update period subtitle
           document.getElementById('production-period').textContent =
-            `${quarterInfo.quarterCode} FY25/26 \u00b7 ${daysSinceQStart} days`;
+            `${quarterInfo.periodLabel || (quarterInfo.quarterCode + ' FY25/26')} \u00b7 ${daysSinceQStart} days`;
 
           // Fetch QTD production and sales from sub-endpoints
           const [prodRes, salesRes] = await Promise.all([
@@ -4358,7 +4431,7 @@
               p.salesQtd = p.mtdSales;
             });
             document.getElementById('production-period').textContent =
-              `${quarterInfo.quarterCode} FY25/26 \u00b7 MTD data`;
+              `${quarterInfo.periodLabel || (quarterInfo.quarterCode + ' FY25/26')} \u00b7 MTD data`;
           }
 
           // Sort: products with largest forward orders first, then by sales
@@ -6155,11 +6228,25 @@
       // Card values reflect the selected period. Sparklines always span Jul → today (YTD)
       // so the user sees current-quarter values in context of the full year.
       function getCurrentFinancialPeriod() {
-        const m = new Date().getMonth(); // 0-11
-        if (m >= 6 && m <= 8)  return 'Q1';
-        if (m >= 9 && m <= 11) return 'Q2';
-        if (m >= 0 && m <= 2)  return 'Q3';
-        return 'Q4';                            // Apr-Jun (m=3-5)
+        // Default to the most recent COMPLETED calendar month — what executives
+        // ask first ("how was last month?") and free of in-progress noise.
+        // Users can switch to YTD / Q1-Q4 / This Month from the period selector.
+        return 'LAST_MONTH';
+      }
+
+      // Translate a period selector value to a short display label.
+      // Used in the AI panel scope and anywhere else "Q4" / "LAST_MONTH" appears.
+      function periodDisplayLabel(periodCode) {
+        if (!periodCode) return '';
+        if (periodCode === 'LAST_MONTH' || periodCode === 'THIS_MONTH') {
+          try {
+            const qi = getQuarterDates(periodCode);
+            return qi.periodLabel || periodCode;
+          } catch (e) {
+            return periodCode === 'LAST_MONTH' ? 'Last Month' : 'This Month (MTD)';
+          }
+        }
+        return periodCode; // Q1-Q4, YTD stay as-is
       }
 
       // Reversal-active check (returns boolean)
@@ -6194,6 +6281,7 @@
         const parts = scopeKey.split('::');
         const entity = parts[0] || 'ALL';
         const period = parts[1] || '';
+        const periodNice = periodDisplayLabel(period);
 
         const entityDisplay = {
           'ALL': 'All Entities (Consolidated)',
@@ -6210,14 +6298,14 @@
 
         if (entity === 'ALL') {
           return {
-            scopeLabel: `${niceEntity} · ${period}${reversalBit}`,
-            hint: `Click to get a 2-3 paragraph analysis of consolidated finances for ${period}. Then ask follow-up questions.`,
-            placeholder: 'e.g. Which entity is the most profitable this quarter?',
+            scopeLabel: `${niceEntity} · ${periodNice}${reversalBit}`,
+            hint: `Click to get a 2-3 paragraph analysis of consolidated finances for ${periodNice}. Then ask follow-up questions.`,
+            placeholder: 'e.g. Which entity is the most profitable this period?',
           };
         }
         return {
-          scopeLabel: `${niceEntity} · ${period}${reversalBit}`,
-          hint: `Click to get a 2-3 paragraph analysis of ${niceEntity} for ${period}. Follow-up questions stay scoped to this entity.`,
+          scopeLabel: `${niceEntity} · ${periodNice}${reversalBit}`,
+          hint: `Click to get a 2-3 paragraph analysis of ${niceEntity} for ${periodNice}. Follow-up questions stay scoped to this entity.`,
           placeholder: `e.g. Why are expenses high in ${niceEntity}?`,
         };
       }
