@@ -5251,8 +5251,8 @@ async function runDailySnapshot(triggeredBy = 'scheduler') {
 
         await pool.query(
           `INSERT INTO monthly_snapshots
-            (org, period_month, revenue, cogs, gross_profit, opex, net_profit, job_status, snapshot_status, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, 'success', 'draft', NOW())`,
+            (org, period_month, revenue, cogs, gross_profit, opex, net_profit, snapshot_date, job_status, snapshot_status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'success', 'draft', NOW())`,
           [orgShortName, periodMonth, revenue, cogs, gross, opex, netProfit]
         );
         monthlyInserted++;
@@ -5455,8 +5455,8 @@ app.post('/api/finalize-month', async (req, res) => {
             );
             await client.query(
               `INSERT INTO monthly_snapshots
-                (org, period_month, revenue, cogs, gross_profit, opex, net_profit, job_status, snapshot_status, created_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, 'success', 'final', NOW())`,
+                (org, period_month, revenue, cogs, gross_profit, opex, net_profit, snapshot_date, job_status, snapshot_status, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'success', 'final', NOW())`,
               [orgShortName, periodMonth, revenue, cogs, gross, opex, netProfit]
             );
             await client.query('COMMIT');
