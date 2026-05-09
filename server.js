@@ -1986,7 +1986,11 @@ async function initializeAutoRefresh() {
     // Start the daily snapshot scheduler (first run in 60s, then every 24h).
     // Captures balance-sheet daily and backfills any missing completed months
     // into monthly_snapshots so dashboard sparklines stay current.
-    startDailySnapshotScheduler();
+    runSchemaMigrations()
+      .then(() => startDailySnapshotScheduler())
+      .catch((err) => {
+        console.error('[migration] FAILED — scheduler not started:', err.message);
+      });
 
     console.error("Auto token refresh + daily snapshot scheduler initialized");
   } catch (error) {
@@ -5073,6 +5077,41 @@ async function snapshotFetchInternal(endpoint, body) {
 
 // Main runner. Called by both the scheduler and the manual button.
 // triggeredBy: 'scheduler' | 'scheduler-boot' | 'manual'
+// ============================================================================
+// SCHEMA MIGRATIONS
+// Idempotent: safe to run on every boot. Each statement uses IF NOT EXISTS
+// so existing schemas are unchanged. Adds whatever columns/indexes the
+// current code needs to be true.
+// ============================================================================
+async function runSchemaMigrations() {
+  console.log('[migration] running schema migrations...');
+
+  // Add snapshot_status column to monthly_snapshots.
+  // 'draft' = auto-captured, may change as accountants post late entries
+  // 'final' = finalized — locked, will not be auto-overwritten
+  await pool.query(`
+    ALTER TABLE monthly_snapshots
+    ADD COLUMN IF NOT EXISTS snapshot_status TEXT DEFAULT 'draft'
+  `);
+
+  // Backfill existing rows: anything that existed before this migration
+  // is treated as final (these are historical months long since closed).
+  // The COALESCE protects against re-running — only NULLs get touched.
+  await pool.query(`
+    UPDATE monthly_snapshots
+    SET snapshot_status = 'final'
+    WHERE snapshot_status IS NULL OR snapshot_status = 'draft' AND created_at < NOW() - INTERVAL '60 days'
+  `);
+
+  // Index for fast lookups by month + status
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_monthly_snapshots_period_status
+    ON monthly_snapshots (org, period_month, snapshot_status)
+  `);
+
+  console.log('[migration] complete');
+}
+
 async function runDailySnapshot(triggeredBy = 'scheduler') {
   const startTime = Date.now();
   console.log(`[snapshot:${triggeredBy}] Starting at ${new Date().toISOString()}`);
@@ -5169,13 +5208,26 @@ async function runDailySnapshot(triggeredBy = 'scheduler') {
     // ------------------------------------------------------------------
     for (const { periodMonth, endDate } of completedMonths) {
       try {
+        // Only skip if there's already a FINAL snapshot for this month.
+        // Drafts are fair game to overwrite — late accruals and reversals
+        // mean today's auto-snapshot may have better numbers than yesterday's.
         const existing = await pool.query(
-          'SELECT id FROM monthly_snapshots WHERE org = $1 AND period_month = $2',
+          `SELECT id, snapshot_status FROM monthly_snapshots
+           WHERE org = $1 AND period_month = $2`,
           [orgShortName, periodMonth]
         );
-        if (existing.rows.length > 0) {
+        const existingFinal = existing.rows.find(r => r.snapshot_status === 'final');
+        if (existingFinal) {
           monthlySkipped++;
           continue;
+        }
+        // Draft exists — delete it so the INSERT below writes a fresh draft.
+        if (existing.rows.length > 0) {
+          await pool.query(
+            `DELETE FROM monthly_snapshots
+             WHERE org = $1 AND period_month = $2 AND snapshot_status = 'draft'`,
+            [orgShortName, periodMonth]
+          );
         }
 
         const plResp = await snapshotFetchInternal('/api/profit-loss-summary', {
@@ -5199,8 +5251,8 @@ async function runDailySnapshot(triggeredBy = 'scheduler') {
 
         await pool.query(
           `INSERT INTO monthly_snapshots
-            (org, period_month, revenue, cogs, gross_profit, opex, net_profit, job_status, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, 'success', NOW())`,
+            (org, period_month, revenue, cogs, gross_profit, opex, net_profit, job_status, snapshot_status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'success', 'draft', NOW())`,
           [orgShortName, periodMonth, revenue, cogs, gross, opex, netProfit]
         );
         monthlyInserted++;
