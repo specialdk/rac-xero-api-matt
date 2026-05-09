@@ -1,40 +1,37 @@
-# RAC Financial Dashboard
+# RAC MEX MCP Server
 
-A financial analysis platform for Rirratjingu Aboriginal Corporation (RAC) that integrates Xero accounting software with Claude AI through the Model Context Protocol (MCP).
+Asset management integration for Rirratjingu Aboriginal Corporation (RAC) connecting MEX CMMS to Claude AI through the Model Context Protocol (MCP).
 
 ## Overview
 
 This project provides:
-- **Express.js API Server** - REST API for Xero and ApprovalMax integration
-- **MCP Server** - Claude Desktop integration for AI-powered financial analysis
-- **Database Token Storage** - PostgreSQL-based OAuth token management
+
+- **Express.js API Server** — REST API that talks to MEX via OData
+- **MCP Server** — Claude Desktop integration for AI-powered asset queries
 
 ## Project Structure
 
 ```
-rac-xero-api-matt/
-├── server.js           # Main Express.js API server
-├── mcp-server.js       # MCP server for Claude Desktop
-├── oldserver.js        # Previous server version (backup)
-├── package.json        # NPM dependencies and scripts
-├── .env                # Environment configuration
-└── .gitignore          # Git ignore rules
+rac-mex-mcp/
+├── server.js         # Express.js API server (deploy to Railway)
+├── mcp-server.js     # MCP server for Claude Desktop
+├── package.json      # Dependencies
+├── .env.example      # Credentials template
+└── .gitignore
 ```
 
-## Main Files
+## File Summary
 
 | File | Purpose |
 |------|---------|
-| `server.js` | Express.js server handling Xero/ApprovalMax OAuth, 50+ REST API endpoints, PostgreSQL token storage |
-| `mcp-server.js` | MCP server (v3.0.0) enabling Claude Desktop to query financial data via 21 tools |
-| `package.json` | Dependencies and npm scripts |
+| `server.js` | Express server — calls MEX OData API, exposes REST endpoints |
+| `mcp-server.js` | MCP server — Claude Desktop talks to this, it calls Railway |
 
 ## Prerequisites
 
 - Node.js >= 18.0.0
-- PostgreSQL database
-- Xero Developer Account with API credentials
-- ApprovalMax Account (optional)
+- MEX Admin account credentials
+- Railway account (for hosting)
 
 ## Installation
 
@@ -44,112 +41,69 @@ npm install
 
 ## Configuration
 
-Create a `.env` file:
+Copy `.env.example` to `.env` and fill in your credentials:
 
-```env
-# Server
+```
+MEX_BASE_URL=https://rirratjinguaboriginalcorporation.mexcmms.com
+MEX_USERNAME=your_admin_username
+MEX_PASSWORD=your_admin_password
 PORT=3000
-NODE_ENV=development
-
-# PostgreSQL
-DATABASE_URL=postgresql://user:password@host:5432/database
-
-# Xero OAuth
-XERO_CLIENT_ID=your_client_id
-XERO_CLIENT_SECRET=your_client_secret
-XERO_REDIRECT_URI=http://localhost:3000/callback
-
-# ApprovalMax OAuth (optional)
-APPROVALMAX_CLIENT_ID=your_client_id
-APPROVALMAX_CLIENT_SECRET=your_client_secret
-APPROVALMAX_REDIRECT_URI=http://localhost:3000/callback/approvalmax
-
-# MCP Server
 RAILWAY_API_URL=https://your-app.up.railway.app
 ```
 
 ## Scripts
 
 ```bash
-npm start      # Start production server
-npm run dev    # Start with nodemon (auto-reload)
-npm run deploy # Deploy to Railway
+npm start       # Start production server
+npm run dev     # Start with nodemon (auto-reload)
+npm run mcp     # Run MCP server locally
 ```
 
 ## API Endpoints
 
-### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/auth` | Initiate Xero OAuth |
-| GET | `/auth?provider=approvalmax` | Initiate ApprovalMax OAuth |
-| GET | `/callback` | Xero OAuth callback |
-| GET | `/callback/approvalmax` | ApprovalMax callback |
-
-### Connection & Health
+### Health & Connection
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
-| GET | `/api/connection-status` | Get all Xero connections |
-| GET | `/api/token-status` | Token expiration status |
+| GET | `/api/connection-status` | Test MEX connection |
+| GET | `/api/endpoints` | List all available MEX OData endpoints |
 
-### Trial Balance & Reports
+### Assets
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/trial-balance/:tenantId` | Trial balance for organization |
-| GET | `/api/consolidated-trial-balance` | Consolidated trial balance |
-| GET | `/api/profit-loss/:tenantId` | P&L summary |
-| GET | `/api/financial-ratios/:tenantId` | Financial ratios |
+| GET | `/api/assets` | List assets (supports ?limit, ?skip, ?filter, ?orderby, ?select) |
+| GET | `/api/assets/search?q=term` | Search assets by keyword |
+| GET | `/api/assets/:assetNo` | Get single asset by Asset Number |
+| GET | `/api/assets/summary/by-status` | Asset counts grouped by status |
+| GET | `/api/assets/summary/by-type` | Asset counts grouped by type |
 
-### Cash & Receivables
+### Asset Types
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/cash-position/:tenantId` | Bank account balances |
-| GET | `/api/outstanding-invoices/:tenantId` | Unpaid invoices |
-| GET | `/api/aged-receivables/:tenantId` | Aged receivables |
+| GET | `/api/asset-types` | List all asset categories |
 
-### Analysis Tools
+### Work Orders
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/journal-entries/:tenantId` | Manual journal entries |
-| GET | `/api/equity-analysis/:tenantId` | Equity movements |
-| GET | `/api/account-history/:tenantId/:accountName` | Account history |
-| GET | `/api/chart-of-accounts/:tenantId` | Chart of accounts |
-| GET | `/api/find-unbalanced/:tenantId` | Unbalanced transactions |
-| GET | `/api/compare-periods/:tenantId` | Period comparison |
-| GET | `/api/expense-analysis/:tenantId` | Expense categories |
-| GET | `/api/intercompany/:tenantId` | Intercompany transactions |
-| GET | `/api/yoy-analysis/:tenantId` | Year-over-year analysis |
-| GET | `/api/monthly-breakdown/:tenantId` | Monthly breakdown |
+| GET | `/api/work-orders` | List work orders (supports ?status, ?assetNo) |
+| GET | `/api/work-orders/:workOrderNo` | Get single work order |
 
 ## MCP Tools (Claude Desktop)
 
-The MCP server exposes 21 tools:
+The MCP server exposes 10 tools:
 
-**Core Tools**
-- `test_rac_connection` - Test API connectivity
-- `get_organizations` - List Xero organizations
-- `get_trial_balance` - Trial balance with imbalance detection
-- `get_consolidated_trial_balance` - Multi-entity trial balance
-- `get_cash_position` - Bank account balances
-- `get_outstanding_invoices` - Unpaid invoices
-
-**Diagnostic Tools**
-- `investigate_imbalance` - Comprehensive imbalance analysis
-- `get_journal_entries` - Manual journal review
-- `check_bank_reconciliation` - Reconciliation status
-- `find_unbalanced_transactions` - Identify problematic entries
-- `get_account_history` - Account transaction history
-- `get_chart_of_accounts` - Chart structure
-
-**Business Intelligence Tools**
-- `get_profit_loss_summary` - P&L breakdown
-- `get_aged_receivables` - Customer payment aging
-- `analyze_expense_categories` - Expense trending
-- `get_financial_ratios` - Liquidity/profitability metrics
-- `get_intercompany_transactions` - Cross-entity analysis
-- `compare_periods` - Period-over-period comparison
-- `analyze_equity_movements` - Equity account analysis
+| Tool | Description |
+|------|-------------|
+| `test_mex_connection` | Test API connectivity |
+| `list_assets` | List assets with optional filtering |
+| `search_assets` | Search by keyword |
+| `get_asset` | Get single asset by number |
+| `list_asset_types` | List all asset categories |
+| `get_asset_summary_by_status` | Asset counts by status |
+| `get_asset_summary_by_type` | Asset counts by type |
+| `list_work_orders` | List work orders |
+| `get_work_order` | Get single work order |
+| `list_mex_endpoints` | Explore available MEX data |
 
 ## Claude Desktop Configuration
 
@@ -158,9 +112,9 @@ Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "rac-xero": {
+    "rac-mex": {
       "command": "node",
-      "args": ["C:/rac-mcp/rac-xero/rac-api/rac-xero-api-matt/mcp-server.js"],
+      "args": ["C:/path/to/rac-mex-mcp/mcp-server.js"],
       "env": {
         "RAILWAY_API_URL": "https://your-app.up.railway.app"
       }
@@ -169,61 +123,25 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-## Database Schema
+## Deployment (Railway)
 
-### tokens
-```sql
-CREATE TABLE tokens (
-    id SERIAL PRIMARY KEY,
-    tenant_id VARCHAR(255) UNIQUE NOT NULL,
-    tenant_name VARCHAR(255) NOT NULL,
-    provider VARCHAR(50) NOT NULL,
-    access_token TEXT NOT NULL,
-    refresh_token TEXT,
-    expires_at BIGINT NOT NULL,
-    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+1. Push this repo to GitHub
+2. Connect repo to Railway
+3. Set environment variables in Railway dashboard:
+   - `MEX_BASE_URL`
+   - `MEX_USERNAME`
+   - `MEX_PASSWORD`
+4. Deploy — Railway auto-detects Node.js
+5. Copy your Railway URL into `RAILWAY_API_URL` in Claude Desktop config
 
-### approvalmax_tokens
-```sql
-CREATE TABLE approvalmax_tokens (
-    id SERIAL PRIMARY KEY,
-    integration_key VARCHAR(255) UNIQUE NOT NULL,
-    access_token TEXT NOT NULL,
-    refresh_token TEXT,
-    expires_at BIGINT NOT NULL,
-    organizations JSONB,
-    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+## MEX OData API Notes
 
-## Supported Organizations
+- MEX uses OData v3.0
+- Authentication: HTTP Basic Auth (Base64 encoded username:password)
+- Base endpoint: `https://yoursite.mexcmms.com/odata.svc`
+- Returns JSON when `Accept: application/json` header is set
+- OData v3 filter syntax: `substringof('term', FieldName)` for partial match
 
-1. Rirratjingu Mining Pty Ltd 7168
-2. Rirratjingu Aboriginal Corporation 8538
-3. Rirratjingu Property Management & Maintenance Services Pty Ltd
-4. Rirratjingu Invest P/L ATF Miliditjpi Trust
-5. Ngarrkuwuy Developments Pty Ltd
-6. Rirratjingu Enterprises Pty Ltd
-7. Marrin Square Developments Pty Ltd
+## About
 
-## Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| express | ^4.18.2 | Web server framework |
-| xero-node | ^4.34.0 | Xero API SDK |
-| pg | ^8.11.3 | PostgreSQL client |
-| node-fetch | ^2.7.0 | HTTP requests |
-| dotenv | ^16.3.1 | Environment variables |
-| @modelcontextprotocol/sdk | ^1.17.3 | MCP server SDK |
-| nodemon | ^3.0.1 | Development auto-reload |
-
-## License
-
-MIT
+Built for Rirratjingu Aboriginal Corporation (RAC) to enable AI-powered asset management reporting via Claude Desktop.
