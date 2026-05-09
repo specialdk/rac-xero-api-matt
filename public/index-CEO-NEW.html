@@ -802,6 +802,106 @@
         border-radius: 2px;
       }
 
+      /* ========== YoY TREND TOGGLES & SUMMARY ========== */
+      .trend-toggles {
+        display: flex;
+        gap: var(--rac-space-5);
+        flex-wrap: wrap;
+        padding: var(--rac-space-3) 0;
+        border-bottom: 1px solid var(--rac-line);
+      }
+      .trend-toggle-group {
+        display: flex;
+        align-items: center;
+        gap: var(--rac-space-2);
+      }
+      .trend-toggle-label {
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xxs);
+        color: var(--rac-ink-mute);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+        margin-right: 2px;
+      }
+      .trend-toggle-btn {
+        background: transparent;
+        border: 1px solid var(--rac-line-2);
+        border-radius: var(--rac-radius-sharp);
+        padding: 4px 10px;
+        font-family: var(--rac-font-sans);
+        font-size: var(--rac-text-xxs);
+        color: var(--rac-ink-mute);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: var(--rac-transition-base);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+      }
+      .trend-toggle-btn:hover {
+        background: var(--rac-paper-2);
+        color: var(--rac-ink);
+      }
+      .trend-toggle-btn.active {
+        color: var(--rac-ink);
+        border-color: var(--rac-ink-mute);
+        background: var(--rac-paper-2);
+      }
+      .trend-toggle-btn:not(.active) .trend-toggle-dot {
+        opacity: 0.35;
+      }
+      .trend-toggle-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      .trend-toggle-dot.dashed {
+        background: repeating-linear-gradient(
+          90deg,
+          var(--rac-ink-mute) 0,
+          var(--rac-ink-mute) 2px,
+          transparent 2px,
+          transparent 4px
+        ) !important;
+      }
+
+      .yoy-summary-bar {
+        display: flex;
+        gap: var(--rac-space-5);
+        padding: var(--rac-space-3) 0;
+        border-bottom: 1px solid var(--rac-line);
+        margin-bottom: var(--rac-space-2);
+        flex-wrap: wrap;
+      }
+      .yoy-summary-item {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        font-family: var(--rac-font-mono);
+      }
+      .yoy-summary-label {
+        font-size: var(--rac-text-xxs);
+        color: var(--rac-ink-mute);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+      }
+      .yoy-summary-value {
+        font-size: var(--rac-text-sm);
+        font-weight: var(--rac-weight-medium);
+      }
+      .yoy-summary-delta {
+        font-size: var(--rac-text-xxs);
+        color: var(--rac-ink-mute);
+      }
+      .yoy-summary-delta.positive {
+        color: var(--rac-moss);
+      }
+      .yoy-summary-delta.negative {
+        color: var(--rac-terra);
+      }
+
       .chart-container {
         flex: 1;
         position: relative;
@@ -2499,38 +2599,44 @@
 
         <!-- Chart Row - Visual Impact -->
         <div class="chart-row">
-          <!-- Revenue & Expenses Trend -->
+          <!-- Revenue & Expenses Trend (YoY) -->
           <div class="chart-card">
             <div class="chart-header">
               <div>
                 <div class="chart-title">Revenue & Expenses Trend</div>
-                <div class="chart-subtitle">Monthly performance with YTD totals</div>
-              </div>
-              <div style="display: flex; align-items: center; gap: 16px;">
-                <div class="chart-legend">
-                  <span class="legend-item"><span class="legend-dot" style="background: var(--rac-moss)"></span> Revenue</span>
-                  <span class="legend-item"><span class="legend-dot" style="background: var(--rac-terra-soft)"></span> Expenses</span>
-                  <span class="legend-item"><span class="legend-dot" style="background: var(--rac-ink-soft)"></span> Profit</span>
-                </div>
-                <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--color-text-secondary); cursor: pointer;">
-                  <input type="checkbox" id="ytdToggle" onchange="initTrendChart()" style="accent-color: var(--color-primary);">
-                  YTD Lines
-                </label>
+                <div class="chart-subtitle">Year-over-year by month, financial year basis (Jul–Jun)</div>
               </div>
             </div>
-            <!-- YTD Summary Bar -->
-            <div id="ytdSummaryBar" style="display: flex; gap: 24px; padding: 6px 0 8px; border-bottom: 1px solid var(--color-border); margin-bottom: 4px;">
-              <div style="font-size: 12px;">
-                <span style="color: var(--color-text-muted);">YTD Revenue:</span>
-                <span id="ytd-revenue" style="font-weight: 600; color: var(--rac-moss); margin-left: 4px;">$0</span>
+            <!-- YoY toggle bar: years and metrics -->
+            <div class="trend-toggles" id="trendToggles">
+              <div class="trend-toggle-group">
+                <span class="trend-toggle-label">Years</span>
+                <button type="button" class="trend-toggle-btn active" data-year="FY26"><span class="trend-toggle-dot" style="background: var(--rac-ink)"></span>FY26</button>
+                <button type="button" class="trend-toggle-btn active" data-year="FY25"><span class="trend-toggle-dot dashed" style="background: var(--rac-ink-mute)"></span>FY25</button>
               </div>
-              <div style="font-size: 12px;">
-                <span style="color: var(--color-text-muted);">YTD Expenses:</span>
-                <span id="ytd-expenses" style="font-weight: 600; color: var(--rac-terra-soft); margin-left: 4px;">$0</span>
+              <div class="trend-toggle-group">
+                <span class="trend-toggle-label">Metrics</span>
+                <button type="button" class="trend-toggle-btn active" data-metric="revenue"><span class="trend-toggle-dot" style="background: var(--rac-moss)"></span>Revenue</button>
+                <button type="button" class="trend-toggle-btn active" data-metric="expenses"><span class="trend-toggle-dot" style="background: var(--rac-terra-soft)"></span>Expenses</button>
+                <button type="button" class="trend-toggle-btn active" data-metric="profit"><span class="trend-toggle-dot" style="background: var(--rac-ink-soft)"></span>Profit</button>
               </div>
-              <div style="font-size: 12px;">
-                <span style="color: var(--color-text-muted);">YTD Profit:</span>
-                <span id="ytd-profit" style="font-weight: 600; margin-left: 4px;">$0</span>
+            </div>
+            <!-- YoY Summary Bar - matched-period FY-to-date comparison -->
+            <div id="yoySummaryBar" class="yoy-summary-bar">
+              <div class="yoy-summary-item">
+                <span class="yoy-summary-label">Revenue</span>
+                <span class="yoy-summary-value" id="yoy-revenue-current" style="color: var(--rac-moss);">$0</span>
+                <span class="yoy-summary-delta" id="yoy-revenue-delta">—</span>
+              </div>
+              <div class="yoy-summary-item">
+                <span class="yoy-summary-label">Expenses</span>
+                <span class="yoy-summary-value" id="yoy-expenses-current" style="color: var(--rac-terra-soft);">$0</span>
+                <span class="yoy-summary-delta" id="yoy-expenses-delta">—</span>
+              </div>
+              <div class="yoy-summary-item">
+                <span class="yoy-summary-label">Profit</span>
+                <span class="yoy-summary-value" id="yoy-profit-current">$0</span>
+                <span class="yoy-summary-delta" id="yoy-profit-delta">—</span>
               </div>
             </div>
             <div class="chart-container">
@@ -4897,228 +5003,261 @@
         document.getElementById('sparkInventory').chart = invChart;
       }
 
-      // ========== TREND CHART ==========
+      // ========== TREND CHART (YoY) ==========
+      // State for which years/metrics are visible. Modified by toggle handlers.
+      window.trendYearsActive = window.trendYearsActive || ['FY26', 'FY25'];
+      window.trendMetricsActive = window.trendMetricsActive || ['revenue', 'expenses', 'profit'];
+
+      // FY axis: 12 months Jul→Jun. Same calendar overlay for YoY comparison.
+      const FY_MONTH_LABELS = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+
+      // period_month "YYYY-MM" → { fyKey: "FY26", fyIndex: 0..11 }
+      // FY runs Jul→Jun. month >= 7 → FY = year+1 (i.e. Jul 2025 is in FY26).
+      function periodMonthToFY(periodMonth) {
+        const [yearStr, monthStr] = periodMonth.split('-');
+        const year = parseInt(yearStr, 10);
+        const month = parseInt(monthStr, 10);
+        const fyEnd = month >= 7 ? year + 1 : year;
+        const fyKey = `FY${String(fyEnd).slice(-2)}`;
+        const fyIndex = month >= 7 ? month - 7 : month + 5;
+        return { fyKey, fyIndex };
+      }
+
+      // Pivot the flat monthly array into FY-keyed structure with 12-element arrays per metric.
+      // Missing months become null (Chart.js skips nulls in line charts).
+      function pivotMonthlyToFY(monthly) {
+        const fyData = {};
+        monthly.forEach(m => {
+          const { fyKey, fyIndex } = periodMonthToFY(m.period_month);
+          if (!fyData[fyKey]) {
+            fyData[fyKey] = {
+              revenue: new Array(12).fill(null),
+              expenses: new Array(12).fill(null),
+              profit: new Array(12).fill(null),
+            };
+          }
+          const rev = parseFloat(m.revenue) || 0;
+          const np = parseFloat(m.net_profit) || 0;
+          fyData[fyKey].revenue[fyIndex] = rev;
+          fyData[fyKey].expenses[fyIndex] = rev - np; // total expenses = COGS + opex
+          fyData[fyKey].profit[fyIndex] = np;
+        });
+        return fyData;
+      }
+
+      // Compute matched-period (overlap) sums for two FYs. We only sum months
+      // where BOTH years have data, so the comparison is apples-to-apples.
+      function computeMatchedPeriodSums(fyData, currentFY, priorFY) {
+        const cur = fyData[currentFY] || { revenue: [], expenses: [], profit: [] };
+        const prior = fyData[priorFY] || { revenue: [], expenses: [], profit: [] };
+        const out = {
+          current: { revenue: 0, expenses: 0, profit: 0 },
+          prior: { revenue: 0, expenses: 0, profit: 0 },
+          monthsCompared: 0,
+        };
+        for (let i = 0; i < 12; i++) {
+          const haveCur = cur.revenue[i] !== null && cur.revenue[i] !== undefined;
+          const havePrior = prior.revenue[i] !== null && prior.revenue[i] !== undefined;
+          if (haveCur && havePrior) {
+            out.monthsCompared++;
+            out.current.revenue  += cur.revenue[i];
+            out.current.expenses += cur.expenses[i];
+            out.current.profit   += cur.profit[i];
+            out.prior.revenue    += prior.revenue[i];
+            out.prior.expenses   += prior.expenses[i];
+            out.prior.profit     += prior.profit[i];
+          }
+        }
+        return out;
+      }
+
+      function fmtMoney(n) {
+        const abs = Math.abs(n);
+        const sign = n < 0 ? '-' : '';
+        if (abs >= 1000000) return sign + '$' + (abs / 1000000).toFixed(1) + 'M';
+        if (abs >= 1000)    return sign + '$' + (abs / 1000).toFixed(0) + 'K';
+        return sign + '$' + Math.round(abs);
+      }
+
+      function fmtDelta(current, prior) {
+        if (prior === 0) {
+          if (current === 0) return { text: '—', cls: '' };
+          return { text: 'new', cls: 'positive' };
+        }
+        const pct = ((current - prior) / Math.abs(prior)) * 100;
+        const sign = pct >= 0 ? '+' : '';
+        const cls = pct >= 0 ? 'positive' : 'negative';
+        return { text: `${sign}${pct.toFixed(1)}% YoY`, cls };
+      }
+
+      // Update the YoY summary bar (just above the chart).
+      function updateYoYSummaryBar(fyData) {
+        const m = computeMatchedPeriodSums(fyData, 'FY26', 'FY25');
+        const r = document.getElementById('yoy-revenue-current');
+        const rd = document.getElementById('yoy-revenue-delta');
+        const e = document.getElementById('yoy-expenses-current');
+        const ed = document.getElementById('yoy-expenses-delta');
+        const p = document.getElementById('yoy-profit-current');
+        const pd = document.getElementById('yoy-profit-delta');
+        if (!r) return; // panel not in DOM
+
+        if (m.monthsCompared === 0) {
+          r.textContent = fmtMoney(m.current.revenue);
+          e.textContent = fmtMoney(m.current.expenses);
+          p.textContent = fmtMoney(m.current.profit);
+          rd.textContent = '— no comparison data';
+          ed.textContent = '';
+          pd.textContent = '';
+          rd.className = 'yoy-summary-delta';
+          ed.className = 'yoy-summary-delta';
+          pd.className = 'yoy-summary-delta';
+          return;
+        }
+
+        r.textContent = fmtMoney(m.current.revenue);
+        e.textContent = fmtMoney(m.current.expenses);
+        p.textContent = fmtMoney(m.current.profit);
+        p.style.color = m.current.profit >= 0 ? RAC_CHART.moss : RAC_CHART.terra;
+
+        // Lower is better for expenses, so flip the colour interpretation
+        const revD = fmtDelta(m.current.revenue, m.prior.revenue);
+        const expD = fmtDelta(m.current.expenses, m.prior.expenses);
+        const profD = fmtDelta(m.current.profit, m.prior.profit);
+        // Flip expense delta colour: an INCREASE in expenses is "bad" (red)
+        const expClsFlipped = expD.cls === 'positive' ? 'negative' : (expD.cls === 'negative' ? 'positive' : '');
+
+        rd.textContent = revD.text;
+        rd.className = `yoy-summary-delta ${revD.cls}`;
+        ed.textContent = expD.text;
+        ed.className = `yoy-summary-delta ${expClsFlipped}`;
+        pd.textContent = profD.text;
+        pd.className = `yoy-summary-delta ${profD.cls}`;
+
+        // Trailing footnote about how many months are matched
+        const trail = ` (${m.monthsCompared} of 12 mo matched)`;
+        rd.textContent += trail;
+      }
+
+      // Colour helpers for chart datasets
+      function trendColor(metric, year) {
+        const colors = {
+          revenue:  { FY26: RAC_CHART.moss,      FY25: RAC_CHART.fade(RAC_CHART.moss, 0.55)      },
+          expenses: { FY26: RAC_CHART.terraSoft, FY25: RAC_CHART.fade(RAC_CHART.terraSoft, 0.55) },
+          profit:   { FY26: RAC_CHART.inkSoft,   FY25: RAC_CHART.fade(RAC_CHART.inkSoft, 0.45)   },
+        };
+        return (colors[metric] && colors[metric][year]) || RAC_CHART.inkFaint;
+      }
+
       function initTrendChart() {
         const ctx = document.getElementById('trendChart').getContext('2d');
         const monthly = window.historicalData?.monthly || [];
-        const showYTD = document.getElementById('ytdToggle')?.checked || false;
-        
-        // Build labels from snapshots
-        const labels = monthly.length > 0 
-          ? monthly.map(m => {
-              const [year, month] = m.period_month.split('-');
-              const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-              return monthNames[parseInt(month)];
-            })
-          : ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
-        
-        const periodStart = window.currentQuarterInfo?.startDate;
-        const actualRevenue = window.dashboardData.pl?.revenue || 0;
-        const actualExpenses = window.dashboardData.pl?.totalExpenses || 0;
-        const actualProfit = window.dashboardData.pl?.netProfit || 0;
+        const fyData = pivotMonthlyToFY(monthly);
 
-        // Determine current month
-        const now = new Date();
-        const currentMonthStr = now.toISOString().slice(0, 7);
-        const monthNames2 = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const currentMonthLabel = monthNames2[now.getMonth() + 1];
-        const hasCurrentMonth = monthly.some(m => m.period_month === currentMonthStr);
-        
-        // Only append current month if within selected period
-        const periodEnd = window.currentQuarterInfo?.endDate;
-        const currentMonthInPeriod = periodStart && periodEnd
-          ? (currentMonthStr >= periodStart.slice(0, 7) && currentMonthStr <= periodEnd.slice(0, 7))
-          : true;
-        const shouldAppendCurrentMonth = !hasCurrentMonth && currentMonthInPeriod;
+        // Update the YoY summary regardless of which series are toggled on
+        updateYoYSummaryBar(fyData);
 
-        // Sum snapshot months within period for MTD calculation
-        let periodSnapRev = 0, periodSnapExp = 0, periodSnapProfit = 0;
-        if (periodStart && shouldAppendCurrentMonth) {
-          monthly.forEach(m => {
-            if (m.period_month >= periodStart.slice(0, 7)) {
-              periodSnapRev += parseFloat(m.revenue) || 0;
-              periodSnapProfit += parseFloat(m.net_profit) || 0;
-              periodSnapExp += (parseFloat(m.revenue) || 0) - (parseFloat(m.net_profit) || 0);
-            }
+        // Build datasets for each (year, metric) combination that's currently active.
+        // Order: draw FY25 first so FY26 sits on top visually.
+        const yearsActive = window.trendYearsActive || ['FY26', 'FY25'];
+        const metricsActive = window.trendMetricsActive || ['revenue', 'expenses', 'profit'];
+        const yearOrder = ['FY25', 'FY26']; // draw order, prior year underneath
+
+        const datasets = [];
+        yearOrder.forEach(year => {
+          if (!yearsActive.includes(year)) return;
+          if (!fyData[year]) return;
+          metricsActive.forEach(metric => {
+            const isCurrent = year === 'FY26';
+            datasets.push({
+              label: `${metric.charAt(0).toUpperCase() + metric.slice(1)} ${year}`,
+              data: fyData[year][metric],
+              borderColor: trendColor(metric, year),
+              backgroundColor: trendColor(metric, year),
+              borderDash: isCurrent ? [] : [5, 4],
+              borderWidth: isCurrent ? 2.5 : 1.5,
+              pointRadius: isCurrent ? 3 : 2,
+              pointHoverRadius: 5,
+              tension: 0.25,
+              spanGaps: false,
+              fill: false,
+            });
           });
-        }
+        });
 
-        let revenueData, expenseData, profitData;
-        if (monthly.length > 0) {
-          revenueData = monthly.map(m => parseFloat(m.revenue));
-          expenseData = monthly.map(m => parseFloat(m.revenue) - parseFloat(m.net_profit));
-          profitData = monthly.map(m => parseFloat(m.net_profit));
-          if (shouldAppendCurrentMonth) {
-            labels.push(currentMonthLabel);
-            revenueData.push(actualRevenue - periodSnapRev);
-            expenseData.push(actualExpenses - periodSnapExp);
-            profitData.push(actualProfit - periodSnapProfit);
-          }
-        } else {
-          revenueData = [actualRevenue];
-          expenseData = [actualExpenses];
-          profitData = [actualProfit];
-        }
-
-        // Calculate YTD cumulative totals
-        const ytdRevenue = [], ytdExpenses = [], ytdProfit = [];
-        let cumRev = 0, cumExp = 0, cumProf = 0;
-        for (let i = 0; i < revenueData.length; i++) {
-          cumRev += revenueData[i];
-          cumExp += expenseData[i];
-          cumProf += profitData[i];
-          ytdRevenue.push(cumRev);
-          ytdExpenses.push(cumExp);
-          ytdProfit.push(cumProf);
-        }
-
-        // Update YTD summary bar
-        const totalYtdRev = ytdRevenue[ytdRevenue.length - 1] || 0;
-        const totalYtdExp = ytdExpenses[ytdExpenses.length - 1] || 0;
-        const totalYtdProf = ytdProfit[ytdProfit.length - 1] || 0;
-        
-        document.getElementById('ytd-revenue').textContent = '$' + totalYtdRev.toLocaleString();
-        document.getElementById('ytd-expenses').textContent = '$' + totalYtdExp.toLocaleString();
-        
-        const ytdProfEl = document.getElementById('ytd-profit');
-        ytdProfEl.textContent = (totalYtdProf < 0 ? '-$' : '$') + Math.abs(totalYtdProf).toLocaleString();
-     ytdProfEl.style.color = totalYtdProf >= 0 ? RAC_CHART.moss : RAC_CHART.terra;
-        
-        // Destroy if exists
         if (window.trendChartInstance) {
           window.trendChartInstance.destroy();
         }
 
-        // Build datasets - bars always, YTD lines when toggled
-        const datasets = [
-          {
-            label: 'Revenue',
-            data: revenueData,
-            backgroundColor: RAC_CHART.moss,
-            borderRadius: 4,
-            order: 2
-          },
-          {
-            label: 'Expenses',
-            data: expenseData,
-            backgroundColor: RAC_CHART.terraSoft,
-            borderRadius: 4,
-            order: 2
-          },
-          {
-            label: 'Profit',
-            data: profitData,
-            backgroundColor: RAC_CHART.inkSoft,
-            borderRadius: 4,
-            order: 2
-          }
-        ];
-
-        if (showYTD) {
-          datasets.push({
-            label: 'YTD Revenue',
-            data: ytdRevenue,
-            type: 'line',
-            borderColor: RAC_CHART.moss,
-            borderWidth: 2,
-            borderDash: [6, 3],
-            pointRadius: 3,
-            pointbackgroundColor: RAC_CHART.moss,
-            fill: false,
-            tension: 0.3,
-            yAxisID: 'y1',
-            order: 1
-          });
-          datasets.push({
-            label: 'YTD Expenses',
-            data: ytdExpenses,
-            type: 'line',
-            borderColor: RAC_CHART.terraSoft,
-            borderWidth: 2,
-            borderDash: [6, 3],
-            pointRadius: 3,
-            pointbackgroundColor: RAC_CHART.terraSoft,
-            fill: false,
-            tension: 0.3,
-            yAxisID: 'y1',
-            order: 1
-          });
-
-          datasets.push({
-            label: 'YTD Profit',
-            data: ytdProfit,
-            type: 'line',
-            borderColor: RAC_CHART.inkSoft,
-            borderWidth: 2,
-            borderDash: [6, 3],
-            pointRadius: 3,
-            pointBackgroundColor: RAC_CHART.inkSoft,
-            fill: false,
-            tension: 0.3,
-            yAxisID: 'y1',
-            order: 1
-          });
-        }
-
-        const scales = {
-          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-          y: { 
-            grid: { color: '#EDEBE9' },
-            border: { display: false },
-            ticks: { 
-              font: { size: 10, weight: '500' },
-              color: '#605E5C',
-              padding: 8,
-              callback: function(value) { 
-                if (value === 0) return '$0';
-                if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
-                return '$' + (value / 1000).toFixed(0) + 'K'; 
-              }
-            }
-          }
-        };
-
-        // Add second Y axis for YTD cumulative values
-        if (showYTD) {
-          scales.y1 = {
-            position: 'right',
-            grid: { display: false },
-            border: { display: false },
-            ticks: {
-              font: { size: 10 },
-              color: '#8A8886',
-              callback: function(value) {
-                if (value === 0) return '$0';
-                if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
-                return '$' + (value / 1000).toFixed(0) + 'K';
-              }
-            }
-          };
-        }
-
         window.trendChartInstance = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: labels,
-            datasets: datasets
-          },
+          type: 'line',
+          data: { labels: FY_MONTH_LABELS, datasets },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { 
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
               legend: { display: false },
               tooltip: {
                 callbacks: {
                   label: function(context) {
-                    return context.dataset.label + ': $' + context.raw.toLocaleString();
+                    if (context.raw === null || context.raw === undefined) return null;
+                    return context.dataset.label + ': ' + fmtMoney(context.raw);
                   }
                 }
               }
             },
-            scales: scales
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { size: 11 } }
+              },
+              y: {
+                grid: { color: '#EDEBE9' },
+                border: { display: false },
+                ticks: {
+                  font: { size: 10, weight: '500' },
+                  color: '#605E5C',
+                  padding: 8,
+                  callback: function(value) {
+                    if (value === 0) return '$0';
+                    if (Math.abs(value) >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+                    return '$' + (value / 1000).toFixed(0) + 'K';
+                  }
+                }
+              }
+            }
           }
         });
       }
+
+      // Wire up YoY toggle buttons (delegated, so it works even if buttons are re-rendered)
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.trend-toggle-btn');
+        if (!btn) return;
+        const year = btn.dataset.year;
+        const metric = btn.dataset.metric;
+        if (year) {
+          const arr = window.trendYearsActive || [];
+          if (arr.includes(year)) {
+            window.trendYearsActive = arr.filter(y => y !== year);
+            btn.classList.remove('active');
+          } else {
+            window.trendYearsActive = [...arr, year];
+            btn.classList.add('active');
+          }
+        } else if (metric) {
+          const arr = window.trendMetricsActive || [];
+          if (arr.includes(metric)) {
+            window.trendMetricsActive = arr.filter(m => m !== metric);
+            btn.classList.remove('active');
+          } else {
+            window.trendMetricsActive = [...arr, metric];
+            btn.classList.add('active');
+          }
+        }
+        // Re-render with new state
+        if (window.historicalData) initTrendChart();
+      });
 
       // ========== DRAWER FUNCTIONS ==========
       function openDrawer(type) {
