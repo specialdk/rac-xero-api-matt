@@ -6551,6 +6551,69 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `\nðŸ“‹ Note: Reversal filter is OFF â€” figures include all journal entries including reversals.\n\n`;
     }
 
+    // ── ACCOUNT-LEVEL VARIANCE (Tier 2) ──
+    // When the client sends accountVariance in context (from /api/account-variance),
+    // serialize it into the prompt so the AI can cite specific accounts and dollar
+    // changes. This compounds with the live data fetches above — both feed the AI.
+    // For "ALL" entity (where the live fetches above fail), variance is the entire story.
+    const variance = context?.accountVariance;
+    if (variance && variance.success && variance.consolidated) {
+      const v = variance.consolidated;
+      const periods = variance.periods || {};
+      const fmt = (n) => {
+        const abs = Math.abs(Number(n) || 0);
+        const sign = n < 0 ? '-' : '';
+        if (abs >= 1000000) return `${sign}$${(abs/1000000).toFixed(2)}M`;
+        if (abs >= 1000)    return `${sign}$${(abs/1000).toFixed(0)}K`;
+        return `${sign}$${Math.round(abs).toLocaleString()}`;
+      };
+      const fmtPct = (pct) => (pct === null || pct === undefined) ? 'n/a' : `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+
+      financialContext += `\n━━━━ ACCOUNT-LEVEL VARIANCE (matched-period YoY) ━━━━\n`;
+      financialContext += `Current period: ${periods.current?.startDate} to ${periods.current?.endDate} (${periods.current?.months}mo)\n`;
+      financialContext += `Prior period:   ${periods.prior?.startDate} to ${periods.prior?.endDate} (${periods.prior?.months}mo)\n\n`;
+
+      const entCount = (variance.byEntity || []).length;
+      financialContext += `CONSOLIDATED TOTALS (across ${entCount} entit${entCount === 1 ? 'y' : 'ies'}):\n`;
+      financialContext += `  Revenue:    current ${fmt(v.revenue.current)}, prior ${fmt(v.revenue.prior)}, delta ${fmt(v.revenue.delta)} (${fmtPct(v.revenue.deltaPct)})\n`;
+      financialContext += `  COGS:       current ${fmt(v.cogs.current)}, prior ${fmt(v.cogs.prior)}, delta ${fmt(v.cogs.delta)} (${fmtPct(v.cogs.deltaPct)})\n`;
+      financialContext += `  Expenses:   current ${fmt(v.expenses.current)}, prior ${fmt(v.expenses.prior)}, delta ${fmt(v.expenses.delta)} (${fmtPct(v.expenses.deltaPct)})\n`;
+      financialContext += `  Net Profit: current ${fmt(v.netProfit.current)}, prior ${fmt(v.netProfit.prior)}, delta ${fmt(v.netProfit.delta)} (${fmtPct(v.netProfit.deltaPct)})\n\n`;
+
+      // Per-entity breakdown — useful for ALL view, redundant for single-entity but harmless
+      if (entCount > 1) {
+        financialContext += `BY ENTITY (sorted by largest revenue change):\n`;
+        const entitiesSorted = [...variance.byEntity].sort(
+          (a, b) => Math.abs(b.totals.revenue.delta) - Math.abs(a.totals.revenue.delta)
+        );
+        entitiesSorted.forEach(e => {
+          financialContext += `  ${e.entity}: rev ${fmt(e.totals.revenue.current)} vs ${fmt(e.totals.revenue.prior)} (Δ ${fmt(e.totals.revenue.delta)}), `;
+          financialContext += `np ${fmt(e.totals.netProfit.current)} vs ${fmt(e.totals.netProfit.prior)} (Δ ${fmt(e.totals.netProfit.delta)})\n`;
+        });
+        financialContext += `\n`;
+      }
+
+      // Top movers across all entities — the "what specifically drove this" signal
+      const topRev = variance.topRevenueMoversConsolidated || [];
+      if (topRev.length > 0) {
+        financialContext += `TOP REVENUE ACCOUNT CHANGES (sorted by absolute delta):\n`;
+        topRev.slice(0, 8).forEach(r => {
+          financialContext += `  [${r.entity}] ${r.name}: ${fmt(r.current)} vs ${fmt(r.prior)} → Δ ${fmt(r.delta)} (${fmtPct(r.deltaPct)})\n`;
+        });
+        financialContext += `\n`;
+      }
+      const topExp = variance.topExpenseMoversConsolidated || [];
+      if (topExp.length > 0) {
+        financialContext += `TOP EXPENSE ACCOUNT CHANGES (sorted by absolute delta):\n`;
+        topExp.slice(0, 8).forEach(r => {
+          financialContext += `  [${r.entity}] ${r.name}: ${fmt(r.current)} vs ${fmt(r.prior)} → Δ ${fmt(r.delta)} (${fmtPct(r.deltaPct)})\n`;
+        });
+        financialContext += `\n`;
+      }
+      financialContext += `When you write the executive summary, USE THIS variance data — name specific accounts and dollar amounts that drove the changes. Don't say "I don't have variance data" — it's right above.\n\n`;
+      console.log(`🤖 AI Chat: Variance data attached — ${entCount} entities, ${topRev.length} revenue movers, ${topExp.length} expense movers`);
+    }
+
     // Debug: show what data sources succeeded
     console.log(`ðŸ¤– AI Chat: Available data - Cash: ${!!cashData && !cashData?.error}, P&L: ${!!plData?.summary}, Invoices: ${!!invoicesData && !invoicesData?.error}, Expenses: ${!!expenseData?.analysis}, Ratios: ${!!ratiosData?.ratios}`);
     if (unavailable.length > 0) {
