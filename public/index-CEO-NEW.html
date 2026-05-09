@@ -1562,7 +1562,8 @@
       .rac-controls-bar .btn-refresh,
       .rac-controls-bar .btn-snapshot,
       .rac-controls-bar .btn-reversal,
-      .rac-controls-bar .btn-dashboard {
+      .rac-controls-bar .btn-dashboard,
+      .rac-controls-bar .btn-finalize {
         background: transparent;
         color: var(--rac-ink);
         border: 1px solid var(--rac-line-2);
@@ -1581,7 +1582,8 @@
       .rac-controls-bar .btn-refresh:hover,
       .rac-controls-bar .btn-snapshot:hover,
       .rac-controls-bar .btn-reversal:hover,
-      .rac-controls-bar .btn-dashboard:hover {
+      .rac-controls-bar .btn-dashboard:hover,
+      .rac-controls-bar .btn-finalize:hover:not(:disabled) {
         background: var(--rac-paper-2);
         border-color: var(--rac-ink-mute);
       }
@@ -1602,6 +1604,179 @@
         font-family: var(--rac-font-mono);
         font-size: var(--rac-text-xxs);
         font-weight: var(--rac-weight-medium);
+      }
+
+      /* ========== FINALIZE BUTTON ========== */
+      /* Disabled state — no drafts to finalize */
+      .rac-controls-bar .btn-finalize:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      /* Active state — drafts present, draws gentle attention via ochre tint */
+      .rac-controls-bar .btn-finalize.has-drafts {
+        background: var(--rac-ochre-pale);
+        border-color: var(--rac-ochre);
+        color: var(--rac-ink);
+      }
+      .rac-controls-bar .btn-finalize.has-drafts:hover {
+        background: var(--rac-ochre-soft);
+        border-color: var(--rac-ochre);
+      }
+      /* Running state — busy spinning */
+      .rac-controls-bar .btn-finalize.running {
+        opacity: 0.7;
+        pointer-events: none;
+      }
+      /* Draft count badge inside the finalize button */
+      .rac-controls-bar .btn-finalize .finalize-count {
+        display: inline-block;
+        margin-left: 4px;
+        padding: 1px 6px;
+        background: var(--rac-ochre);
+        color: var(--rac-paper);
+        border-radius: var(--rac-radius-sharp);
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xxs);
+        font-weight: var(--rac-weight-medium);
+      }
+      .rac-controls-bar .btn-finalize:disabled .finalize-count {
+        background: var(--rac-line-2);
+        color: var(--rac-ink-faint);
+      }
+
+      /* ========== FINALIZE MODAL ========== */
+      .finalize-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(20, 26, 42, 0.55);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: var(--rac-space-5);
+      }
+      .finalize-modal-backdrop.open {
+        display: flex;
+      }
+      .finalize-modal {
+        background: var(--rac-paper);
+        border: 1px solid var(--rac-line-2);
+        border-radius: var(--rac-radius-sharp);
+        max-width: 560px;
+        width: 100%;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(20, 26, 42, 0.3);
+      }
+      .finalize-modal-header {
+        padding: var(--rac-space-4) var(--rac-space-5);
+        border-bottom: 1px solid var(--rac-line);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .finalize-modal-header h2 {
+        margin: 0;
+        font-family: var(--rac-font-sans);
+        font-size: var(--rac-text-lg, 1rem);
+        font-weight: var(--rac-weight-medium);
+        color: var(--rac-ink);
+      }
+      .finalize-modal-close {
+        background: transparent;
+        border: none;
+        font-size: 18px;
+        color: var(--rac-ink-mute);
+        cursor: pointer;
+        padding: 0 4px;
+      }
+      .finalize-modal-close:hover { color: var(--rac-ink); }
+      .finalize-modal-body {
+        padding: var(--rac-space-4) var(--rac-space-5);
+        overflow-y: auto;
+        flex: 1;
+      }
+      .finalize-modal-intro {
+        font-size: var(--rac-text-sm);
+        color: var(--rac-ink-soft);
+        margin: 0 0 var(--rac-space-4) 0;
+        line-height: 1.5;
+      }
+      .finalize-modal-empty {
+        text-align: center;
+        padding: var(--rac-space-5) 0;
+        color: var(--rac-ink-mute);
+        font-size: var(--rac-text-sm);
+      }
+      .finalize-month-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--rac-space-3) 0;
+        border-bottom: 1px solid var(--rac-line);
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-sm);
+      }
+      .finalize-month-row:last-child { border-bottom: none; }
+      .finalize-month-label {
+        color: var(--rac-ink);
+        font-weight: var(--rac-weight-medium);
+      }
+      .finalize-month-meta {
+        color: var(--rac-ink-mute);
+        font-size: var(--rac-text-xxs);
+        text-align: right;
+      }
+      .finalize-modal-footer {
+        padding: var(--rac-space-4) var(--rac-space-5);
+        border-top: 1px solid var(--rac-line);
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--rac-space-2);
+        align-items: center;
+      }
+      .finalize-modal-status {
+        flex: 1;
+        font-family: var(--rac-font-mono);
+        font-size: var(--rac-text-xxs);
+        color: var(--rac-ink-mute);
+        text-transform: uppercase;
+        letter-spacing: var(--rac-tracking-mono-tight);
+      }
+      .finalize-modal-status.error { color: var(--rac-terra); }
+      .finalize-modal-status.success { color: var(--rac-ink); }
+      .finalize-btn-cancel,
+      .finalize-btn-confirm {
+        font-family: var(--rac-font-sans);
+        font-size: var(--rac-text-sm);
+        font-weight: var(--rac-weight-medium);
+        padding: var(--rac-space-2) var(--rac-space-4);
+        border-radius: var(--rac-radius-sharp);
+        cursor: pointer;
+        transition: var(--rac-transition-base);
+      }
+      .finalize-btn-cancel {
+        background: transparent;
+        color: var(--rac-ink);
+        border: 1px solid var(--rac-line-2);
+      }
+      .finalize-btn-cancel:hover {
+        background: var(--rac-paper-2);
+        border-color: var(--rac-ink-mute);
+      }
+      .finalize-btn-confirm {
+        background: var(--rac-ink);
+        color: var(--rac-paper);
+        border: 1px solid var(--rac-ink);
+      }
+      .finalize-btn-confirm:hover:not(:disabled) {
+        background: var(--rac-ink-soft);
+        border-color: var(--rac-ink-soft);
+      }
+      .finalize-btn-confirm:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
       }
       /* Inline snapshot status text */
       .rac-controls-bar .snapshot-status {
@@ -2130,6 +2305,7 @@
               <button class="btn-refresh" onclick="loadDashboard()">↻ Refresh</button>
               <button class="btn-snapshot" id="snapshotBtn" onclick="runDailySnapshot()">📸 Snapshot</button>
               <span class="snapshot-status" id="snapshotStatus"></span>
+              <button class="btn-finalize" id="finalizeBtn" onclick="openFinalizeModal()" disabled title="Finalize draft monthly snapshots — locks them so they won't be auto-overwritten">📋 Finalize <span class="finalize-count" id="finalizeCount">0</span></button>
               <button class="btn-reversal" id="reversalToggle" onclick="toggleReversals()" title="Hide/show reversal journal entries from P&L">🔄 Reversals <span class="reversal-count" id="reversalCount" style="display:none">0</span></button>
               <button class="btn-dashboard" onclick="window.location.href='/'">🔗 Connection Manager</button>
             </div>
@@ -6112,6 +6288,192 @@
           btn.classList.remove('running');
           btn.innerHTML = '&#x1F4F8; Snapshot';
         }
+        // Refresh draft state — Snapshot may have created new drafts for completed months
+        loadDraftMonths();
+      }
+
+
+      // ========================================================================
+      // FINALIZE MONTH — module
+      // Loads draft state, opens a modal listing drafts in the selected period,
+      // calls /api/finalize-month to lock them as 'final'.
+      // ========================================================================
+
+      // FY mapping for "selected period" → list of period_month strings.
+      // FY26 = Jul 2025 – Jun 2026. Adjust if FY context changes.
+      function getMonthsForPeriod(period) {
+        // Period selector values: 'Q1' | 'Q2' | 'Q3' | 'Q4' (FY25/26 currently)
+        const map = {
+          Q1: ['2025-07', '2025-08', '2025-09'],
+          Q2: ['2025-10', '2025-11', '2025-12'],
+          Q3: ['2026-01', '2026-02', '2026-03'],
+          Q4: ['2026-04', '2026-05', '2026-06'],
+        };
+        return map[period] || [];
+      }
+
+      function formatMonthLabel(periodMonth) {
+        // '2026-04' → 'Apr 2026'
+        const [y, m] = periodMonth.split('-');
+        const names = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${names[parseInt(m, 10)]} ${y}`;
+      }
+
+      // Fetch /api/draft-months and update button state.
+      // Cached on window.draftRowsCache so the modal can read it without re-fetching.
+      async function loadDraftMonths() {
+        try {
+          const resp = await fetch(`${API_BASE}/api/draft-months`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const data = await resp.json();
+          window.draftRowsCache = data.draftRows || [];
+
+          const btn = document.getElementById('finalizeBtn');
+          const countEl = document.getElementById('finalizeCount');
+          if (!btn || !countEl) return;
+
+          const total = window.draftRowsCache.length;
+          countEl.textContent = total;
+
+          if (total === 0) {
+            btn.disabled = true;
+            btn.classList.remove('has-drafts');
+          } else {
+            btn.disabled = false;
+            btn.classList.add('has-drafts');
+          }
+        } catch (err) {
+          console.warn('[finalize] could not load draft months:', err);
+          const btn = document.getElementById('finalizeBtn');
+          if (btn) {
+            btn.disabled = true;
+            btn.classList.remove('has-drafts');
+          }
+        }
+      }
+
+      // Populate and open the modal scoped to the currently selected period.
+      function openFinalizeModal() {
+        const period = document.getElementById('periodSelector')?.value || 'Q3';
+        const periodMonths = getMonthsForPeriod(period);
+        const allDrafts = window.draftRowsCache || [];
+        // Filter drafts to the selected period
+        const drafts = allDrafts.filter(r => periodMonths.includes(r.period_month));
+
+        // Group by period_month: { '2026-04': [{org, revenue, net_profit}, ...] }
+        const grouped = {};
+        drafts.forEach(r => {
+          if (!grouped[r.period_month]) grouped[r.period_month] = [];
+          grouped[r.period_month].push(r);
+        });
+        const months = Object.keys(grouped).sort();
+
+        // Build body markup
+        const body = document.getElementById('finalizeModalBody');
+        if (months.length === 0) {
+          body.innerHTML = `
+            <p class="finalize-modal-intro">No draft months in <strong>${period} FY25/26</strong>.</p>
+            <div class="finalize-modal-empty">
+              All months in this period are already finalized.<br>
+              Switch periods to find drafts elsewhere.
+            </div>`;
+          document.getElementById('finalizeConfirmBtn').disabled = true;
+        } else {
+          let totalEntities = 0;
+          let totalRev = 0;
+          let totalNP = 0;
+          drafts.forEach(r => {
+            totalEntities++;
+            totalRev += parseFloat(r.revenue) || 0;
+            totalNP += parseFloat(r.net_profit) || 0;
+          });
+
+          const rowsHtml = months.map(pm => {
+            const entries = grouped[pm];
+            const monthRev = entries.reduce((s, r) => s + (parseFloat(r.revenue) || 0), 0);
+            const monthNP = entries.reduce((s, r) => s + (parseFloat(r.net_profit) || 0), 0);
+            return `
+              <div class="finalize-month-row">
+                <span class="finalize-month-label">${formatMonthLabel(pm)} — ${entries.length} ${entries.length === 1 ? 'entity' : 'entities'}</span>
+                <span class="finalize-month-meta">
+                  Rev $${Math.round(monthRev).toLocaleString()}<br>
+                  NP $${Math.round(monthNP).toLocaleString()}
+                </span>
+              </div>`;
+          }).join('');
+
+          body.innerHTML = `
+            <p class="finalize-modal-intro">
+              These months will be re-fetched from Xero and locked as <strong>final</strong>.
+              Once finalized, the daily auto-snapshot will no longer overwrite them.
+            </p>
+            ${rowsHtml}
+            <div class="finalize-month-row" style="border-top: 2px solid var(--rac-line-2); margin-top: 8px; padding-top: 12px; font-weight: var(--rac-weight-medium);">
+              <span class="finalize-month-label">Total: ${totalEntities} draft snapshots</span>
+              <span class="finalize-month-meta">
+                Rev $${Math.round(totalRev).toLocaleString()}<br>
+                NP $${Math.round(totalNP).toLocaleString()}
+              </span>
+            </div>`;
+          document.getElementById('finalizeConfirmBtn').disabled = false;
+        }
+
+        // Stash the months we'll send when Finalize is clicked.
+        window.finalizeTargetMonths = months;
+
+        // Reset status text and open
+        document.getElementById('finalizeModalStatus').textContent = '';
+        document.getElementById('finalizeModalStatus').className = 'finalize-modal-status';
+        document.getElementById('finalizeModalBackdrop').classList.add('open');
+      }
+
+      function closeFinalizeModal() {
+        document.getElementById('finalizeModalBackdrop').classList.remove('open');
+      }
+
+      // Calls /api/finalize-month with the currently-staged months.
+      async function runFinalize() {
+        const months = window.finalizeTargetMonths || [];
+        if (months.length === 0) {
+          closeFinalizeModal();
+          return;
+        }
+
+        const confirmBtn = document.getElementById('finalizeConfirmBtn');
+        const status = document.getElementById('finalizeModalStatus');
+
+        confirmBtn.disabled = true;
+        status.className = 'finalize-modal-status';
+        status.textContent = 'Finalizing — re-fetching from Xero...';
+
+        try {
+          const resp = await fetch(`${API_BASE}/api/finalize-month`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ periodMonths: months, entities: 'all' }),
+          });
+          const result = await resp.json();
+
+          if (!resp.ok || result.success === false) {
+            throw new Error(result.error || `HTTP ${resp.status}`);
+          }
+
+          const s = result.summary || {};
+          status.className = 'finalize-modal-status success';
+          status.textContent = `✓ ${s.finalized || 0} finalized · ${s.skippedAlreadyFinal || 0} skipped · ${s.errors || 0} errors · ${result.durationSeconds || 0}s`;
+
+          // Refresh draft state and dashboard so the user sees fresh numbers
+          await loadDraftMonths();
+          await loadDashboard();
+
+          // Close after a short pause so the user can read the success line
+          setTimeout(closeFinalizeModal, 1800);
+        } catch (err) {
+          console.error('[finalize] failed:', err);
+          status.className = 'finalize-modal-status error';
+          status.textContent = `✗ Failed: ${err.message}`;
+          confirmBtn.disabled = false;
+        }
       }
 
 
@@ -6122,10 +6484,16 @@
         const periodSel = document.getElementById('periodSelector');
         if (periodSel) periodSel.value = currentPeriod;
 
+        // Refresh draft count when period changes — different period may have different drafts
+        if (periodSel) {
+          periodSel.addEventListener('change', () => loadDraftMonths());
+        }
+
         // Initial render of the AI panel (empty state) so it appears before data loads
         renderAIPanel();
 
         loadDashboard();
+        loadDraftMonths();
       });
     </script>
     <!-- Mast datetime — updates every minute (Design System §4.1) -->
@@ -6143,5 +6511,23 @@
         setInterval(updateMastDatetime, 60000);
       })();
     </script>
+
+    <!-- ========== FINALIZE MONTH MODAL ========== -->
+    <div class="finalize-modal-backdrop" id="finalizeModalBackdrop" onclick="if(event.target===this)closeFinalizeModal()">
+      <div class="finalize-modal" role="dialog" aria-labelledby="finalizeModalTitle" aria-modal="true">
+        <div class="finalize-modal-header">
+          <h2 id="finalizeModalTitle">Finalize Draft Months</h2>
+          <button class="finalize-modal-close" onclick="closeFinalizeModal()" aria-label="Close">✕</button>
+        </div>
+        <div class="finalize-modal-body" id="finalizeModalBody">
+          <!-- Populated dynamically by openFinalizeModal() -->
+        </div>
+        <div class="finalize-modal-footer">
+          <span class="finalize-modal-status" id="finalizeModalStatus"></span>
+          <button class="finalize-btn-cancel" onclick="closeFinalizeModal()">Cancel</button>
+          <button class="finalize-btn-confirm" id="finalizeConfirmBtn" onclick="runFinalize()">Finalize</button>
+        </div>
+      </div>
+    </div>
   </body>
   </html>
