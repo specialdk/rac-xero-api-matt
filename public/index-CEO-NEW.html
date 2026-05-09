@@ -2803,7 +2803,7 @@
             <div class="card-header">
               <div>
                 <div class="card-title">Balance Sheet</div>
-                <div class="card-subtitle">Current position</div>
+                <div class="card-subtitle" id="bs-period">Current position (as at today)</div>
               </div>
              <span style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
             </div>
@@ -4585,9 +4585,10 @@
 
       // ========== TOP CUSTOMERS ==========
       async function loadTopCustomers(quarterInfo) {
-        // Update subtitle to show current period
-        const period = document.getElementById("periodSelector").value;
-        document.getElementById("customers-period").textContent = `${period} FY25/26`;
+        // Top Customers shows the largest CURRENT OUTSTANDING receivables —
+        // a point-in-time view, independent of which period is selected.
+        // Subtitle reflects that to avoid implying period filtering.
+        document.getElementById("customers-period").textContent = 'Currently outstanding';
         
         // Get invoices from receivables data
         const invoices = window.dashboardData.receivables?.invoices || [];
