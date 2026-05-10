@@ -2991,6 +2991,48 @@
             </div>
           </div>
 
+          <!-- Top Spend Accounts -->
+          <div class="summary-card" id="top-spend-card" onclick="openDrawer('topSpend')" style="cursor: pointer;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Top Spend Accounts</div>
+                <div class="card-subtitle" id="top-spend-subtitle">Top 5 accounts by amount</div>
+              </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
+            </div>
+            <div class="card-content">
+              <table class="data-table" style="width: 100%;">
+                <tbody id="top-spend-list">
+                  <tr><td style="color: var(--color-text-muted); font-style: italic;">Loading…</td></tr>
+                </tbody>
+              </table>
+              <div id="top-spend-disabled-note" style="display: none; font-size: 11px; color: var(--color-text-muted); margin-top: 8px; font-style: italic;">
+                Pick a single entity to view top accounts.
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Revenue Accounts -->
+          <div class="summary-card" id="top-revenue-card" onclick="openDrawer('topRevenue')" style="cursor: pointer;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Top Revenue Accounts</div>
+                <div class="card-subtitle" id="top-revenue-subtitle">Top 5 accounts by amount</div>
+              </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
+            </div>
+            <div class="card-content">
+              <table class="data-table" style="width: 100%;">
+                <tbody id="top-revenue-list">
+                  <tr><td style="color: var(--color-text-muted); font-style: italic;">Loading…</td></tr>
+                </tbody>
+              </table>
+              <div id="top-revenue-disabled-note" style="display: none; font-size: 11px; color: var(--color-text-muted); margin-top: 8px; font-style: italic;">
+                Pick a single entity to view top accounts.
+              </div>
+            </div>
+          </div>
+
         </div>
         </div>
      
@@ -3831,8 +3873,9 @@
         loadFinancialRatios();
         // Load top expenses (for non-Mining entities)
         loadTopExpenses();
-        // Load Spend & Revenue Profile classification (single-entity only)
-        loadProfile();
+        // Load Spend & Revenue Profile classification (single-entity only),
+        // then top accounts which read the same data.
+        loadProfile().then(() => loadTopAccounts());
         // Update Balance Sheet and Aged Debtors cards
         updateSummaryCards();
 
@@ -4113,7 +4156,7 @@
         updateHealthStatus();
         loadFinancialRatios();
         loadTopExpenses();
-        loadProfile();
+        loadProfile().then(() => loadTopAccounts());
         updateSummaryCards();
         initSparklines();
         initTrendChart();
@@ -5121,6 +5164,71 @@
           resetBars();
         }
       }
+
+      // ========== TOP SPEND / TOP REVENUE ACCOUNTS ==========
+      // Sibling cards to the Spend & Revenue Profile. Reuse the classification
+      // data already fetched by loadProfile() — no extra API calls. We flatten
+      // every bucket's `detailed` array, sort by absolute amount, take top 5.
+      function loadTopAccounts() {
+        const fmt2 = (n) => '$' + Number(n || 0).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const renderTopList = (listEl, subtitleEl, disabledEl, classificationData, isAll) => {
+          if (isAll) {
+            listEl.innerHTML = '';
+            subtitleEl.textContent = 'Single-entity only — pick an entity above';
+            disabledEl.style.display = 'block';
+            return;
+          }
+          disabledEl.style.display = 'none';
+          if (!classificationData || !classificationData.detailed) {
+            listEl.innerHTML = '<tr><td style="color: var(--color-text-muted); font-style: italic;">No data</td></tr>';
+            subtitleEl.textContent = 'No data';
+            return;
+          }
+          // Flatten all buckets into one array, then sort by absolute amount
+          const allAccounts = [];
+          Object.entries(classificationData.detailed).forEach(([bucket, items]) => {
+            (items || []).forEach(item => {
+              allAccounts.push({ name: item.name, amount: item.amount, bucket });
+            });
+          });
+          if (allAccounts.length === 0) {
+            listEl.innerHTML = '<tr><td style="color: var(--color-text-muted); font-style: italic;">No accounts</td></tr>';
+            return;
+          }
+          const top5 = allAccounts
+            .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+            .slice(0, 5);
+          listEl.innerHTML = top5.map((acc, i) => {
+            const safeName = (acc.name || '').replace(/"/g, '&quot;');
+            return `
+              <tr>
+                <td style="color: var(--color-text-muted); width: 18px; font-size: 12px;">${i + 1}</td>
+                <td style="font-size: 13px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${safeName}">${acc.name}</td>
+                <td style="text-align: right; font-weight: 600; font-size: 13px; white-space: nowrap;">${fmt2(acc.amount)}</td>
+              </tr>`;
+          }).join('');
+          subtitleEl.textContent = `Top 5 of ${allAccounts.length} accounts`;
+        };
+
+        const entityName = getSelectedEntity();
+        const isAll = ['ALL', 'all entities', 'consolidated'].includes(String(entityName).trim().toLowerCase()) || entityName === 'ALL Entities' || entityName === 'ALL';
+
+        renderTopList(
+          document.getElementById('top-spend-list'),
+          document.getElementById('top-spend-subtitle'),
+          document.getElementById('top-spend-disabled-note'),
+          window.dashboardData?.spendClassification,
+          isAll
+        );
+        renderTopList(
+          document.getElementById('top-revenue-list'),
+          document.getElementById('top-revenue-subtitle'),
+          document.getElementById('top-revenue-disabled-note'),
+          window.dashboardData?.revenueClassification,
+          isAll
+        );
+      }
         
         // ========== UPDATE BALANCE SHEET & AGED CARDS ==========
       function updateSummaryCards() {
@@ -5865,7 +5973,9 @@
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
           ratios: 'Key Financial Ratios',
-          profile: 'Spend & Revenue Profile'
+          profile: 'Spend & Revenue Profile',
+          topSpend: 'All Spend Accounts (sorted by amount)',
+          topRevenue: 'All Revenue Accounts (sorted by amount)'
         };
 
         title.textContent = titles[type] || 'Detail View';
@@ -6687,6 +6797,98 @@
                   <code>/lib/classifier.js</code> and <code>/lib/revenue-classifier.js</code>.
                   See CLEAN_UP.md for known classification calls under review.
                 </div>
+              </div>
+            `;
+          })(),
+
+          topSpend: (() => {
+            const spend = window.dashboardData.spendClassification;
+            const fmt2 = (n) => '$' + Number(n || 0).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (!spend || !spend.detailed) {
+              return '<p style="color: var(--color-text-muted);">No spend classification data — pick a single entity to view top accounts.</p>';
+            }
+            const bucketLabel = {
+              IN: 'Procurement',
+              OUT_PERSONNEL: 'Personnel',
+              OUT_TAX_DEPN_INT: 'Tax/Depn/Int',
+              OUT_INTERCO: 'Interco',
+              OUT_GOVERNANCE: 'Governance',
+              GREY_DISTRIB: 'Distribution'
+            };
+            const allAccounts = [];
+            Object.entries(spend.detailed).forEach(([bucket, items]) => {
+              (items || []).forEach(item => allAccounts.push({ ...item, bucket }));
+            });
+            allAccounts.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+            const total = spend.totalExpenses || 0;
+            const rows = allAccounts.map((a, i) => {
+              const pct = total > 0 ? (Math.abs(a.amount) / total * 100).toFixed(1) : '0';
+              const safeName = (a.name || '').replace(/"/g, '&quot;');
+              return `
+                <tr>
+                  <td style="font-size: 12px; color: var(--color-text-muted); width: 24px;">${i + 1}</td>
+                  <td style="font-size: 12px;" title="${safeName}">${a.name}</td>
+                  <td style="font-size: 11px; color: var(--color-text-muted);">${bucketLabel[a.bucket] || a.bucket}</td>
+                  <td style="text-align: right; font-size: 12px;">${fmt2(a.amount)}</td>
+                  <td style="text-align: right; font-size: 11px; color: var(--color-text-muted);">${pct}%</td>
+                </tr>`;
+            }).join('');
+            return `
+              <div style="padding: 16px 0;">
+                <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">${fmt2(total)}</div>
+                <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 16px;">${allAccounts.length} accounts &#x2022; sorted by amount</div>
+                <table class="data-table">
+                  <thead><tr><th>#</th><th>Account</th><th>Bucket</th><th style="text-align:right">Amount</th><th style="text-align:right">%</th></tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>
+            `;
+          })(),
+
+          topRevenue: (() => {
+            const rev = window.dashboardData.revenueClassification;
+            const fmt2 = (n) => '$' + Number(n || 0).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (!rev || !rev.detailed) {
+              return '<p style="color: var(--color-text-muted);">No revenue classification data — pick a single entity to view top accounts.</p>';
+            }
+            const bucketLabel = {
+              CORE_OPERATIONS: 'Core',
+              MINING_AGREEMENTS: 'Royalty',
+              INVESTMENT_INCOME: 'Investment',
+              GRANT_INCOME: 'Grant',
+              RENTAL_INCOME: 'Rental',
+              INTERCO_REVENUE: 'Interco',
+              OTHER: 'Other'
+            };
+            const allAccounts = [];
+            Object.entries(rev.detailed).forEach(([bucket, items]) => {
+              (items || []).forEach(item => allAccounts.push({ ...item, bucket }));
+            });
+            allAccounts.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+            const total = rev.totalRevenue || 0;
+            // For percentage: use abs of total so net-negative buckets still display
+            // a meaningful proportion of the gross revenue movement.
+            const absTotal = Math.abs(total) || 1;
+            const rows = allAccounts.map((a, i) => {
+              const pct = (Math.abs(a.amount) / absTotal * 100).toFixed(1);
+              const safeName = (a.name || '').replace(/"/g, '&quot;');
+              return `
+                <tr>
+                  <td style="font-size: 12px; color: var(--color-text-muted); width: 24px;">${i + 1}</td>
+                  <td style="font-size: 12px;" title="${safeName}">${a.name}</td>
+                  <td style="font-size: 11px; color: var(--color-text-muted);">${bucketLabel[a.bucket] || a.bucket}</td>
+                  <td style="text-align: right; font-size: 12px;">${fmt2(a.amount)}</td>
+                  <td style="text-align: right; font-size: 11px; color: var(--color-text-muted);">${pct}%</td>
+                </tr>`;
+            }).join('');
+            return `
+              <div style="padding: 16px 0;">
+                <div style="font-size: 28px; font-weight: 600; color: var(--color-positive); margin-bottom: 4px;">${fmt2(total)}</div>
+                <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 16px;">${allAccounts.length} accounts &#x2022; sorted by amount</div>
+                <table class="data-table">
+                  <thead><tr><th>#</th><th>Account</th><th>Bucket</th><th style="text-align:right">Amount</th><th style="text-align:right">%</th></tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
               </div>
             `;
           })()
