@@ -1624,10 +1624,9 @@
 
       /* ========== CONTROLS BAR (Design System — page-tier interaction layer) ========== */
       .rac-controls-bar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        gap: var(--rac-space-6);
+        display: grid;
+        grid-template-columns: 1fr 1fr 5fr;  /* Entity | Period | Actions (5 buttons wide) */
+        column-gap: var(--rac-space-3);
         max-width: var(--rac-container-max);
         margin: 0 auto;
         padding: var(--rac-space-4) var(--rac-space-3) var(--rac-space-3);
@@ -1637,11 +1636,9 @@
       .rac-controls-group {
         display: flex;
         flex-direction: column;
+        justify-content: flex-end;
         gap: var(--rac-space-2);
         min-width: 0;
-      }
-      .rac-controls-group.actions {
-        flex: 1;
       }
       .rac-controls-label {
         font-family: var(--rac-font-mono);
@@ -1651,11 +1648,56 @@
         letter-spacing: var(--rac-tracking-mono-tight);
         color: var(--rac-ink-mute);
       }
+      /* The actions wrapper itself is a 5-column grid so each button takes 1/5 of the
+         actions area — same width regardless of label length. */
       .rac-controls-actions {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
         gap: var(--rac-space-3);
+        align-items: stretch;
+      }
+
+      /* Snapshot status — repositioned out of the action button row so it doesn't
+         disrupt grid alignment. Shown briefly during a snapshot run, otherwise hidden. */
+      .snapshot-status {
+        position: absolute;
+        font-size: var(--rac-text-xs);
+        color: var(--rac-ink-mute);
+        opacity: 0;
+        pointer-events: none;
+      }
+      .snapshot-status:not(:empty) {
+        position: static;
+        opacity: 1;
+        pointer-events: auto;
+        display: block;
+        text-align: center;
+        margin-top: var(--rac-space-1);
+        grid-column: 2;  /* sits under the Snapshot button column */
+      }
+      .snapshot-status.success { color: var(--color-positive, #2E7D32); }
+      .snapshot-status.error { color: var(--color-critical, #C62828); }
+
+      /* ===== 7-COLUMN EQUAL-WIDTH OVERRIDE =====
+         Make every control in the top bar fill its grid cell equally so the row
+         feels balanced corner-to-corner, like the KPI row below. We override the
+         min-width and inline-flex defaults from earlier rules. */
+      .rac-controls-bar .entity-picker-btn,
+      .rac-controls-bar .period-selector {
+        min-width: 0;
+        width: 100%;
+      }
+      .rac-controls-bar .entity-picker {
+        width: 100%;
+      }
+      .rac-controls-actions .btn-refresh,
+      .rac-controls-actions .btn-snapshot,
+      .rac-controls-actions .btn-finalize,
+      .rac-controls-actions .btn-reversal,
+      .rac-controls-actions .btn-dashboard {
+        display: flex;
+        justify-content: center;
+        width: 100%;
       }
 
       /* Canonical .btn-sm .btn-secondary treatment for the surviving legacy buttons */
