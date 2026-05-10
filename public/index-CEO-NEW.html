@@ -2783,12 +2783,13 @@
           </div>
 
           <!-- Top Customers -->
-          <div class="summary-card">
+          <div class="summary-card" onclick="openDrawer('customers')" style="cursor: pointer;">
             <div class="card-header">
               <div>
                 <div class="card-title">Top Customers</div>
                 <div class="card-subtitle" id="customers-period">FY26 Year to Date</div>
               </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
             </div>
             <div class="card-content">
               <div class="customer-list" id="customerList">
@@ -4668,16 +4669,37 @@
             customerTotals[name].orders += 1;
           });
 
-          const customers = Object.values(customerTotals)
+          // Sort all customers by value descending
+          const allCustomers = Object.values(customerTotals)
             .filter(c => c.value > 0)
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 5);
+            .sort((a, b) => b.value - a.value);
+
+          // Top 5 for the tile, top 20 stored for the drawer
+          const customers = allCustomers.slice(0, 5);
+          window.dashboardData = window.dashboardData || {};
+          window.dashboardData.topCustomers = {
+            top20: allCustomers.slice(0, 20),
+            allCount: allCustomers.length,
+            totalRevenue: allCustomers.reduce((s, c) => s + c.value, 0),
+            periodLabel: periodLbl,
+            dateFrom,
+            dateTo,
+          };
 
           if (!customerList) return;
           if (customers.length === 0) {
             customerList.innerHTML = '<div class="customer-item" style="color: var(--color-text-muted);">No invoiced revenue in this period</div>';
             return;
           }
+
+          // Compact dollar format for the narrow tile — full numbers in the drawer.
+          const fmtTile = (v) => {
+            const abs = Math.abs(v);
+            const sign = v < 0 ? '-' : '';
+            if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(2)}M`;
+            if (abs >= 1e3) return `${sign}$${Math.round(abs / 1e3).toLocaleString('en-AU')}k`;
+            return `${sign}$${Math.round(abs).toLocaleString('en-AU')}`;
+          };
 
           const maxValue = customers[0].value || 1;
           customerList.innerHTML = customers.map((c, i) => `
@@ -4690,7 +4712,7 @@
                   <div class="customer-bar-fill" style="width: ${(c.value / maxValue) * 100}%"></div>
                 </div>
               </div>
-              <span class="customer-value">$${c.value.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+              <span class="customer-value">${fmtTile(c.value)}</span>
             </div>
           `).join('');
         } catch (e) {
@@ -5474,6 +5496,7 @@
           inventory: 'Inventory Detail',
           production: 'Production Overview',
           expenses: 'Top Expenses',
+          customers: 'Top Customers by Period Revenue',
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
           ratios: 'Key Financial Ratios'
@@ -5934,6 +5957,84 @@
                       </div>
                     `;
                   }).join('')}
+                </div>
+              </div>
+            `;
+          })(),
+          customers: (() => {
+            const tc = window.dashboardData.topCustomers || {};
+            const top20 = tc.top20 || [];
+            const totalRev = tc.totalRevenue || 0;
+            const periodLbl = tc.periodLabel || 'Selected period';
+            const allCount = tc.allCount || top20.length;
+
+            if (top20.length === 0) {
+              return `
+                <div style="padding: 16px 0;">
+                  <div style="color: var(--color-text-muted);">No invoiced revenue in ${periodLbl}.</div>
+                  <div style="color: var(--color-text-muted); font-size: 12px; margin-top: 8px;">Try selecting a different period from the dropdown.</div>
+                </div>
+              `;
+            }
+
+            const maxValue = top20[0].value || 1;
+            return `
+              <div style="padding: 16px 0;">
+                <div style="font-size: 28px; font-weight: 600; color: var(--color-positive); margin-bottom: 4px;">
+                  $${Math.round(totalRev).toLocaleString('en-AU')}
+                </div>
+                <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
+                  Total invoiced revenue across ${allCount} customer${allCount !== 1 ? 's' : ''} &#x2022; ${periodLbl}
+                </div>
+
+                <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Top ${top20.length} Customers</h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Customer</th>
+                      <th style="text-align:center">Invoices</th>
+                      <th style="text-align:right">Revenue</th>
+                      <th style="text-align:right">% of Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${top20.map((c, i) => {
+                      const pct = totalRev > 0 ? ((c.value / totalRev) * 100).toFixed(1) : '0.0';
+                      const barPct = (c.value / maxValue) * 100;
+                      return `
+                        <tr>
+                          <td style="font-size:13px; color: var(--color-text-muted);">${i + 1}</td>
+                          <td style="font-size:13px;">${c.name}</td>
+                          <td style="text-align:center; font-size:13px; color: var(--color-text-muted);">${c.orders}</td>
+                          <td style="text-align:right; font-size:13px; font-weight: 600;">$${Math.round(c.value).toLocaleString('en-AU')}</td>
+                          <td style="text-align:right; font-size:13px; color: var(--color-text-muted);">${pct}%</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+
+                <div style="margin-top: 20px;">
+                  <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600;">Revenue Distribution</h3>
+                  ${top20.slice(0, 10).map((c, i) => {
+                    const pct = totalRev > 0 ? ((c.value / totalRev) * 100) : 0;
+                    return `
+                      <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                          <span style="font-size:13px;">${c.name}</span>
+                          <span style="font-size:13px; font-weight: 600;">$${Math.round(c.value).toLocaleString('en-AU')} <span style="color:var(--color-text-muted); font-weight: 400;">(${pct.toFixed(1)}%)</span></span>
+                        </div>
+                        <div style="height: 6px; background: rgba(0,0,0,0.05); border-radius: 3px; overflow: hidden;">
+                          <div style="height: 100%; width: ${pct}%; background: var(--color-positive); border-radius: 3px;"></div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+
+                <div style="margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.02); border-radius: 6px; font-size: 12px; color: var(--color-text-muted);">
+                  <strong>Note:</strong> Revenue figures are gross invoice totals (including tax) for invoices DATED in this period, regardless of payment status. Excludes voided and deleted invoices. Different from Aged Receivables which shows currently outstanding amounts.
                 </div>
               </div>
             `;
