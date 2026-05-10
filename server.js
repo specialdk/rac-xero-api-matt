@@ -6486,15 +6486,82 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `\n`;
     }
 
-    // Note what data was unavailable
+    // ── CONSOLIDATED DASHBOARD VIEW (frontend-supplied, ALL-entities case) ──
+    // When entity is "ALL", the per-org endpoints above 404 (they expect a single
+    // tenant). The frontend already has the data the user is looking at and ships
+    // it in context.consolidatedData. Principle: what the dashboard shows, the AI
+    // sees. We append it here so the AI has cash, balance, receivables aging,
+    // ratios, top customers and entity-level P&L for ALL.
+    const consolidated = context?.consolidatedData;
+    if (consolidated) {
+      financialContext += `\n━━━━ CONSOLIDATED DASHBOARD VIEW (ALL entities — what the user is looking at) ━━━━\n`;
+
+      if (consolidated.cash?.total) {
+        financialContext += `💰 CASH POSITION (today): ${consolidated.cash.total}\n`;
+        if (Array.isArray(consolidated.cash.bankAccounts) && consolidated.cash.bankAccounts.length > 0) {
+          consolidated.cash.bankAccounts.slice(0, 12).forEach(acc => {
+            const bal = Number(acc.balance || 0);
+            financialContext += `  • ${acc.name || acc.accountName || 'Account'}: $${bal.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+          });
+        }
+        financialContext += `\n`;
+      }
+
+      if (consolidated.balance && (consolidated.balance.totalAssets || consolidated.balance.totalEquity)) {
+        financialContext += `📊 BALANCE SHEET (period-end):\n`;
+        financialContext += `  Total Assets: ${consolidated.balance.totalAssets || 'n/a'}\n`;
+        financialContext += `  Total Liabilities: ${consolidated.balance.totalLiabilities || 'n/a'}\n`;
+        financialContext += `  Total Equity: ${consolidated.balance.totalEquity || 'n/a'}\n\n`;
+      }
+
+      if (consolidated.receivables && consolidated.receivables.total) {
+        financialContext += `📋 RECEIVABLES AGING (today, all entities consolidated):\n`;
+        financialContext += `  Total Outstanding: ${consolidated.receivables.total} across ${consolidated.receivables.invoiceCount || 0} invoices\n`;
+        financialContext += `  Current (0-30 days): ${consolidated.receivables.current}\n`;
+        financialContext += `  31-60 days: ${consolidated.receivables.days31_60}\n`;
+        financialContext += `  61-90 days: ${consolidated.receivables.days61_90}\n`;
+        financialContext += `  90+ days: ${consolidated.receivables.days90plus}\n`;
+        financialContext += `  Use these for any aging / collection-risk question — do NOT say receivables data is unavailable.\n\n`;
+      }
+
+      if (consolidated.ratios) {
+        financialContext += `📐 FINANCIAL RATIOS — USE THESE EXACT VALUES (from dashboard):\n`;
+        financialContext += `  Current Ratio: ${consolidated.ratios.currentRatio || 'n/a'}\n`;
+        financialContext += `  Gross Margin: ${consolidated.ratios.grossMargin || 'n/a'}\n`;
+        financialContext += `  Net Profit Margin: ${consolidated.ratios.netProfitMargin || 'n/a'}\n`;
+        financialContext += `  Debt to Equity: ${consolidated.ratios.debtToEquity || 'n/a'}\n\n`;
+      }
+
+      if (Array.isArray(consolidated.topCustomers) && consolidated.topCustomers.length > 0) {
+        financialContext += `👥 TOP CUSTOMERS BY PERIOD REVENUE (consolidated):\n`;
+        consolidated.topCustomers.slice(0, 5).forEach((c, i) => {
+          financialContext += `  ${i + 1}. ${c.name}: ${c.value}\n`;
+        });
+        financialContext += `\n`;
+      }
+
+      if (consolidated.pl && Array.isArray(consolidated.pl.entityBreakdown) && consolidated.pl.entityBreakdown.length > 0) {
+        financialContext += `🏢 ENTITY P&L BREAKDOWN (current period):\n`;
+        consolidated.pl.entityBreakdown.forEach(e => {
+          const name = e.name || e.entity || 'Unknown';
+          const rev = Number(e.revenue || 0);
+          const np = Number(e.netProfit || 0);
+          financialContext += `  ${name}: revenue $${rev.toLocaleString("en-AU", { minimumFractionDigits: 2 })}, net profit $${np.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+        });
+        financialContext += `\n`;
+      }
+    }
+
+    // Note what data was unavailable. consolidatedData (above) acts as a fallback
+    // for the ALL-entity case where the per-org endpoints return 404.
     const unavailable = [];
-    if (!cashData || cashData.error) unavailable.push("cash position");
-    if (!plData || plData.error || !plData.summary) unavailable.push("P&L");
-    if (!invoicesData || invoicesData.error) unavailable.push("invoices");
+    if ((!cashData || cashData.error) && !consolidated?.cash?.total) unavailable.push("cash position");
+    if ((!plData || plData.error || !plData.summary) && !consolidated?.pl) unavailable.push("P&L");
+    if ((!invoicesData || invoicesData.error) && !consolidated?.receivables?.total) unavailable.push("receivables");
     if (!expenseData || expenseData.error || !expenseData.analysis) unavailable.push("expenses");
-    if (!ratiosData || ratiosData.error || !ratiosData.ratios) unavailable.push("financial ratios");
+    if ((!ratiosData || ratiosData.error || !ratiosData.ratios) && !consolidated?.ratios) unavailable.push("financial ratios");
     if (unavailable.length > 0) {
-      financialContext += `âš ï¸ Data not available: ${unavailable.join(", ")}\n`;
+      financialContext += `⚠️ Data not available: ${unavailable.join(", ")}\n`;
     }
 
         // Reversal adjustments context
