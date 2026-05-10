@@ -1846,8 +1846,15 @@ app.post("/api/spend-classification", async (req, res) => {
     }
 
     const expenseData = await upstream.json();
-    // expenseData shape: { totalExpenses, expenseCategories: [{accountName, amount, ...}], ... }
-    const categories = expenseData.expenseCategories || [];
+    // Real shape (verified): { tenantId, tenantName, period, analysis, generatedAt }
+    // Where analysis = { totalExpenses, expenseCategories: [{accountName, amount, ...}], topExpenses, monthlyAverage }
+    // Earlier draft assumed top-level expenseCategories — defensive read covers both.
+    const categories = expenseData.analysis?.expenseCategories
+      || expenseData.expenseCategories
+      || [];
+    const reportedTotal = expenseData.analysis?.totalExpenses
+      ?? expenseData.totalExpenses
+      ?? null;
 
     // Run the classifier
     const classification = summariseSpend(categories);
@@ -1858,7 +1865,7 @@ app.post("/api/spend-classification", async (req, res) => {
       period: { date, periodMonths: periodMonths || 12 },
       classification,
       // Round-trip the upstream total for sanity-check / reconciliation
-      reportedTotalExpenses: expenseData.totalExpenses,
+      reportedTotalExpenses: reportedTotal,
       // Account count by bucket — handy for the UI
       bucketCounts: Object.fromEntries(
         Object.entries(classification.detailed || {}).map(([k, v]) => [k, v.length])
@@ -1866,8 +1873,8 @@ app.post("/api/spend-classification", async (req, res) => {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Spend classification API error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Spend classification API error:", error?.stack || error);
+    res.status(500).json({ error: error.message, stack: error?.stack });
   }
 });
 
@@ -1919,7 +1926,9 @@ app.post("/api/revenue-classification", async (req, res) => {
     }
 
     const plData = await upstream.json();
-    // plData shape: { summary: { revenueAccounts: [{name, amount}], totalRevenue, ... }, ... }
+    // Real shape (verified): { tenantId, tenantName, period, summary, generatedAt }
+    // Where summary = { totalRevenue, totalCOGS, grossProfit, totalExpenses, netProfit,
+    //                    revenueAccounts: [{name, amount}], cogsAccounts, expenseAccounts }
     const revenueAccounts = plData?.summary?.revenueAccounts || [];
 
     // Run the classifier
@@ -1938,8 +1947,8 @@ app.post("/api/revenue-classification", async (req, res) => {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Revenue classification API error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Revenue classification API error:", error?.stack || error);
+    res.status(500).json({ error: error.message, stack: error?.stack });
   }
 });
 
