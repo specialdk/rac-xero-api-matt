@@ -3674,7 +3674,7 @@
         // Load all data
         await Promise.all([
           loadCashPosition(),
-          loadTrialBalance(),
+          loadTrialBalance(quarterInfo),
           loadProfitLoss(quarterInfo),
           loadAgedReceivables(),
           loadInventory(),
@@ -3812,11 +3812,13 @@
               totalReceivables += invData.reduce((sum, inv) => sum + (inv.amountDue || 0), 0);
             }
 
-            // Trial Balance (for Balance Sheet)
+            // Trial Balance (for Balance Sheet) — pass period end date for period-aware view
+            const tbBody = { organizationName: entity };
+            if (quarterInfo && quarterInfo.endDate) tbBody.reportDate = quarterInfo.endDate;
             const tbResp = await fetch(`${API_BASE}/api/trial-balance`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ organizationName: entity }),
+              body: JSON.stringify(tbBody),
             });
             const tbData = await tbResp.json();
             const entityAssets = tbData.trialBalance?.totals?.totalAssets || 0;
@@ -3904,13 +3906,20 @@
           totalLiabilities: totalLiabilities,
           totalEquity: totalEquity,
           entityBreakdown: allEntityBalance,
-          isConsolidated: true
+          isConsolidated: true,
+          asAtDate: (quarterInfo && quarterInfo.endDate) ? quarterInfo.endDate : null,
         };
 
         // Update Balance Sheet card
         document.getElementById('bs-assets').textContent = fmtKpiAuto(totalAssets);
         document.getElementById('bs-liabilities').textContent = fmtKpiAuto(totalLiabilities);
         document.getElementById('bs-equity').textContent = fmtKpiAuto(totalEquity);
+
+        // BS subtitle reflects the as-at date
+        const bsPeriodEl = document.getElementById('bs-period');
+        if (bsPeriodEl) {
+          bsPeriodEl.textContent = formatBalanceSheetSubtitle(window.dashboardData.balance.asAtDate);
+        }
 
         // Update P&L Summary card
         document.getElementById("pl-revenue").textContent = fmtKpiAuto(totalRevenue);
@@ -3973,15 +3982,23 @@
       }
 
       // ========== TRIAL BALANCE ==========
-      async function loadTrialBalance() {
+      async function loadTrialBalance(quarterInfo) {
         try {
+          // Pass period end date so the Balance Sheet reflects period-end position,
+          // not "today". For Last Month view, this means Apr 30 balances; for Q1
+          // (completed), Sep 30 balances. For YTD or current month MTD, today's date.
+          // If no quarterInfo passed, defaults to today (server-side).
+          const reportDate = (quarterInfo && quarterInfo.endDate) ? quarterInfo.endDate : null;
+          const body = { organizationName: getSelectedEntity() };
+          if (reportDate) body.reportDate = reportDate;
+
           const response = await fetch(`${API_BASE}/api/trial-balance`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ organizationName: getSelectedEntity() }),
+            body: JSON.stringify(body),
           });
           const data = await response.json();
-          
+
           // Store totals plus account arrays for sidecard detail
           window.dashboardData.balance = {
             totalAssets: data.trialBalance?.totals?.totalAssets || 0,
@@ -3989,9 +4006,10 @@
             totalEquity: data.trialBalance?.totals?.totalEquity || 0,
             assets: data.trialBalance?.assets || [],
             liabilities: data.trialBalance?.liabilities || [],
-            equity: data.trialBalance?.equity || []
+            equity: data.trialBalance?.equity || [],
+            asAtDate: reportDate,  // Stored so subtitle can show "as at Apr 30"
           };
-          
+
         } catch (error) {
           console.error("Error loading trial balance:", error);
         }
@@ -4767,6 +4785,12 @@
         document.getElementById('bs-assets').textContent = fmtKpiAuto((balance.totalAssets || 0));
         document.getElementById('bs-liabilities').textContent = fmtKpiAuto((balance.totalLiabilities || 0));
         document.getElementById('bs-equity').textContent = fmtKpiAuto((balance.totalEquity || 0));
+
+        // BS subtitle reflects the as-at date
+        const bsPeriodEl = document.getElementById('bs-period');
+        if (bsPeriodEl) {
+          bsPeriodEl.textContent = formatBalanceSheetSubtitle(balance.asAtDate);
+        }
 
         // Key Ratios card
         const pl = window.dashboardData.pl || {};
@@ -6417,6 +6441,24 @@
           }
         }
         return periodCode; // Q1-Q4, YTD stay as-is
+      }
+
+      // Format the Balance Sheet subtitle to reflect the as-at date.
+      // BS is always a point-in-time snapshot — the question is which point.
+      // Returns "Current position (as at today)" when no date specified or date is today,
+      // otherwise "Position as at <Mon DD, YYYY>".
+      function formatBalanceSheetSubtitle(asAtDate) {
+        if (!asAtDate) return 'Current position (as at today)';
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (asAtDate === todayStr) return 'Current position (as at today)';
+        try {
+          const d = new Date(asAtDate);
+          if (isNaN(d.getTime())) return 'Current position (as at today)';
+          const dateStr = d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+          return `Position as at ${dateStr}`;
+        } catch (e) {
+          return 'Current position (as at today)';
+        }
       }
 
       // Updates the period-bearing KPI card labels to show the selected period.
