@@ -6430,25 +6430,95 @@ app.post("/api/ai-chat", async (req, res) => {
       financialContext += `\n`;
     }
 
-    // Outstanding Invoices
+    // ── OUTSTANDING INVOICES — aging + customer concentration (single-entity) ──
+    // The invoices payload includes dueDate, amountDue, contact for every invoice.
+    // Previously we only shipped the top 5 amounts to the AI which made aging
+    // questions impossible to answer. Now we compute the four aging buckets
+    // (mirroring the dashboard logic at the kpi-receivables card) and aggregate
+    // by customer — both top-by-amount AND slowest-paying — so the AI can speak
+    // to concentration AND collection risk.
     if (invoicesData && !invoicesData.error) {
       const invoices = invoicesData.invoices || invoicesData;
       if (Array.isArray(invoices) && invoices.length > 0) {
-        const totalOwed = invoices.reduce((sum, inv) => sum + (inv.amountDue || inv.AmountDue || 0), 0);
-        financialContext += `ðŸ“‹ OUTSTANDING INVOICES:\n`;
-        financialContext += `  Total Outstanding: $${totalOwed.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
-        financialContext += `  Number of Invoices: ${invoices.length}\n`;
-        // Show top 5 by amount
-        const sorted = [...invoices].sort((a, b) => (b.amountDue || b.AmountDue || 0) - (a.amountDue || a.AmountDue || 0));
-        financialContext += `  Largest Outstanding:\n`;
-        sorted.slice(0, 5).forEach((inv) => {
+        const today = new Date();
+        const fmt$ = (n) => `$${Number(n || 0).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // Bucket each invoice by days-overdue (matches frontend: today - dueDate).
+        // Negative daysOverdue (not yet due) lands in the current bucket — correct.
+        let bCurrent = 0, b31_60 = 0, b61_90 = 0, b90plus = 0;
+        let cCurrent = 0, c31_60 = 0, c61_90 = 0, c90plus = 0;
+        const byCustomer = {};   // name -> { amount, count, oldestDays, oldestAmount }
+
+        invoices.forEach(inv => {
+          const amount = Number(inv.amountDue || inv.AmountDue || 0);
+          const dueRaw = inv.dueDate || inv.DueDate;
+          const dueDate = dueRaw ? new Date(dueRaw) : null;
+          const daysOverdue = dueDate && !isNaN(dueDate)
+            ? Math.floor((today - dueDate) / 86400000)
+            : 0;
+
+          if (daysOverdue <= 30)      { bCurrent += amount; cCurrent++; }
+          else if (daysOverdue <= 60) { b31_60   += amount; c31_60++; }
+          else if (daysOverdue <= 90) { b61_90   += amount; c61_90++; }
+          else                        { b90plus  += amount; c90plus++; }
+
           const name = inv.contact || inv.Contact?.Name || "Unknown";
-          const amount = inv.amountDue || inv.AmountDue || 0;
-          financialContext += `    - ${name}: $${amount.toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+          if (!byCustomer[name]) byCustomer[name] = { amount: 0, count: 0, oldestDays: -Infinity, oldestAmount: 0 };
+          byCustomer[name].amount += amount;
+          byCustomer[name].count++;
+          if (daysOverdue > byCustomer[name].oldestDays) {
+            byCustomer[name].oldestDays = daysOverdue;
+            byCustomer[name].oldestAmount = amount;
+          }
         });
+
+        const total = bCurrent + b31_60 + b61_90 + b90plus;
+        const overdue60plus = b61_90 + b90plus;
+        const overdue60plusCount = c61_90 + c90plus;
+        const pct = (n) => total > 0 ? `${(n / total * 100).toFixed(1)}%` : '0%';
+
+        financialContext += `📋 OUTSTANDING INVOICES — full detail (use these numbers, do NOT say data is unavailable):\n`;
+        financialContext += `  Total Outstanding: ${fmt$(total)} across ${invoices.length} invoices\n`;
+        financialContext += `  Aging buckets (by daysOverdue from dueDate):\n`;
+        financialContext += `    • Current (≤30 days): ${fmt$(bCurrent)} — ${cCurrent} invoices (${pct(bCurrent)})\n`;
+        financialContext += `    • 31–60 days:         ${fmt$(b31_60)} — ${c31_60} invoices (${pct(b31_60)})\n`;
+        financialContext += `    • 61–90 days:         ${fmt$(b61_90)} — ${c61_90} invoices (${pct(b61_90)})\n`;
+        financialContext += `    • 90+ days:           ${fmt$(b90plus)} — ${c90plus} invoices (${pct(b90plus)})\n`;
+        financialContext += `  Over 60 days (collection-risk): ${fmt$(overdue60plus)} across ${overdue60plusCount} invoices (${pct(overdue60plus)} of total)\n\n`;
+
+        // Top customers by total outstanding
+        const customersByAmount = Object.entries(byCustomer)
+          .sort((a, b) => b[1].amount - a[1].amount);
+        const topAmount = customersByAmount.slice(0, 8);
+        financialContext += `  Top customers by outstanding amount:\n`;
+        topAmount.forEach(([name, d]) => {
+          financialContext += `    • ${name}: ${fmt$(d.amount)} (${d.count} invoice${d.count === 1 ? '' : 's'}, oldest ${d.oldestDays} days overdue)\n`;
+        });
+
+        // Concentration: how much of total is in the top 3
+        if (customersByAmount.length >= 3) {
+          const top3Total = customersByAmount.slice(0, 3).reduce((s, [, d]) => s + d.amount, 0);
+          financialContext += `  Concentration: top 3 customers = ${fmt$(top3Total)} (${pct(top3Total)} of total receivables)\n`;
+        }
+
+        // Slowest payers — customers with at least one invoice over 60 days,
+        // ranked by oldestDays. Distinct from "biggest" — answers "who is slow".
+        const slowest = Object.entries(byCustomer)
+          .filter(([, d]) => d.oldestDays > 60)
+          .sort((a, b) => b[1].oldestDays - a[1].oldestDays)
+          .slice(0, 5);
+        if (slowest.length > 0) {
+          financialContext += `\n  Slowest payers (oldest invoice over 60 days, ranked by age):\n`;
+          slowest.forEach(([name, d]) => {
+            financialContext += `    • ${name}: oldest invoice ${d.oldestDays} days overdue, ${fmt$(d.amount)} total outstanding across ${d.count} invoice${d.count === 1 ? '' : 's'}\n`;
+          });
+        } else {
+          financialContext += `\n  No customers have invoices over 60 days overdue — collection profile is healthy.\n`;
+        }
         financialContext += `\n`;
       }
     }
+
 
     // Expense Analysis - data is nested under expenseData.analysis
     if (expenseData && !expenseData.error && expenseData.analysis) {
@@ -6715,7 +6785,8 @@ RESPONSE GUIDELINES:
 - Use Australian dollar formatting ($X,XXX)
 - Keep responses to 2-3 short paragraphs max
 - Highlight key insights, trends, risks and opportunities
-- If data for a specific question isn't available, say so clearly and suggest what to check
+- ANSWER FRAMING: When some data dimensions are present and others missing, LEAD WITH WHAT YOU HAVE. Do NOT open the response with "I don't have X" or "data is unavailable". Answer the parts you can answer using the data above (especially the OUTSTANDING INVOICES aging breakdown, customer concentration, and slowest payers). If a specific dimension is genuinely absent, mention it briefly at the END as a caveat — never as the opener.
+- Do NOT contradict yourself: if you list specific aging buckets, customer amounts, or slowest payers from the data, do NOT also say "I don't have aging data". The data is right above. Use it.
 - Bold key numbers using **$amount** markdown format
 - Compare figures where relevant (e.g. revenue vs expenses, margins)`;
 
