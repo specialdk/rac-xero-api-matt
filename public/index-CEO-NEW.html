@@ -4870,7 +4870,7 @@
             <div class="customer-item">
               <span class="customer-rank">${i + 1}</span>
               <div class="customer-info">
-                <div class="customer-name">${c.name}</div>
+                <div class="customer-name" title="${(c.name || '').replace(/"/g, '&quot;')}">${c.name}</div>
                 <div class="customer-orders">${c.orders} invoice${c.orders !== 1 ? 's' : ''}</div>
                 <div class="customer-bar">
                   <div class="customer-bar-fill" style="width: ${(c.value / maxValue) * 100}%"></div>
@@ -6167,10 +6167,11 @@
                     ${top20.map((c, i) => {
                       const pct = totalRev > 0 ? ((c.value / totalRev) * 100).toFixed(1) : '0.0';
                       const barPct = (c.value / maxValue) * 100;
+                      const safeName = (c.name || '').replace(/"/g, '&quot;');
                       return `
                         <tr>
                           <td style="font-size:13px; color: var(--color-text-muted);">${i + 1}</td>
-                          <td style="font-size:13px;">${c.name}</td>
+                          <td style="font-size:13px;" title="${safeName}">${c.name}</td>
                           <td style="text-align:center; font-size:13px; color: var(--color-text-muted);">${c.orders}</td>
                           <td style="text-align:right; font-size:13px; font-weight: 600;">$${Math.round(c.value).toLocaleString('en-AU')}</td>
                           <td style="text-align:right; font-size:13px; color: var(--color-text-muted);">${pct}%</td>
@@ -6231,7 +6232,7 @@
                       .slice(0, 10)
                       .map(([name, data]) => `
                         <tr>
-                          <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</td>
+                          <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${(name || '').replace(/"/g, '&quot;')}">${name}</td>
                           <td style="text-align:center; color: var(--color-text-muted);">${data.count}</td>
                           <td style="text-align:right; font-weight: 600;">$${data.amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         </tr>
