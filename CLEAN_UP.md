@@ -97,4 +97,36 @@ After deployment, testing showed the bold thesis sentence rule lands consistentl
 
 ---
 
+## Tier 5 — operational unit economics (next horizon)
+
+### 7. Sub-account drill-down — Salaries & Wages, Cost-Materials, etc.
+**Status:** Open question. Right question, no code yet.
+
+**Detail:** Per session 10 May 2026, the AI was asked for a Salaries & Wages breakdown for Property ($848K FY26 YTD). The honest answer was correct: the Xero P&L API rolls Salaries & Wages up to a single line. To go below that line we need a different data source. Same applies to other large rolled-up accounts (Cost-Materials, Motor Vehicle Expenses, etc.).
+
+**Three possible paths, ranked by richness:**
+
+**(A) Bank/journal transaction detail.** Augment the P&L with the underlying transactions for each account. Easy. Gives cadence (e.g. "26 fortnightly pay runs averaging $32.6K") but no employee/pay-item breakdown. Useful for "is anything anomalous in any single month" but not for unit economics.
+
+**(B) Xero Payroll API.** If RAC uses Xero Payroll (subscription tier separate from Xero accounting), the payroll API exposes employees, pay runs, leave, super, allowances. Possible cuts: by pay item (Base/Overtime/Allowances/Leave/Bonus), by employee (with optional name redaction), by department or cost centre if Xero Payroll tracking is configured. The richest standard answer.
+
+**(C) Xero Payroll tracking categories.** If RAC configured Payroll tracking categories (Department: Trades/Admin/Field; or Cost Centre: DIPL Carpentry/Plumbing/Electrical), the breakdown would be pre-coded. RAC accounting tracking categories aren't in use (verified 10 May 2026 against Property and Mining invoice line items). Payroll tracking is a separate setup — needs Matt confirmation.
+
+**Adjacent stream — Paul's time-tracking app concept.** Paul (incoming CEO) raised the idea of a time-tracking app where staff "code their day to jobs" so Wages number gets job/contract attribution. That's Option B+C combined plus a fresh ingestion layer. Strategic-grade work, not next sprint.
+
+**Open questions for Matt:**
+- Does RAC use Xero Payroll, or a separate payroll system?
+- Are tracking categories configured in Xero Payroll if so?
+- What's the right granularity for leadership reporting — by pay item? by department? by job/contract? all three?
+
+**Open questions for Rhian/Paul:**
+- If we could show the wages breakdown, what cuts would actually help decisions? (i.e. which dimension matters most — by pay item, by department, by job?)
+- Same question for Cost-Materials and other large rolled-up accounts.
+
+**Plan:** Discuss with Rhian/Paul during dashboard review (week of 11 May). Confirm Xero Payroll arrangement with Matt. Then choose A vs B vs C based on what the conversation surfaces. Likely B if Xero Payroll is in use; A as a tactical fill-in either way.
+
+**Date logged:** 10 May 2026
+
+---
+
 (Items added below as session continues)
