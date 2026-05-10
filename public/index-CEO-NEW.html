@@ -1680,12 +1680,13 @@
 
       /* ===== 7-COLUMN EQUAL-WIDTH OVERRIDE =====
          Make every control in the top bar fill its grid cell equally so the row
-         feels balanced corner-to-corner, like the KPI row below. We override the
-         min-width and inline-flex defaults from earlier rules. */
+         feels balanced corner-to-corner, like the KPI row below. We use !important
+         to defeat the original min-width: 220-240px rules that come later in the
+         cascade and would otherwise force the dropdowns wider than each button. */
       .rac-controls-bar .entity-picker-btn,
       .rac-controls-bar .period-selector {
-        min-width: 0;
-        width: 100%;
+        min-width: 0 !important;
+        width: 100% !important;
       }
       .rac-controls-bar .entity-picker {
         width: 100%;
