@@ -3004,10 +3004,14 @@
           option.classList.add('selected');
           
           updateEntityPickerLabel();
-          
+
           // Close dropdown after selection
           picker.classList.remove('open');
-          
+
+          // Update AI panel scope immediately so it reflects the new entity
+          // without waiting for loadDashboard's data fetches to complete.
+          renderAIPanel();
+
           loadDashboard();
         }
       });
@@ -7030,8 +7034,13 @@
         if (periodSel) periodSel.value = currentPeriod;
 
         // Refresh draft count when period changes — different period may have different drafts
+        // Also re-render AI panel immediately so the scope label tracks the period selection
+        // without waiting for the (slower) loadDashboard() data fetches to complete.
         if (periodSel) {
-          periodSel.addEventListener('change', () => loadDraftMonths());
+          periodSel.addEventListener('change', () => {
+            loadDraftMonths();
+            renderAIPanel();
+          });
         }
 
         // Initial render of the AI panel (empty state) so it appears before data loads
