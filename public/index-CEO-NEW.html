@@ -4590,53 +4590,115 @@
       }
 
       // ========== TOP CUSTOMERS ==========
+      // Shows the top 5 customers by REVENUE INVOICED in the selected period.
+      // This is fundamentally different from the Aged Receivables drawer (which shows
+      // who currently OWES money). Period revenue answers "who's our biggest customer
+      // this period?" — the executive question.
+      //
+      // Data source: /api/invoices-detail with date range filter. Returns ACCREC
+      // invoices (sales) regardless of paid/unpaid status. We sum the total field
+      // (subtotal + tax) which is the gross sale value.
+      //
+      // For ALL view: fan out across 7 entities in parallel, aggregate by contact name.
       async function loadTopCustomers(quarterInfo) {
-        // Top Customers shows the largest CURRENT OUTSTANDING receivables —
-        // a point-in-time view, independent of which period is selected.
-        // Subtitle reflects that to avoid implying period filtering.
-        document.getElementById("customers-period").textContent = 'Currently outstanding';
-        
-        // Get invoices from receivables data
-        const invoices = window.dashboardData.receivables?.invoices || [];
-        
-        // Group by customer name and sum amounts
-        const customerTotals = {};
-        invoices.forEach(inv => {
-          const name = inv.contact || inv.contactName || 'Unknown';
-          if (!customerTotals[name]) {
-            customerTotals[name] = { name, value: 0, orders: 0 };
-          }
-          customerTotals[name].value += inv.amountDue || 0;
-          customerTotals[name].orders += 1;
-        });
-
-        // Convert to array, sort by value descending, take top 5
-        const customers = Object.values(customerTotals)
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 5);
-
-        const maxValue = customers[0]?.value || 1;
-
         const customerList = document.getElementById("customerList");
-        
-        if (customers.length === 0) {
-          customerList.innerHTML = '<div class="customer-item" style="color: var(--color-text-muted);">No outstanding receivables</div>';
+        const periodEl = document.getElementById("customers-period");
+
+        // Update subtitle to reflect period scope
+        const periodLbl = (quarterInfo && quarterInfo.periodLabel) ||
+                          periodDisplayLabel(document.getElementById('periodSelector')?.value || '');
+        if (periodEl) periodEl.textContent = periodLbl || 'Selected period';
+
+        // Show loading placeholder
+        if (customerList) {
+          customerList.innerHTML = '<div class="customer-item" style="color: var(--color-text-muted);">Loading customers…</div>';
+        }
+
+        // Need date range to query
+        if (!quarterInfo || !quarterInfo.startDate || !quarterInfo.endDate) {
+          if (customerList) customerList.innerHTML = '<div class="customer-item" style="color: var(--color-text-muted);">No period selected</div>';
           return;
         }
 
-        customerList.innerHTML = customers.map((c, i) => `
-          <div class="customer-item">
-            <span class="customer-rank">${i + 1}</span>
-            <div class="customer-info">
-              <div class="customer-name">${c.name}</div>
-              <div class="customer-orders">${c.orders} invoice${c.orders !== 1 ? 's' : ''}</div>
-              <div class="customer-bar">
-                <div class="customer-bar-fill" style="width: ${(c.value / maxValue) * 100}%"></div>
+        const dateFrom = quarterInfo.startDate;
+        const dateTo = quarterInfo.endDate;
+        const selected = getSelectedEntity();
+        const isConsolidated = selected === 'ALL';
+        const entities = isConsolidated
+          ? ['Mining', 'Aboriginal Corporation', 'Enterprises', 'Property', 'Ngarrkuwuy', 'Invest', 'Marrin']
+          : [selected];
+
+        // Fan out — fetch invoices for each entity in parallel
+        const fetchOne = async (entityName) => {
+          try {
+            const resp = await fetch(`${API_BASE}/api/invoices-detail`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                organizationName: entityName,
+                dateFrom,
+                dateTo,
+                // No status filter — include paid + unpaid; we want gross revenue
+              }),
+            });
+            if (!resp.ok) return [];
+            const data = await resp.json();
+            return data.invoices || [];
+          } catch (e) {
+            console.warn(`[topCustomers] ${entityName} fetch failed:`, e);
+            return [];
+          }
+        };
+
+        try {
+          const allBatches = await Promise.all(entities.map(fetchOne));
+          const allInvoices = allBatches.flat();
+
+          // Aggregate by contact (customer) name; sum gross total per customer
+          // Skip VOIDED and DELETED — they shouldn't count as revenue
+          const customerTotals = {};
+          allInvoices.forEach(inv => {
+            const status = (inv.status || '').toUpperCase();
+            if (status === 'VOIDED' || status === 'DELETED') return;
+            const name = inv.contact || 'Unknown';
+            if (!customerTotals[name]) {
+              customerTotals[name] = { name, value: 0, orders: 0 };
+            }
+            customerTotals[name].value += parseFloat(inv.total) || 0;
+            customerTotals[name].orders += 1;
+          });
+
+          const customers = Object.values(customerTotals)
+            .filter(c => c.value > 0)
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5);
+
+          if (!customerList) return;
+          if (customers.length === 0) {
+            customerList.innerHTML = '<div class="customer-item" style="color: var(--color-text-muted);">No invoiced revenue in this period</div>';
+            return;
+          }
+
+          const maxValue = customers[0].value || 1;
+          customerList.innerHTML = customers.map((c, i) => `
+            <div class="customer-item">
+              <span class="customer-rank">${i + 1}</span>
+              <div class="customer-info">
+                <div class="customer-name">${c.name}</div>
+                <div class="customer-orders">${c.orders} invoice${c.orders !== 1 ? 's' : ''}</div>
+                <div class="customer-bar">
+                  <div class="customer-bar-fill" style="width: ${(c.value / maxValue) * 100}%"></div>
+                </div>
               </div>
+              <span class="customer-value">$${c.value.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
             </div>
-            <span class="customer-value">$${c.value.toLocaleString()}</span>
-          </div>
-        `).join("");
+          `).join('');
+        } catch (e) {
+          console.error('[topCustomers] aggregation failed:', e);
+          if (customerList) {
+            customerList.innerHTML = '<div class="customer-item" style="color: var(--color-text-muted);">Failed to load customer revenue</div>';
+          }
+        }
       }
 
       // ========== FINANCIAL RATIOS ==========
