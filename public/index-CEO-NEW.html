@@ -1682,7 +1682,19 @@
          Make every control in the top bar fill its grid cell equally so the row
          feels balanced corner-to-corner, like the KPI row below. We use !important
          to defeat the original min-width: 220-240px rules that come later in the
-         cascade and would otherwise force the dropdowns wider than each button. */
+         cascade and would otherwise force the dropdowns wider than each button.
+         Also enforce a uniform min-height so the native <select> (Period) renders
+         the same height as the custom button and dropdown trigger. */
+      .rac-controls-bar .entity-picker-btn,
+      .rac-controls-bar .period-selector,
+      .rac-controls-actions .btn-refresh,
+      .rac-controls-actions .btn-snapshot,
+      .rac-controls-actions .btn-finalize,
+      .rac-controls-actions .btn-reversal,
+      .rac-controls-actions .btn-dashboard {
+        min-height: 38px;  /* uniform height across all 7 controls */
+        box-sizing: border-box;
+      }
       .rac-controls-bar .entity-picker-btn,
       .rac-controls-bar .period-selector {
         min-width: 0 !important;
@@ -1698,6 +1710,7 @@
       .rac-controls-actions .btn-dashboard {
         display: flex;
         justify-content: center;
+        align-items: center;
         width: 100%;
       }
 
