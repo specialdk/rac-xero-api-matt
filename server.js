@@ -1905,24 +1905,20 @@ app.post("/api/revenue-classification", async (req, res) => {
       }
     }
 
-    // Call the existing profit-loss-summary endpoint to get revenue data
-    const upstreamBody = {
-      organizationName,
-      tenantId: actualTenantId,
-      date,
-      periodMonths: periodMonths || 12,
-    };
+    // Call the existing profit-loss GET endpoint directly (same pattern as
+    // spend → expense-analysis). Going through the POST wrapper introduced an
+    // extra HTTP hop that 404'd intermittently under concurrent token state.
+    const params = new URLSearchParams();
+    if (date) params.append("date", date);
+    params.append("periodMonths", (periodMonths || 12).toString());
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+
     const upstream = await fetch(
-      `${req.protocol}://${req.get("host")}/api/profit-loss-summary`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(upstreamBody),
-      }
+      `${req.protocol}://${req.get("host")}/api/profit-loss/${actualTenantId}${queryString}`
     );
 
     if (!upstream.ok) {
-      throw new Error(`Upstream profit-loss-summary failed: ${upstream.status}`);
+      throw new Error(`Upstream profit-loss failed: ${upstream.status}`);
     }
 
     const plData = await upstream.json();
