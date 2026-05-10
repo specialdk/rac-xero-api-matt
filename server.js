@@ -13,6 +13,12 @@ import { Pool } from "pg";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 
+// Spend & Revenue classifier modules — see /lib/classifier.js and
+// /lib/revenue-classifier.js. Imported as namespaces with renamed
+// summarise to avoid collision between the two modules' summarise().
+import { summarise as summariseSpend } from "./lib/classifier.js";
+import { summariseRevenue } from "./lib/revenue-classifier.js";
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1774,6 +1780,165 @@ app.post("/api/expense-analysis", async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Expense analysis API error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// SPEND & REVENUE CLASSIFICATION endpoints
+//
+// These bucket Xero accounts into meaningful categories beyond the chart
+// of accounts — built on classifier modules in /lib/. They pipe through
+// existing expense-analysis and profit-loss-summary endpoints, then run
+// the classifiers, so they don't make their own Xero API calls.
+//
+// classifier.js (spend):     IN, GREY_DISTRIB, OUT_PERSONNEL,
+//                            OUT_TAX_DEPN_INT, OUT_INTERCO, OUT_GOVERNANCE
+// revenue-classifier.js:     CORE_OPERATIONS, MINING_AGREEMENTS,
+//                            INVESTMENT_INCOME, GRANT_INCOME, RENTAL_INCOME,
+//                            INTERCO_REVENUE, OTHER
+//
+// Single-entity only for v1. ALL/consolidated would need a fan-out
+// across all 7 tenants — deferrable to v2.
+// ─────────────────────────────────────────────────────────────────────────
+
+app.post("/api/spend-classification", async (req, res) => {
+  try {
+    const { organizationName, tenantId, date, periodMonths } = req.body;
+
+    if (!organizationName && !tenantId) {
+      return res.status(400).json({ error: "Organization name or tenant ID required" });
+    }
+    // Reject ALL/consolidated for v1 — single entity only
+    const normalised = String(organizationName || "").toLowerCase();
+    if (["all", "all entities", "consolidated"].includes(normalised)) {
+      return res.status(400).json({ error: "Spend classification is single-entity only in v1. Pick a specific entity." });
+    }
+
+    // Resolve organisation name to tenantId (matches existing endpoint pattern)
+    let actualTenantId = tenantId;
+    let actualTenantName = "";
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+        actualTenantName = connection.tenantName;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
+
+    // Call the existing expense-analysis endpoint to get raw expense data
+    const params = new URLSearchParams();
+    if (date) params.append("date", date);
+    if (periodMonths) params.append("periodMonths", periodMonths.toString());
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+
+    const upstream = await fetch(
+      `${req.protocol}://${req.get("host")}/api/expense-analysis/${actualTenantId}${queryString}`
+    );
+
+    if (!upstream.ok) {
+      throw new Error(`Upstream expense-analysis failed: ${upstream.status}`);
+    }
+
+    const expenseData = await upstream.json();
+    // expenseData shape: { totalExpenses, expenseCategories: [{accountName, amount, ...}], ... }
+    const categories = expenseData.expenseCategories || [];
+
+    // Run the classifier
+    const classification = summariseSpend(categories);
+
+    res.json({
+      tenantId: actualTenantId,
+      tenantName: actualTenantName || expenseData.tenantName,
+      period: { date, periodMonths: periodMonths || 12 },
+      classification,
+      // Round-trip the upstream total for sanity-check / reconciliation
+      reportedTotalExpenses: expenseData.totalExpenses,
+      // Account count by bucket — handy for the UI
+      bucketCounts: Object.fromEntries(
+        Object.entries(classification.detailed || {}).map(([k, v]) => [k, v.length])
+      ),
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Spend classification API error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/revenue-classification", async (req, res) => {
+  try {
+    const { organizationName, tenantId, date, periodMonths } = req.body;
+
+    if (!organizationName && !tenantId) {
+      return res.status(400).json({ error: "Organization name or tenant ID required" });
+    }
+    const normalised = String(organizationName || "").toLowerCase();
+    if (["all", "all entities", "consolidated"].includes(normalised)) {
+      return res.status(400).json({ error: "Revenue classification is single-entity only in v1. Pick a specific entity." });
+    }
+
+    let actualTenantId = tenantId;
+    let actualTenantName = "";
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+        actualTenantName = connection.tenantName;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
+
+    // Call the existing profit-loss-summary endpoint to get revenue data
+    const upstreamBody = {
+      organizationName,
+      tenantId: actualTenantId,
+      date,
+      periodMonths: periodMonths || 12,
+    };
+    const upstream = await fetch(
+      `${req.protocol}://${req.get("host")}/api/profit-loss-summary`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(upstreamBody),
+      }
+    );
+
+    if (!upstream.ok) {
+      throw new Error(`Upstream profit-loss-summary failed: ${upstream.status}`);
+    }
+
+    const plData = await upstream.json();
+    // plData shape: { summary: { revenueAccounts: [{name, amount}], totalRevenue, ... }, ... }
+    const revenueAccounts = plData?.summary?.revenueAccounts || [];
+
+    // Run the classifier
+    const classification = summariseRevenue(revenueAccounts);
+
+    res.json({
+      tenantId: actualTenantId,
+      tenantName: actualTenantName || plData.tenantName,
+      period: plData.period || { date, periodMonths: periodMonths || 12 },
+      classification,
+      // Round-trip the upstream total for reconciliation
+      reportedTotalRevenue: plData?.summary?.totalRevenue,
+      bucketCounts: Object.fromEntries(
+        Object.entries(classification.detailed || {}).map(([k, v]) => [k, v.length])
+      ),
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Revenue classification API error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -6385,13 +6550,19 @@ app.post("/api/ai-chat", async (req, res) => {
       }
     };
 
-    // Fetch all data sources in parallel (match dashboard's quarter dates)
-    const [cashData, plData, invoicesData, expenseData, ratiosData] = await Promise.all([
+    // Fetch all data sources in parallel (match dashboard's quarter dates).
+    // Classification endpoints are single-entity only in v1 — skip for ALL.
+    const isAllEntity = ["all", "all entities", "consolidated"]
+      .includes(String(entityName || "").toLowerCase());
+
+    const [cashData, plData, invoicesData, expenseData, ratiosData, spendClassData, revenueClassData] = await Promise.all([
       fetchInternal("/api/cash-position", { organizationName: entityName }),
       fetchInternal("/api/profit-loss-summary", { organizationName: entityName, date: reportDate, periodMonths }),
       fetchInternal("/api/outstanding-invoices", { organizationName: entityName }),
       fetchInternal("/api/expense-analysis", { organizationName: entityName, date: reportDate, periodMonths }),
       fetchInternal("/api/financial-ratios", { organizationName: entityName }),
+      isAllEntity ? Promise.resolve(null) : fetchInternal("/api/spend-classification", { organizationName: entityName, date: reportDate, periodMonths }),
+      isAllEntity ? Promise.resolve(null) : fetchInternal("/api/revenue-classification", { organizationName: entityName, date: reportDate, periodMonths }),
     ]);
 
     // â”€â”€ Build rich financial context for the AI â”€â”€
@@ -6554,6 +6725,39 @@ app.post("/api/ai-chat", async (req, res) => {
         financialContext += `  Health Assessment: Liquidity=${ratiosData.interpretations.currentRatio}, Leverage=${ratiosData.interpretations.debtToEquity}, Profitability=${ratiosData.interpretations.profitability}\n`;
       }
       financialContext += `\n`;
+    }
+
+    // ── SPEND & REVENUE CLASSIFICATION (single-entity only in v1) ──
+    // Bucketed view of expenses and revenue beyond chart-of-accounts —
+    // see /lib/classifier.js and /lib/revenue-classifier.js. Lets the AI
+    // answer questions like "what's our procurement spend?" or "how
+    // dependent are we on royalties?" with specific dollar figures
+    // rather than hand-waving from account-level totals.
+    if (spendClassData && !spendClassData.error && spendClassData.classification) {
+      const c = spendClassData.classification;
+      financialContext += `\n━━━━ SPEND CLASSIFICATION (${spendClassData.tenantName || entityName}) ━━━━\n`;
+      financialContext += `Total expenses: $${Number(c.totalExpenses || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  • Procurement (real third-party spend): $${Number(c.inTotal || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })} (${c.inPct || 0}% of total)\n`;
+      financialContext += `  • Personnel (wages/super/payroll tax/leave): $${Number(c.outPersonnel || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  • Tax/Depreciation/Interest/Bank fees: $${Number(c.outTaxDepnInt || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  • Intercompany (mgmt fees, transfers): $${Number(c.outInterco || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  • Governance (sitting/director fees): $${Number(c.outGovernance || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  • Distributions/Donations/Grant payments: $${Number(c.greyTotal || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `Use these for any "what kind of spend" / "how much procurement" / "personnel cost ratio" question.\n\n`;
+    }
+
+    if (revenueClassData && !revenueClassData.error && revenueClassData.classification) {
+      const c = revenueClassData.classification;
+      financialContext += `━━━━ REVENUE CLASSIFICATION (${revenueClassData.tenantName || entityName}) ━━━━\n`;
+      financialContext += `Total revenue: $${Number(c.totalRevenue || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })}\n`;
+      financialContext += `  • Core operations (trading/services revenue): $${Number(c.coreTotal || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })} (${c.corePct || 0}%)\n`;
+      financialContext += `  • Mining agreements (Gove RTA / s64 royalties): $${Number(c.royaltyTotal || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })} (${c.royaltyPct || 0}%)\n`;
+      financialContext += `  • Investment income (Macquarie/Morgans/dividends): $${Number(c.investmentTotal || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })} (${c.investmentPct || 0}%)\n`;
+      financialContext += `  • Grant income (NIAA/ISEP/tax credits): $${Number(c.grantTotal || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })} (${c.grantPct || 0}%)\n`;
+      financialContext += `  • Rental income: $${Number(c.rentalTotal || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })} (${c.rentalPct || 0}%)\n`;
+      financialContext += `  • Intercompany revenue: $${Number(c.intercoTotal || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })} (${c.intercoPct || 0}%)\n`;
+      financialContext += `  • Other (sundry/court outcomes/sponsorship): $${Number(c.otherTotal || 0).toLocaleString("en-AU", { minimumFractionDigits: 2 })} (${c.otherPct || 0}%)\n`;
+      financialContext += `Use these for any "what kind of revenue" / "how reliant are we on grants" / "investment dependency" question.\n\n`;
     }
 
     // ── CONSOLIDATED DASHBOARD VIEW (frontend-supplied, ALL-entities case) ──

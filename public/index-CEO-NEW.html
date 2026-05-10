@@ -2934,6 +2934,63 @@
             </div>
           </div>
 
+          <!-- Spend & Revenue Profile -->
+          <div class="summary-card" id="profile-card" onclick="openDrawer('profile')" style="cursor: pointer;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Spend &amp; Revenue Profile</div>
+                <div class="card-subtitle" id="profile-subtitle">Bucketed view — single entity</div>
+              </div>
+              <span style="color: var(--color-text-muted); font-size: 18px;">&#x2192;</span>
+            </div>
+            <div class="card-content">
+              <!-- Spend mini-bar -->
+              <div class="budget-item">
+                <div class="budget-item-header">
+                  <span class="budget-item-label" style="font-weight: 600;">Spend Mix</span>
+                  <span class="budget-actual" id="profile-spend-total">--</span>
+                </div>
+                <div id="profile-spend-bar" style="display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 6px 0 4px 0; background: var(--color-bg-subtle, #eee);">
+                  <div title="Procurement" style="background: var(--color-positive, #2e7d32); width: 0%;" data-bucket="IN"></div>
+                  <div title="Personnel" style="background: var(--color-info, #1976d2); width: 0%;" data-bucket="OUT_PERSONNEL"></div>
+                  <div title="Tax / Depreciation / Interest" style="background: var(--color-text-muted, #888); width: 0%;" data-bucket="OUT_TAX_DEPN_INT"></div>
+                  <div title="Intercompany" style="background: var(--color-warning, #f57c00); width: 0%;" data-bucket="OUT_INTERCO"></div>
+                  <div title="Governance" style="background: var(--color-negative, #c62828); width: 0%;" data-bucket="OUT_GOVERNANCE"></div>
+                  <div title="Distributions / Donations" style="background: #9c27b0; width: 0%;" data-bucket="GREY_DISTRIB"></div>
+                </div>
+                <div style="font-size: 11px; color: var(--color-text-muted); display: flex; justify-content: space-between;">
+                  <span>Procurement: <strong id="profile-spend-procurement">--</strong></span>
+                  <span>Personnel: <strong id="profile-spend-personnel">--</strong></span>
+                </div>
+              </div>
+
+              <!-- Revenue mini-bar -->
+              <div class="budget-item" style="margin-top: 12px;">
+                <div class="budget-item-header">
+                  <span class="budget-item-label" style="font-weight: 600;">Revenue Mix</span>
+                  <span class="budget-actual" id="profile-revenue-total">--</span>
+                </div>
+                <div id="profile-revenue-bar" style="display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 6px 0 4px 0; background: var(--color-bg-subtle, #eee);">
+                  <div title="Core Operations" style="background: var(--color-positive, #2e7d32); width: 0%;" data-bucket="CORE_OPERATIONS"></div>
+                  <div title="Mining Agreements" style="background: var(--color-info, #1976d2); width: 0%;" data-bucket="MINING_AGREEMENTS"></div>
+                  <div title="Investment Income" style="background: #6a1b9a; width: 0%;" data-bucket="INVESTMENT_INCOME"></div>
+                  <div title="Grant Income" style="background: var(--color-warning, #f57c00); width: 0%;" data-bucket="GRANT_INCOME"></div>
+                  <div title="Rental Income" style="background: #00838f; width: 0%;" data-bucket="RENTAL_INCOME"></div>
+                  <div title="Intercompany" style="background: #c62828; width: 0%;" data-bucket="INTERCO_REVENUE"></div>
+                  <div title="Other" style="background: var(--color-text-muted, #888); width: 0%;" data-bucket="OTHER"></div>
+                </div>
+                <div style="font-size: 11px; color: var(--color-text-muted); display: flex; justify-content: space-between;">
+                  <span id="profile-revenue-top1">--</span>
+                  <span id="profile-revenue-top2">--</span>
+                </div>
+              </div>
+
+              <div id="profile-disabled-note" style="display: none; font-size: 11px; color: var(--color-text-muted); margin-top: 8px; font-style: italic;">
+                Pick a single entity to view classification.
+              </div>
+            </div>
+          </div>
+
         </div>
         </div>
      
@@ -4054,6 +4111,7 @@
         updateHealthStatus();
         loadFinancialRatios();
         loadTopExpenses();
+        loadProfile();
         updateSummaryCards();
         initSparklines();
         initTrendChart();
@@ -4921,6 +4979,146 @@
         document.getElementById('ratio-net-margin').textContent = netMargin;
         document.getElementById('ratio-debt-equity').textContent = debtEquity;
       }
+
+      // ========== SPEND & REVENUE PROFILE ==========
+      // Calls /api/spend-classification and /api/revenue-classification
+      // and renders bucketed mini-bars on the Profile card. Single-entity
+      // only in v1 — for ALL view, the card shows a "pick a single entity"
+      // note instead.
+      async function loadProfile() {
+        const subtitleEl = document.getElementById('profile-subtitle');
+        const disabledNoteEl = document.getElementById('profile-disabled-note');
+        const spendTotalEl = document.getElementById('profile-spend-total');
+        const revenueTotalEl = document.getElementById('profile-revenue-total');
+        const procurementEl = document.getElementById('profile-spend-procurement');
+        const personnelEl = document.getElementById('profile-spend-personnel');
+        const top1El = document.getElementById('profile-revenue-top1');
+        const top2El = document.getElementById('profile-revenue-top2');
+        const spendBar = document.getElementById('profile-spend-bar');
+        const revenueBar = document.getElementById('profile-revenue-bar');
+
+        // Helper — set every segment width to 0
+        const resetBars = () => {
+          spendBar.querySelectorAll('div').forEach(d => d.style.width = '0%');
+          revenueBar.querySelectorAll('div').forEach(d => d.style.width = '0%');
+        };
+
+        const entityName = getSelectedEntity();
+        const isAll = ['ALL', 'all entities', 'consolidated'].includes(String(entityName).trim().toLowerCase()) || entityName === 'ALL Entities';
+
+        if (isAll) {
+          // Disable card for ALL view
+          resetBars();
+          spendTotalEl.textContent = '—';
+          revenueTotalEl.textContent = '—';
+          procurementEl.textContent = '—';
+          personnelEl.textContent = '—';
+          top1El.textContent = '';
+          top2El.textContent = '';
+          subtitleEl.textContent = 'Single-entity only — pick an entity above';
+          disabledNoteEl.style.display = 'block';
+          return;
+        }
+
+        disabledNoteEl.style.display = 'none';
+        subtitleEl.textContent = 'Loading…';
+
+        try {
+          // Period info — match the dashboard's current selection
+          const quarterInfo = window.dashboardData?.quarterInfo || {};
+          const reportDate = quarterInfo.endDate || new Date().toISOString().split('T')[0];
+          const periodMonths = quarterInfo.periodMonths || 12;
+
+          const [spendResp, revenueResp] = await Promise.all([
+            fetch(`${API_BASE}/api/spend-classification`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ organizationName: entityName, date: reportDate, periodMonths })
+            }),
+            fetch(`${API_BASE}/api/revenue-classification`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ organizationName: entityName, date: reportDate, periodMonths })
+            })
+          ]);
+
+          const spendData = spendResp.ok ? await spendResp.json() : null;
+          const revenueData = revenueResp.ok ? await revenueResp.json() : null;
+
+          // Stash for AI panel and drawer
+          window.dashboardData = window.dashboardData || {};
+          window.dashboardData.spendClassification = spendData?.classification || null;
+          window.dashboardData.revenueClassification = revenueData?.classification || null;
+
+          // ---- Spend bar ----
+          if (spendData?.classification) {
+            const c = spendData.classification;
+            const total = c.totalExpenses || 0;
+            spendTotalEl.textContent = fmtKpiAuto(total);
+            const pct = (n) => total > 0 ? (n / total * 100) : 0;
+            // Set each segment width by data-bucket attribute
+            spendBar.querySelectorAll('div').forEach(seg => {
+              const bucket = seg.dataset.bucket;
+              const val = c.totals?.[bucket] || 0;
+              seg.style.width = pct(val).toFixed(1) + '%';
+            });
+            procurementEl.textContent = fmtKpiAuto(c.inTotal || 0) + ' (' + (c.inPct || 0) + '%)';
+            personnelEl.textContent = fmtKpiAuto(c.outPersonnel || 0);
+          } else {
+            spendTotalEl.textContent = '—';
+            procurementEl.textContent = '—';
+            personnelEl.textContent = '—';
+          }
+
+          // ---- Revenue bar ----
+          if (revenueData?.classification) {
+            const c = revenueData.classification;
+            const total = c.totalRevenue || 0;
+            revenueTotalEl.textContent = fmtKpiAuto(total);
+            // For revenue, signed totals can be tricky if a bucket is net negative
+            // (market value adjustments). Use absolute values for bar widths,
+            // but show signed totals in tooltip text.
+            const absTotal = Object.values(c.totals || {}).reduce((s, v) => s + Math.abs(v || 0), 0);
+            const pct = (n) => absTotal > 0 ? (Math.abs(n) / absTotal * 100) : 0;
+            revenueBar.querySelectorAll('div').forEach(seg => {
+              const bucket = seg.dataset.bucket;
+              const val = c.totals?.[bucket] || 0;
+              seg.style.width = pct(val).toFixed(1) + '%';
+            });
+            // Top 2 buckets by absolute value, for the legend underneath
+            const ranked = Object.entries(c.totals || {})
+              .filter(([, v]) => Math.abs(v) > 0)
+              .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+            const labelOf = (k) => ({
+              CORE_OPERATIONS: 'Core',
+              MINING_AGREEMENTS: 'Royalty',
+              INVESTMENT_INCOME: 'Investment',
+              GRANT_INCOME: 'Grant',
+              RENTAL_INCOME: 'Rental',
+              INTERCO_REVENUE: 'Interco',
+              OTHER: 'Other'
+            }[k] || k);
+            if (ranked[0]) {
+              top1El.innerHTML = labelOf(ranked[0][0]) + ': <strong>' + fmtKpiAuto(ranked[0][1]) + '</strong>';
+            }
+            if (ranked[1]) {
+              top2El.innerHTML = labelOf(ranked[1][0]) + ': <strong>' + fmtKpiAuto(ranked[1][1]) + '</strong>';
+            }
+          } else {
+            revenueTotalEl.textContent = '—';
+            top1El.textContent = '';
+            top2El.textContent = '';
+          }
+
+          // Subtitle reflects period
+          const periodDesc = (quarterInfo.label || 'period').toLowerCase();
+          subtitleEl.textContent = `Bucketed view — ${periodDesc}`;
+        } catch (e) {
+          console.error('[profile] load failed:', e);
+          subtitleEl.textContent = 'Failed to load classification';
+          resetBars();
+        }
+      }
         
         // ========== UPDATE BALANCE SHEET & AGED CARDS ==========
       function updateSummaryCards() {
@@ -5664,7 +5862,8 @@
           customers: 'Top Customers by Period Revenue',
           pl: 'Full P&L Statement',
           balance: 'Balance Sheet',
-          ratios: 'Key Financial Ratios'
+          ratios: 'Key Financial Ratios',
+          profile: 'Spend & Revenue Profile'
         };
 
         title.textContent = titles[type] || 'Detail View';
@@ -6417,6 +6616,74 @@
 
                 <div style="margin-top: 12px; font-size: 11px; color: var(--color-text-muted); text-align: right;">
                   ${qi.quarterCode} FY25/26 \u00b7 ${pd.hasQtdData ? 'QTD' : 'MTD'} data from RAC Inventory System
+                </div>
+              </div>
+            `;
+          })(),
+
+          profile: (() => {
+            const spend = window.dashboardData.spendClassification;
+            const rev = window.dashboardData.revenueClassification;
+            const fmt2 = (n) => '$' + Number(n || 0).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const sectionLabels = {
+              IN: 'Procurement (real third-party spend)',
+              OUT_PERSONNEL: 'Personnel (wages, super, leave, recruitment)',
+              OUT_TAX_DEPN_INT: 'Tax / Depreciation / Interest / Bank fees',
+              OUT_INTERCO: 'Intercompany (mgmt fees, transfers)',
+              OUT_GOVERNANCE: 'Governance (sitting fees, director fees)',
+              GREY_DISTRIB: 'Distributions / Donations / Grant payments',
+              CORE_OPERATIONS: 'Core operations (trading / services)',
+              MINING_AGREEMENTS: 'Mining agreements (RTA, royalties)',
+              INVESTMENT_INCOME: 'Investment income (Macquarie, Morgans, dividends)',
+              GRANT_INCOME: 'Grant income (NIAA, ISEP, tax credits)',
+              RENTAL_INCOME: 'Rental income',
+              INTERCO_REVENUE: 'Intercompany revenue (cross-charges)',
+              OTHER: 'Other (sundry, court outcomes, sponsorships)'
+            };
+
+            const renderBucketSection = (bucket, items, total, totalForPct) => {
+              if (!items || items.length === 0) return '';
+              const subTotal = items.reduce((s, x) => s + (x.amount || 0), 0);
+              const pct = totalForPct ? (Math.abs(subTotal) / Math.abs(totalForPct) * 100).toFixed(1) : '0';
+              const rows = items
+                .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+                .map(x => `
+                  <tr>
+                    <td style="font-size: 12px;">${x.name || ''}</td>
+                    <td style="text-align: right; font-size: 12px;">${fmt2(x.amount)}</td>
+                  </tr>`).join('');
+              return `
+                <h4 style="margin: 14px 0 6px 0; font-size: 13px; font-weight: 600;">
+                  ${sectionLabels[bucket] || bucket}
+                  <span style="float: right; color: var(--color-text-muted); font-weight: 400;">${fmt2(subTotal)} (${pct}%)</span>
+                </h4>
+                <table class="data-table"><tbody>${rows}</tbody></table>`;
+            };
+
+            const renderClassification = (label, c, bucketOrder, totalKey) => {
+              if (!c) return `<p style="color: var(--color-text-muted);">No ${label.toLowerCase()} data — pick a single entity to view classification.</p>`;
+              const total = c[totalKey] || 0;
+              const sections = bucketOrder.map(b => renderBucketSection(b, c.detailed?.[b], total, total)).join('');
+              return `
+                <h3 style="margin: 18px 0 8px 0; font-size: 15px; font-weight: 600;">
+                  ${label}
+                  <span style="float: right; color: var(--color-text-muted);">${fmt2(total)}</span>
+                </h3>
+                ${sections}`;
+            };
+
+            return `
+              <div style="padding: 16px 0;">
+                ${renderClassification('Spend Classification', spend,
+                    ['IN', 'OUT_PERSONNEL', 'OUT_TAX_DEPN_INT', 'OUT_INTERCO', 'OUT_GOVERNANCE', 'GREY_DISTRIB'],
+                    'totalExpenses')}
+                ${renderClassification('Revenue Classification', rev,
+                    ['CORE_OPERATIONS', 'MINING_AGREEMENTS', 'INVESTMENT_INCOME', 'GRANT_INCOME', 'RENTAL_INCOME', 'INTERCO_REVENUE', 'OTHER'],
+                    'totalRevenue')}
+                <div style="margin-top: 18px; font-size: 11px; color: var(--color-text-muted);">
+                  Buckets are derived from account names by classifier rules in
+                  <code>/lib/classifier.js</code> and <code>/lib/revenue-classifier.js</code>.
+                  See CLEAN_UP.md for known classification calls under review.
                 </div>
               </div>
             `;
