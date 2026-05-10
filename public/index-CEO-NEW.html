@@ -2529,7 +2529,7 @@
           <!-- Revenue -->
           <div class="kpi-card" onclick="openDrawer('revenue')">
             <div class="kpi-header">
-              <div class="kpi-label">Revenue (Period)</div>
+              <div class="kpi-label" id="kpi-revenue-label">Revenue (Period)</div>
               <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-revenue">Loading...</div>
@@ -2543,7 +2543,7 @@
           <!-- Net Profit -->
           <div class="kpi-card" onclick="openDrawer('profit')">
             <div class="kpi-header">
-              <div class="kpi-label">Net Profit (Period)</div>
+              <div class="kpi-label" id="kpi-profit-label">Net Profit (Period)</div>
               <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-profit">Loading...</div>
@@ -2585,7 +2585,7 @@
           <!-- Top Expenses (non-Mining entities) -->
           <div id="expenses-card" class="kpi-card" onclick="openDrawer('expenses')" style="display: none;">
             <div class="kpi-header">
-              <div class="kpi-label">Operating Expenses (Period)</div>
+              <div class="kpi-label" id="kpi-expenses-label">Operating Expenses (Period)</div>
               <span class="kpi-arrow">&#x2192;</span>
             </div>
             <div class="kpi-value" id="kpi-top-expense">Loading...</div>
@@ -3664,6 +3664,7 @@
         document.getElementById("budget-period").textContent =
           `${periodLbl} (${Math.round(quarterInfo.proRateFactor * 100)}% elapsed)`;
         document.getElementById("pl-period").textContent = periodLbl;
+        updateKpiPeriodLabels(quarterInfo);
 
         // Load all data
         await Promise.all([
@@ -3721,6 +3722,7 @@
         }
         if (plPeriodEl) plPeriodEl.textContent = quarterInfo.periodLabel || `${period} FY25/26`;
         if (customersPeriodEl) customersPeriodEl.textContent = quarterInfo.periodLabel || `${period} FY25/26`;
+        updateKpiPeriodLabels(quarterInfo);
 
         let totalCash = 0;
         let totalRevenue = 0;
@@ -6248,6 +6250,24 @@
           }
         }
         return periodCode; // Q1-Q4, YTD stay as-is
+      }
+
+      // Updates the period-bearing KPI card labels to show the selected period.
+      // Today cards (Cash, Receivables, Inventory) keep their (Today) suffix —
+      // they're snapshot-as-of-now regardless of period selection.
+      // Period cards (Revenue, Net Profit, Operating Expenses) get the dynamic
+      // label so users instantly see WHICH window the number represents.
+      function updateKpiPeriodLabels(quarterInfo) {
+        const period = document.getElementById('periodSelector')?.value || '';
+        const lbl = (quarterInfo && quarterInfo.periodLabel) || periodDisplayLabel(period);
+        if (!lbl) return;
+        const set = (id, text) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = text;
+        };
+        set('kpi-revenue-label',  `Revenue (${lbl})`);
+        set('kpi-profit-label',   `Net Profit (${lbl})`);
+        set('kpi-expenses-label', `Operating Expenses (${lbl})`);
       }
 
       // Reversal-active check (returns boolean)
