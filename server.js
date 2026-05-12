@@ -4965,6 +4965,101 @@ app.post("/api/monthly-breakdown", async (req, res) => {
   }
 });
 
+// =============================================================================
+// REPORT SECTIONS — load & save narrative blocks for Finance Monthly Report
+// =============================================================================
+
+// POST /api/report/get
+// Body: { org: "RAC", periodMonth: "2026-04" }
+// Returns: { sections: { exec_summary: { content, aiDrafted, updatedAt, updatedBy }, ... } }
+//
+// Returns an empty object if no sections exist yet for this (org, periodMonth).
+// The frontend treats that as "first time opening this report" and uses its
+// built-in AI-draft placeholders.
+app.post("/api/report/get", async (req, res) => {
+  try {
+    const { org, periodMonth } = req.body;
+    if (!org || !periodMonth) {
+      return res.status(400).json({ error: "org and periodMonth required" });
+    }
+
+    const result = await pool.query(
+      `SELECT section_key, content, ai_drafted, updated_at, updated_by
+       FROM report_sections
+       WHERE org = $1 AND period_month = $2
+       ORDER BY updated_at DESC`,
+      [org, periodMonth]
+    );
+
+    // Shape into a keyed object for easy frontend lookup
+    const sections = {};
+    for (const row of result.rows) {
+      sections[row.section_key] = {
+        content: row.content,
+        aiDrafted: row.ai_drafted,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by,
+      };
+    }
+
+    res.json({ org, periodMonth, sections });
+  } catch (error) {
+    console.error("[report/get] error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/report/save
+// Body: { org, periodMonth, sectionKey, content, aiDrafted, updatedBy }
+// Returns: { success: true, updatedAt }
+//
+// Upserts a single section. If a row exists for (org, periodMonth, sectionKey)
+// it's overwritten; otherwise inserted. UNIQUE constraint on the natural key
+// makes this safe under concurrent saves — last write wins.
+app.post("/api/report/save", async (req, res) => {
+  try {
+    const { org, periodMonth, sectionKey, content, aiDrafted, updatedBy } = req.body;
+
+    if (!org || !periodMonth || !sectionKey || content === undefined) {
+      return res.status(400).json({
+        error: "org, periodMonth, sectionKey, and content are required",
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO report_sections
+        (org, period_month, section_key, content, ai_drafted, updated_at, updated_by)
+       VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+       ON CONFLICT (org, period_month, section_key, version)
+       DO UPDATE SET
+         content = EXCLUDED.content,
+         ai_drafted = EXCLUDED.ai_drafted,
+         updated_at = NOW(),
+         updated_by = EXCLUDED.updated_by
+       RETURNING updated_at`,
+      [
+        org,
+        periodMonth,
+        sectionKey,
+        content,
+        aiDrafted === undefined ? false : aiDrafted,
+        updatedBy || 'unknown',
+      ]
+    );
+
+    res.json({
+      success: true,
+      org,
+      periodMonth,
+      sectionKey,
+      updatedAt: result.rows[0].updated_at,
+    });
+  } catch (error) {
+    console.error("[report/save] error:", error);
+    res.status(500).json({ error: error.message });
+  }
+  
+});
 // ============================================================================
 // HISTORICAL METRICS ENDPOINT (serves snapshot data to CEO dashboard)
 // ============================================================================
@@ -5254,6 +5349,39 @@ async function snapshotFetchInternal(endpoint, body) {
 // current code needs to be true.
 // ============================================================================
 async function runSchemaMigrations() {
+  // ---------------------------------------------------------------------------
+  // REPORT SECTIONS — narrative blocks for the Finance Monthly Report.
+  //
+  // One row per (org, period_month, section_key). Section_key examples:
+  //   'exec_summary', 'pl_commentary', 'receivables_commentary', 'notes'
+  //
+  // ai_drafted flag tracks whether the content is still the original AI draft
+  // (true) or has been edited by a human (false). Lets the UI show an audit
+  // trail and lets us decide whether "Regenerate AI" is safe to run.
+  //
+  // version column is unused in v1 (always 1). Reserved for future:
+  // multiple saved versions per (org, period_month, section_key) so you can
+  // see "Paul's draft" vs "Matt's edit" vs "Final".
+  // ---------------------------------------------------------------------------
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS report_sections (
+      id SERIAL PRIMARY KEY,
+      org VARCHAR(50) NOT NULL,
+      period_month VARCHAR(7) NOT NULL,
+      section_key VARCHAR(50) NOT NULL,
+      content TEXT NOT NULL,
+      ai_drafted BOOLEAN DEFAULT true,
+      version INTEGER DEFAULT 1,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_by VARCHAR(100) DEFAULT 'unknown',
+      UNIQUE (org, period_month, section_key, version)
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_report_sections_lookup
+    ON report_sections (org, period_month)
+  `);
   console.log('[migration] running schema migrations...');
 
   // Add snapshot_status column to monthly_snapshots.
