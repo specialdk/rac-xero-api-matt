@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Finance Monthly Report — Rirratjingu Aboriginal Corporation — April 2026</title>
+<style>
+  :root {
+    --paper: #ffffff;
+    --page-bg: #f4f4f0;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a4a;
+    --ink-muted: #7a7a7a;
+    --rule: #d8d8d4;
+    --rule-soft: #ececea;
+    --accent: #6b3410;          /* warm earth — RAC feel */
+    --accent-soft: #f5ede4;
+    --green: #2f7a3d;
+    --green-soft: #e8f3ea;
+    --amber: #b8740a;
+    --amber-soft: #fdf3e2;
+    --red: #b32424;
+    --red-soft: #fbe8e8;
+    --edit-bg: #fffbe8;
+    --edit-border: #e8d893;
+    --serif: 'Georgia', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --mono: 'SF Mono', Monaco, 'Cascadia Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--page-bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ============ TOP CONTROL BAR (hidden on print) ============ */
+  .control-bar {
+    position: sticky; top: 0; z-index: 100;
+    background: #ffffff;
+    border-bottom: 1px solid var(--rule);
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .control-bar .group {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .control-bar label {
+    font-size: 12px; color: var(--ink-muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .control-bar select, .control-bar input[type="text"] {
+    padding: 6px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    font-family: inherit; font-size: 14px;
+    background: #fff;
+  }
+  .control-bar .status-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--amber-soft);
+    color: var(--amber);
+    border: 1px solid #e8d893;
+  }
+  .control-bar .status-pill.final {
+    background: var(--green-soft);
+    color: var(--green);
+    border-color: #b8d8c0;
+  }
+  .control-bar .save-indicator {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-left: 4px;
+    transition: color 0.2s;
+  }
+  .control-bar .save-indicator.saving { color: var(--amber); }
+  .control-bar .save-indicator.saved { color: var(--green); }
+  .control-bar .save-indicator.error { color: var(--red); }
+  .control-bar .spacer { flex: 1; }
+  .control-bar button {
+    padding: 8px 14px;
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+    background: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .control-bar button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .control-bar button.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .control-bar button.primary:hover {
+    background: #4d2509;
+    color: #fff;
+  }
+
+  /* ============ PAGE / PAPER ============ */
+  .page-wrap {
+    max-width: 880px;
+    margin: 24px auto 80px;
+    padding: 0 24px;
+  }
+  .paper {
+    background: var(--paper);
+    padding: 56px 64px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    border: 1px solid var(--rule);
+  }
+
+  /* ============ TYPOGRAPHY ============ */
+  h1, h2, h3, h4 {
+    font-family: var(--serif);
+    color: var(--ink);
+    font-weight: 700;
+    margin: 0;
+  }
+  h1 { font-size: 28px; line-height: 1.2; }
+  h2 {
+    font-size: 18px;
+    margin: 36px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--ink);
+  }
+  h3 { font-size: 15px; margin: 16px 0 8px; }
+  p { margin: 0 0 12px; }
+  .lead { font-size: 15px; color: var(--ink-soft); }
+
+  /* ============ REPORT HEADER ============ */
+  .report-header {
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+  .report-header .org-id {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .report-header h1 { margin-bottom: 4px; }
+  .report-header .subtitle {
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 16px;
+  }
+  .report-header .meta {
+    display: flex; gap: 28px; flex-wrap: wrap;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+  .report-header .meta span strong {
+    color: var(--ink); font-weight: 600;
+    display: block; font-size: 13px; margin-top: 2px;
+  }
+
+  /* ============ EDITABLE BLOCKS ============ */
+  .editable {
+    background: var(--edit-bg);
+    border-left: 3px solid var(--edit-border);
+    padding: 14px 18px;
+    margin: 12px 0 18px;
+    position: relative;
+    border-radius: 0 4px 4px 0;
+    cursor: text;
+    transition: background 0.15s;
+  }
+  .editable:hover {
+    background: #fef7d6;
+  }
+  .editable:focus {
+    outline: 2px solid var(--accent);
+    background: #fff;
+  }
+  .editable .ai-badge {
+    position: absolute;
+    top: -10px; right: 10px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .editable.edited .ai-badge {
+    background: var(--green);
+  }
+  .editable.edited .ai-badge::before {
+    content: "✓ Edited — ";
+  }
+  .editable p:last-child { margin-bottom: 0; }
+  .editable ul { margin: 0; padding-left: 20px; }
+  .editable li { margin-bottom: 6px; }
+
+  /* ============ DATA TABLES ============ */
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 16px;
+    font-size: 13px;
+  }
+  table.data th, table.data td {
+    padding: 8px 12px;
+    text-align: right;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  table.data th:first-child, table.data td:first-child {
+    text-align: left;
+  }
+  table.data thead th {
+    border-bottom: 1.5px solid var(--ink);
+    font-weight: 600;
+    color: var(--ink-soft);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  table.data tbody tr.total td {
+    font-weight: 700;
+    border-top: 1px solid var(--ink);
+    border-bottom: 1.5px solid var(--ink);
+    background: #fafaf7;
+  }
+  table.data tbody tr.subtotal td {
+    font-weight: 600;
+    border-top: 1px solid var(--rule);
+  }
+  table.data .num { font-variant-numeric: tabular-nums; }
+  table.data .var-pos { color: var(--green); font-weight: 600; }
+  table.data .var-neg { color: var(--red); font-weight: 600; }
+  table.data .indent { padding-left: 24px; color: var(--ink-soft); }
+
+  /* ============ KPI ROW ============ */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 12px 0 16px;
+  }
+  .kpi-card {
+    border: 1px solid var(--rule);
+    padding: 12px 14px;
+    border-radius: 4px;
+  }
+  .kpi-card .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    margin-bottom: 4px;
+  }
+  .kpi-card .value {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .kpi-card .delta {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .kpi-card .delta.up { color: var(--green); }
+  .kpi-card .delta.down { color: var(--red); }
+
+  /* ============ FLAGS BOX ============ */
+  .flags-box {
+    background: var(--amber-soft);
+    border: 1px solid #e8c878;
+    border-left: 4px solid var(--amber);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin: 12px 0 16px;
+  }
+  .flags-box h3 {
+    color: var(--amber);
+    margin-top: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .flags-box ul {
+    margin: 8px 0 0; padding-left: 22px;
+  }
+  .flags-box li { margin-bottom: 6px; }
+  .flag-tag {
+    display: inline-block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 6px;
+    font-weight: 600;
+  }
+  .flag-tag.high { background: var(--red); color: #fff; }
+  .flag-tag.med  { background: var(--amber); color: #fff; }
+  .flag-tag.info { background: var(--ink-muted); color: #fff; }
+
+  /* ============ SIGN-OFF BLOCK ============ */
+  .signoff {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  .signoff .sig-block {
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+    height: 36px;
+  }
+  .signoff .sig-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+  }
+
+  /* ============ FOOTER ============ */
+  .doc-footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-soft);
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  /* ============ PRINT STYLES ============ */
+  @media print {
+    body { background: #fff; }
+    .control-bar, .no-print { display: none !important; }
+    .page-wrap { max-width: none; margin: 0; padding: 0; }
+    .paper {
+      box-shadow: none;
+      border: none;
+      padding: 24mm 20mm;
+    }
+    .editable {
+      background: transparent;
+      border-left: none;
+      padding: 0;
+      margin: 12px 0;
+    }
+    .editable .ai-badge { display: none; }
+    h2 { page-break-after: avoid; }
+    table.data, .kpi-row, .flags-box { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- =========================================================
+     TOP CONTROL BAR — hidden on print
+     ========================================================= -->
+<div class="control-bar no-print">
+  <div class="group">
+    <label>Entity</label>
+    <select>
+      <option>Rirratjingu Aboriginal Corporation</option>
+      <option>Rirratjingu Mining Pty Ltd</option>
+      <option>Rirratjingu Enterprises Pty Ltd</option>
+      <option>Rirratjingu Property Management</option>
+      <option>Ngarrkuwuy Developments Pty Ltd</option>
+      <option>Rirratjingu Invest (Miliditjpi Trust)</option>
+      <option>Marrin Square Developments Pty Ltd</option>
+      <option>— Consolidated —</option>
+    </select>
+  </div>
+  <div class="group">
+    <label>Period</label>
+    <select>
+      <option>April 2026</option>
+      <option>March 2026</option>
+      <option>February 2026</option>
+      <option>January 2026</option>
+    </select>
+  </div>
+  <div class="group">
+    <span class="status-pill">Draft</span>
+    <span class="save-indicator" id="saveIndicator"></span>
+  </div>
+  <div class="spacer"></div>
+  <button onclick="regenerateAI()">Regenerate AI Draft</button>
+  <button onclick="window.print()" class="primary">Print / PDF</button>
+</div>
+
+<!-- =========================================================
+     PAPER — the report itself
+     ========================================================= -->
+<div class="page-wrap">
+<div class="paper">
+
+  <!-- ============ HEADER ============ -->
+  <header class="report-header">
+    <div class="org-id">Rirratjingu Aboriginal Corporation • ICN 8538</div>
+    <h1>Finance Monthly Report</h1>
+    <div class="subtitle">April 2026 — Period 10 of FY26</div>
+    <div class="meta">
+      <span>Period<strong>1 — 30 April 2026</strong></span>
+      <span>Generated<strong>12 May 2026, 10:42 AM</strong></span>
+      <span>Prepared by<strong>Duane Kuru</strong></span>
+      <span>Snapshot status<strong>Draft (April not finalised)</strong></span>
+    </div>
+  </header>
+
+  <!-- ============ EXECUTIVE SUMMARY ============ -->
+  <h2>1. Executive Summary</h2>
+  <p class="lead">A short narrative summary of the month — the "if you only read one section, read this" view.</p>
+
+  <div class="editable" contenteditable="true" data-section-key="exec_summary">
+    <span class="ai-badge">AI Draft</span>
+    <p>April 2026 closed with net profit of <strong>$214,580</strong>, ahead of budget by <strong>$48,200 (29%)</strong>, driven primarily by stronger-than-expected royalty receipts and a one-off recovery on a long-outstanding receivable. Year-to-date net profit now stands at <strong>$1.84M</strong> against a budgeted $1.62M.</p>
+    <p>Cash position strengthened to <strong>$3.42M</strong>, up $187K on March. Trade debtors closed at $612K, with $94K aged over 60 days — a watchpoint heading into May. Operating expenses tracked broadly to budget across all categories except Legal & Professional, which ran 22% above due to the ongoing Marrin Square advisory engagement.</p>
+    <p><strong>Items flagged for review:</strong> the Q3 royalty accrual has not yet been posted (see Section 9), and two reversal journal decisions from Matt remain in draft status.</p>
+  </div>
+
+  <!-- ============ KPI ROW ============ -->
+  <h2>2. Key Indicators</h2>
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="label">Net Profit</div>
+      <div class="value">$214,580</div>
+      <div class="delta up">▲ 29% vs budget</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Cash on Hand</div>
+      <div class="value">$3.42M</div>
+      <div class="delta up">▲ $187K vs Mar</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Trade Debtors</div>
+      <div class="value">$612K</div>
+      <div class="delta down">▲ $48K vs Mar</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">Current Ratio</div>
+      <div class="value">2.8 : 1</div>
+      <div class="delta up">▲ 0.3 vs Mar</div>
+    </div>
+  </div>
+
+  <!-- ============ P&L SUMMARY ============ -->
+  <h2>3. Profit &amp; Loss Summary</h2>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Account</th>
+        <th>Apr 2026</th>
+        <th>Budget</th>
+        <th>Variance $</th>
+        <th>Variance %</th>
+        <th>YTD</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Royalty Income</td>
+        <td class="num">$385,420</td>
+        <td class="num">$320,000</td>
+        <td class="num var-pos">+$65,420</td>
+        <td class="num var-pos">+20.4%</td>
+        <td class="num">$3,124,800</td>
+      </tr>
+      <tr>
+        <td>Grant Income</td>
+        <td class="num">$48,200</td>
+        <td class="num">$50,000</td>
+        <td class="num var-neg">-$1,800</td>
+        <td class="num var-neg">-3.6%</td>
+        <td class="num">$524,600</td>
+      </tr>
+      <tr>
+        <td>Other Income</td>
+        <td class="num">$12,840</td>
+        <td class="num">$10,000</td>
+        <td class="num var-pos">+$2,840</td>
+        <td class="num var-pos">+28.4%</td>
+        <td class="num">$118,920</td>
+      </tr>
+      <tr class="subtotal">
+        <td>Total Income</td>
+        <td class="num">$446,460</td>
+        <td class="num">$380,000</td>
+        <td class="num var-pos">+$66,460</td>
+        <td class="num var-pos">+17.5%</td>
+        <td class="num">$3,768,320</td>
+      </tr>
+      <tr>
+        <td>Salaries &amp; Wages</td>
+        <td class="num">$128,400</td>
+        <td class="num">$132,000</td>
+        <td class="num var-pos">+$3,600</td>
+        <td class="num var-pos">+2.7%</td>
+        <td class="num">$1,184,600</td>
+      </tr>
+      <tr>
+        <td>Legal &amp; Professional</td>
+        <td class="num">$42,800</td>
+        <td class="num">$35,000</td>
+        <td class="num var-neg">-$7,800</td>
+        <td class="num var-neg">-22.3%</td>
+        <td class="num">$298,400</td>
+      </tr>
+      <tr>
+        <td>Office &amp; Admin</td>
+        <td class="num">$18,420</td>
+        <td class="num">$20,000</td>
+        <td class="num var-pos">+$1,580</td>
+        <td class="num var-pos">+7.9%</td>
+        <td class="num">$182,800</td>
+      </tr>
+      <tr>
+        <td>Other Expenses</td>
+        <td class="num">$42,260</td>
+        <td class="num">$45,000</td>
+        <td class="num var-pos">+$2,740</td>
+        <td class="num var-pos">+6.1%</td>
+        <td class="num">$258,520</td>
+      </tr>
+      <tr class="subtotal">
+        <td>Total Expenses</td>
+        <td class="num">$231,880</td>
+        <td class="num">$232,000</td>
+        <td class="num var-pos">+$120</td>
+        <td class="num">0.1%</td>
+        <td class="num">$1,924,320</td>
+      </tr>
+      <tr class="total">
+        <td>NET PROFIT</td>
+        <td class="num">$214,580</td>
+        <td class="num">$148,000</td>
+        <td class="num var-pos">+$66,580</td>
+        <td class="num var-pos">+45.0%</td>
+        <td class="num">$1,844,000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ============ P&L COMMENTARY ============ -->
+  <h3>P&amp;L Commentary</h3>
+  <div class="editable" contenteditable="true">
+    <span class="ai-badge">AI Draft</span>
+    <p>The favourable royalty variance reflects timing of the Q3 distribution that landed in late April rather than the budgeted May posting. Excluding the timing effect, underlying royalty income is broadly aligned with budget.</p>
+    <p>Legal &amp; Professional overspend of $7,800 relates to the Marrin Square Developments advisory engagement, which was not in the original budget — this was approved by the Board in February and should be reflected in the next budget revision.</p>
+  </div>
+
+  <!-- ============ BALANCE SHEET ============ -->
+  <h2>4. Balance Sheet Position</h2>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Account</th>
+        <th>30 Apr 2026</th>
+        <th>31 Mar 2026</th>
+        <th>Movement</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Cash &amp; Bank Accounts</td><td class="num">$3,420,180</td><td class="num">$3,233,420</td><td class="num var-pos">+$186,760</td></tr>
+      <tr><td>Investment Accounts</td><td class="num">$1,840,000</td><td class="num">$1,840,000</td><td class="num">—</td></tr>
+      <tr><td>Trade Debtors</td><td class="num">$612,340</td><td class="num">$563,920</td><td class="num var-neg">+$48,420</td></tr>
+      <tr><td>Other Current Assets</td><td class="num">$84,200</td><td class="num">$82,180</td><td class="num">+$2,020</td></tr>
+      <tr class="subtotal"><td>Total Current Assets</td><td class="num">$5,956,720</td><td class="num">$5,719,520</td><td class="num var-pos">+$237,200</td></tr>
+      <tr><td>Fixed Assets (net)</td><td class="num">$2,184,600</td><td class="num">$2,196,400</td><td class="num">-$11,800</td></tr>
+      <tr class="total"><td>TOTAL ASSETS</td><td class="num">$8,141,320</td><td class="num">$7,915,920</td><td class="num var-pos">+$225,400</td></tr>
+      <tr><td>Trade Creditors</td><td class="num">$284,600</td><td class="num">$298,400</td><td class="num var-pos">-$13,800</td></tr>
+      <tr><td>Other Current Liabilities</td><td class="num">$162,300</td><td class="num">$148,200</td><td class="num">+$14,100</td></tr>
+      <tr class="subtotal"><td>Total Liabilities</td><td class="num">$446,900</td><td class="num">$446,600</td><td class="num">+$300</td></tr>
+      <tr class="total"><td>NET EQUITY</td><td class="num">$7,694,420</td><td class="num">$7,469,320</td><td class="num var-pos">+$225,100</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ CASH POSITION ============ -->
+  <h2>5. Cash Position</h2>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Account</th>
+        <th>30 Apr 2026</th>
+        <th>31 Mar 2026</th>
+        <th>Movement</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>WBC Operating Account</td><td class="num">$1,842,400</td><td class="num">$1,724,800</td><td class="num var-pos">+$117,600</td></tr>
+      <tr><td>WBC Reserve Account</td><td class="num">$1,250,000</td><td class="num">$1,250,000</td><td class="num">—</td></tr>
+      <tr><td>WBC Project Account</td><td class="num">$324,780</td><td class="num">$256,620</td><td class="num var-pos">+$68,160</td></tr>
+      <tr><td>Petty Cash</td><td class="num">$3,000</td><td class="num">$2,000</td><td class="num">+$1,000</td></tr>
+      <tr class="total"><td>TOTAL CASH</td><td class="num">$3,420,180</td><td class="num">$3,233,420</td><td class="num var-pos">+$186,760</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ RECEIVABLES ============ -->
+  <h2>6. Receivables &amp; Aged Debtors</h2>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Aging</th>
+        <th>Amount</th>
+        <th>% of Total</th>
+        <th>Movement vs Mar</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Current (0–30 days)</td><td class="num">$384,200</td><td class="num">62.7%</td><td class="num">+$28,400</td></tr>
+      <tr><td>31–60 days</td><td class="num">$133,800</td><td class="num">21.8%</td><td class="num var-neg">+$22,600</td></tr>
+      <tr><td>61–90 days</td><td class="num">$58,400</td><td class="num">9.5%</td><td class="num var-neg">+$3,200</td></tr>
+      <tr><td>90+ days</td><td class="num">$35,940</td><td class="num">5.9%</td><td class="num var-pos">-$5,780</td></tr>
+      <tr class="total"><td>TOTAL DEBTORS</td><td class="num">$612,340</td><td class="num">100%</td><td class="num">+$48,420</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Receivables Commentary</h3>
+  <div class="editable" contenteditable="true">
+    <span class="ai-badge">AI Draft</span>
+    <p>The 31–60 day bucket has grown by $22,600 — predominantly two invoices to a single customer that have rolled into overdue. Recommend Saheel follow up in the first week of May. The 90+ day balance has reduced through partial recovery of a long-outstanding receivable.</p>
+  </div>
+
+  <!-- ============ KEY RATIOS ============ -->
+  <h2>7. Key Financial Ratios</h2>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Ratio</th>
+        <th>Apr 2026</th>
+        <th>Mar 2026</th>
+        <th>Feb 2026</th>
+        <th>Trend</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Current Ratio</td><td class="num">2.8 : 1</td><td class="num">2.5 : 1</td><td class="num">2.4 : 1</td><td class="var-pos">Improving</td></tr>
+      <tr><td>Quick Ratio</td><td class="num">2.7 : 1</td><td class="num">2.4 : 1</td><td class="num">2.3 : 1</td><td class="var-pos">Improving</td></tr>
+      <tr><td>Debt-to-Equity</td><td class="num">0.06</td><td class="num">0.06</td><td class="num">0.06</td><td>Stable</td></tr>
+      <tr><td>Return on Equity (YTD)</td><td class="num">24.0%</td><td class="num">22.1%</td><td class="num">20.4%</td><td class="var-pos">Improving</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ FLAGS ============ -->
+  <h2>8. Accrual &amp; Adjustment Flags</h2>
+  <p class="lead">Items that may affect the accuracy of this period's reporting and require review or action.</p>
+
+  <div class="flags-box">
+    <h3>⚠ Items flagged for attention</h3>
+    <ul>
+      <li><span class="flag-tag high">High</span> <strong>Q3 Royalty Accrual not posted</strong> — Royalties for January–March 2026 typically accrued at month-end. Last posted accrual was December 2025. <em>Owner: Matt</em></li>
+      <li><span class="flag-tag med">Med</span> <strong>2 reversal journals in draft</strong> — Matt's reversal decisions pending for: JNL-2026-0412 ($14,200), JNL-2026-0418 ($8,640). <em>Owner: Matt</em></li>
+      <li><span class="flag-tag info">Info</span> <strong>Depreciation run scheduled</strong> — April depreciation will post on 15 May. Will reduce Fixed Assets by ~$18,200.</li>
+    </ul>
+  </div>
+
+  <!-- ============ NOTES ============ -->
+  <h2>9. Notes &amp; Commentary</h2>
+  <p class="lead">Anything else the reader of this report needs to know — items not captured elsewhere, decisions made during the month, things to watch.</p>
+  <div class="editable" contenteditable="true">
+    <span class="ai-badge">AI Draft</span>
+    <p><em>(AI draft is intentionally minimal in this section — this is a free-form notes block for the preparer to add anything specific to the month.)</em></p>
+    <p>April was a strong month financially, with the timing of the Q3 royalty distribution flattering the result. May is expected to be quieter on the income side. The Marrin Square advisory engagement continues and will likely add a further ~$15K in legal &amp; professional costs through May–June.</p>
+  </div>
+
+  <!-- ============ SIGN-OFF ============ -->
+  <h2>10. Sign-off</h2>
+  <div class="signoff">
+    <div>
+      <div class="sig-block"></div>
+      <div class="sig-label">Prepared by — Date</div>
+    </div>
+    <div>
+      <div class="sig-block"></div>
+      <div class="sig-label">Reviewed by — Date</div>
+    </div>
+  </div>
+
+  <!-- ============ DOC FOOTER ============ -->
+  <div class="doc-footer">
+    Rirratjingu Aboriginal Corporation • Finance Monthly Report • April 2026 • Page 1 of 1<br>
+    Generated from RAC Financial Dashboard on 12 May 2026
+  </div>
+
+</div>
+</div>
+
+<script>
+  // ========================================================================
+  // CONFIG
+  // ========================================================================
+  // Point this at the Railway API. For local dev, override to http://localhost:8080
+  const API_BASE = "https://rac-xero-api-matt-production.up.railway.app";
+
+  // Map dropdown display name → short org code used in monthly_snapshots table
+  // (and now report_sections table). Mirrors orgNameMap in your dashboard.
+  const ORG_SHORT_NAMES = {
+    "Rirratjingu Aboriginal Corporation": "RAC",
+    "Rirratjingu Mining Pty Ltd": "Mining",
+    "Rirratjingu Enterprises Pty Ltd": "Enterprises",
+    "Rirratjingu Property Management": "Property",
+    "Ngarrkuwuy Developments Pty Ltd": "Ngarrkuwuy",
+    "Rirratjingu Invest (Miliditjpi Trust)": "Invest",
+    "Marrin Square Developments Pty Ltd": "Marrin",
+    "— Consolidated —": "Consolidated",
+  };
+
+  // Map period display string → YYYY-MM
+  const PERIOD_KEYS = {
+    "April 2026": "2026-04",
+    "March 2026": "2026-03",
+    "February 2026": "2026-02",
+    "January 2026": "2026-01",
+  };
+
+  // ========================================================================
+  // STATE
+  // ========================================================================
+  const state = {
+    org: "RAC",
+    periodMonth: "2026-04",
+    // saved content keyed by section — populated by load()
+    saved: {},
+    // debounce timers per section
+    saveTimers: {},
+  };
+
+  // ========================================================================
+  // DOM HELPERS
+  // ========================================================================
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+  const indicator = () => $("#saveIndicator");
+
+  function setIndicator(text, cls) {
+    const el = indicator();
+    el.textContent = text;
+    el.className = "save-indicator" + (cls ? " " + cls : "");
+  }
+
+  function clearIndicatorAfter(ms) {
+    setTimeout(() => setIndicator("", ""), ms);
+  }
+
+  // ========================================================================
+  // LOAD — fetch all saved sections for current org+period, hydrate the UI
+  // ========================================================================
+  async function loadReport() {
+    setIndicator("Loading…", "saving");
+    try {
+      const resp = await fetch(`${API_BASE}/api/report/get`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ org: state.org, periodMonth: state.periodMonth }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      state.saved = data.sections || {};
+
+      // Hydrate any editable block whose section_key has saved content
+      $$(".editable[data-section-key]").forEach((el) => {
+        const key = el.dataset.sectionKey;
+        const saved = state.saved[key];
+        if (saved) {
+          // Restore saved content (HTML)
+          // Keep the AI badge element from the template
+          const badge = el.querySelector(".ai-badge");
+          el.innerHTML = saved.content;
+          if (badge) {
+            // Re-insert badge if it was wiped, with edited state if applicable
+            const newBadge = document.createElement("span");
+            newBadge.className = "ai-badge";
+            newBadge.textContent = "AI Draft";
+            el.prepend(newBadge);
+            if (!saved.aiDrafted) {
+              el.classList.add("edited");
+            }
+          }
+        }
+      });
+
+      setIndicator("Loaded", "saved");
+      clearIndicatorAfter(1500);
+    } catch (err) {
+      console.error("Load failed:", err);
+      setIndicator("Load failed — using local copy", "error");
+      clearIndicatorAfter(4000);
+    }
+  }
+
+  // ========================================================================
+  // SAVE — push current content for a single section to the server
+  // ========================================================================
+  async function saveSection(el) {
+    const key = el.dataset.sectionKey;
+    if (!key) return;
+
+    // Strip the AI badge from the content before saving (it's UI chrome, not content)
+    const clone = el.cloneNode(true);
+    const badge = clone.querySelector(".ai-badge");
+    if (badge) badge.remove();
+    const content = clone.innerHTML.trim();
+
+    // aiDrafted = false because the user just typed
+    const payload = {
+      org: state.org,
+      periodMonth: state.periodMonth,
+      sectionKey: key,
+      content,
+      aiDrafted: false,
+      updatedBy: "duane", // placeholder — wire to real user later
+    };
+
+    setIndicator("Saving…", "saving");
+    try {
+      const resp = await fetch(`${API_BASE}/api/report/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      const time = new Date(data.updatedAt).toLocaleTimeString("en-AU", {
+        hour: "numeric", minute: "2-digit", hour12: true,
+      });
+      setIndicator(`Saved ${time}`, "saved");
+      clearIndicatorAfter(3000);
+
+      // Update the badge state to "edited"
+      el.classList.add("edited");
+    } catch (err) {
+      console.error("Save failed:", err);
+      setIndicator("Save failed — will retry", "error");
+      // Retry once after 5s
+      setTimeout(() => saveSection(el), 5000);
+    }
+  }
+
+  // Debounce: only save 1.2s after the user stops typing
+  function scheduleSave(el) {
+    const key = el.dataset.sectionKey;
+    if (state.saveTimers[key]) clearTimeout(state.saveTimers[key]);
+    state.saveTimers[key] = setTimeout(() => saveSection(el), 1200);
+    setIndicator("Editing…", "");
+  }
+
+  // ========================================================================
+  // EVENT WIRING
+  // ========================================================================
+  function regenerateAI() {
+    if (confirm(
+      "Regenerate AI draft for all narrative sections?\n\n" +
+      "This will overwrite any edits you have made.\n\n" +
+      "(In the real version, this would call Anthropic API with the current dashboard data.)"
+    )) {
+      alert("AI regeneration would run here — pulling live data, calling Anthropic API, refreshing narrative blocks.");
+    }
+  }
+
+  // Wire editable blocks with data-section-key for save behaviour
+  function wireEditables() {
+    $$(".editable[data-section-key]").forEach((el) => {
+      el.addEventListener("input", () => scheduleSave(el));
+      el.addEventListener("blur", () => {
+        // Force immediate save on blur (no waiting for debounce)
+        const key = el.dataset.sectionKey;
+        if (state.saveTimers[key]) {
+          clearTimeout(state.saveTimers[key]);
+          delete state.saveTimers[key];
+          saveSection(el);
+        }
+      });
+    });
+
+    // Non-wired editables (those without data-section-key) still get the
+    // "edited" visual state — they're mockup-only until we add their keys.
+    $$(".editable:not([data-section-key])").forEach((el) => {
+      const original = el.innerText;
+      el.addEventListener("input", () => {
+        if (el.innerText !== original) el.classList.add("edited");
+      });
+    });
+  }
+
+  // Selector changes → update state + reload
+  function wireSelectors() {
+    const orgSel = document.querySelector(".control-bar select:nth-of-type(1)");
+    const periodSel = document.querySelector(".control-bar select:nth-of-type(2)");
+
+    orgSel.addEventListener("change", (e) => {
+      state.org = ORG_SHORT_NAMES[e.target.value] || "RAC";
+      loadReport();
+    });
+    periodSel.addEventListener("change", (e) => {
+      state.periodMonth = PERIOD_KEYS[e.target.value] || "2026-04";
+      loadReport();
+    });
+  }
+
+  // ========================================================================
+  // INIT
+  // ========================================================================
+  document.addEventListener("DOMContentLoaded", () => {
+    wireEditables();
+    wireSelectors();
+    loadReport();
+  });
+</script>
+
+</body>
+</html>
