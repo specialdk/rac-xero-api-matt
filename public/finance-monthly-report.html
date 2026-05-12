@@ -903,19 +903,23 @@
 
   // Selector changes → update state + reload
   function wireSelectors() {
-    const orgSel = document.querySelector(".control-bar select:nth-of-type(1)");
-    const periodSel = document.querySelector(".control-bar select:nth-of-type(2)");
+    const selects = document.querySelectorAll(".control-bar select");
+    const orgSel = selects[0];
+    const periodSel = selects[1];
 
-    orgSel.addEventListener("change", (e) => {
-      state.org = ORG_SHORT_NAMES[e.target.value] || "RAC";
-      loadReport();
-    });
-    periodSel.addEventListener("change", (e) => {
-      state.periodMonth = PERIOD_KEYS[e.target.value] || "2026-04";
-      loadReport();
-    });
+    if (orgSel) {
+      orgSel.addEventListener("change", (e) => {
+        state.org = ORG_SHORT_NAMES[e.target.value] || "RAC";
+        loadReport();
+      });
+    }
+    if (periodSel) {
+      periodSel.addEventListener("change", (e) => {
+        state.periodMonth = PERIOD_KEYS[e.target.value] || "2026-04";
+        loadReport();
+      });
+    }
   }
-
   // ========================================================================
   // INIT
   // ========================================================================
