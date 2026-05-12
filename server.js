@@ -6468,6 +6468,346 @@ app.post("/api/reversal-journals", async (req, res) => {
   }
 });
 
+// ============================================================================
+// ORPHAN REVERSALS ENDPOINT (Rhian's rule)
+//
+// "A reversal with its matching accrual is noise. A reversal WITHOUT its
+//  matching accrual is signal."
+//
+// Pulls a wider window than the user requested (default: requested period
+// + 12 months lookback) so we can find matching accruals that are older
+// than the reversal we're looking at. Then for each reversal IN the
+// requested period, attempts to find its matching accrual:
+//   - Reversal narration: "Reversal: <original>"
+//   - Match key:          "<original>"  (text after "Reversal: ")
+//   - Accrual must have:  narration EXACTLY matching the key
+//                         date earlier than the reversal date
+//                         line amounts that sign-flip with the reversal
+//
+// Returns ORPHAN reversals only — those where no matching accrual found.
+// In healthy books, older periods should return ~0. The current period
+// will typically return live in-progress accruals awaiting invoice.
+// ============================================================================
+
+app.get("/api/orphan-reversals/:tenantId", async (req, res) => {
+  try {
+    const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
+    if (!tokenData) {
+      return res.status(404).json({ error: "Tenant not found or token expired" });
+    }
+
+    await xero.setTokenSet(tokenData);
+
+    const dateFrom = req.query.dateFrom ||
+      new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+    const dateTo = req.query.dateTo || new Date().toISOString().split("T")[0];
+
+    // Lookback window — accruals can be older than the reversals we're seeing
+    const lookbackMonths = parseInt(req.query.lookbackMonths || "12", 10);
+    const lookbackDate = new Date(dateFrom);
+    lookbackDate.setMonth(lookbackDate.getMonth() - lookbackMonths);
+    const lookbackDateStr = lookbackDate.toISOString().split("T")[0];
+
+    console.log(`[orphan-reversals] ${tokenData.tenantName} period=${dateFrom}..${dateTo} lookback=${lookbackDateStr}`);
+
+    // Chart of accounts for P&L category mapping
+    const accountsResponse = await xero.accountingApi.getAccounts(req.params.tenantId);
+    const accountTypeMap = {};
+    (accountsResponse.body.accounts || []).forEach(acc => {
+      accountTypeMap[acc.code] = {
+        type: acc.type,
+        name: acc.name,
+        class: acc.class
+      };
+    });
+
+    // Pull ALL journals in the wider window (lookback → dateTo)
+    const whereClause = `Date >= DateTime(${lookbackDateStr.replace(/-/g, ",")}) AND Date <= DateTime(${dateTo.replace(/-/g, ",")})`;
+    const journalListResponse = await xero.accountingApi.getManualJournals(
+      req.params.tenantId,
+      null,
+      whereClause
+    );
+
+    const journalList = (journalListResponse.body.manualJournals || [])
+      .filter(j => j.status === "POSTED");
+
+    console.log(`[orphan-reversals] ${journalList.length} posted journals in wider window`);
+
+    // Fetch full details for each (we need journal lines)
+    const allJournals = [];
+    for (const j of journalList) {
+      try {
+        const detailResp = await xero.accountingApi.getManualJournal(
+          req.params.tenantId,
+          j.manualJournalID
+        );
+        const full = detailResp.body.manualJournals?.[0];
+        if (full && full.journalLines) allJournals.push(full);
+      } catch (err) {
+        console.warn(`[orphan-reversals] Could not fetch ${j.manualJournalID}: ${err.message}`);
+      }
+    }
+
+    // Split into Accruals (no "Reversal:") vs Reversals (with "Reversal:")
+    const accruals = [];
+    const reversals = [];
+
+    for (const j of allJournals) {
+      const narration = (j.narration || "").toLowerCase();
+      const linesHaveReversal = (j.journalLines || []).some(line =>
+        (line.description || "").toLowerCase().includes("reversal:")
+      );
+      const isReversal = narration.includes("reversal:") || linesHaveReversal;
+
+      if (isReversal) {
+        reversals.push(j);
+      } else {
+        accruals.push(j);
+      }
+    }
+
+    console.log(`[orphan-reversals] split: ${accruals.length} accruals, ${reversals.length} reversals`);
+
+    // Build an index of accruals by normalised narration for fast lookup.
+    // We index by lowercased trimmed narration. Multiple accruals can
+    // share a narration (e.g. periodic recurring accruals) — store as array.
+    const accrualsByNarration = new Map();
+    for (const a of accruals) {
+      const key = (a.narration || "").toLowerCase().trim();
+      if (!key) continue;
+      if (!accrualsByNarration.has(key)) accrualsByNarration.set(key, []);
+      accrualsByNarration.get(key).push(a);
+    }
+
+    // For each reversal in the REQUESTED period, try to find its matching accrual
+    const orphanReversals = [];
+    const matchedReversals = [];
+
+    let revenueAdjustment = 0;
+    let cogsAdjustment = 0;
+    let expenseAdjustment = 0;
+
+    for (const rev of reversals) {
+      const revDate = rev.date.split("T")[0];
+
+      // Only consider reversals dated within the requested period
+      if (revDate < dateFrom || revDate > dateTo) continue;
+
+      // Extract match key from narration
+      const narration = (rev.narration || "").toLowerCase().trim();
+      let matchKey = null;
+      const idx = narration.indexOf("reversal:");
+      if (idx !== -1) {
+        matchKey = narration.substring(idx + "reversal:".length).trim();
+      }
+
+      // If no key extractable from narration, try line descriptions
+      if (!matchKey) {
+        for (const line of (rev.journalLines || [])) {
+          const desc = (line.description || "").toLowerCase();
+          const lineIdx = desc.indexOf("reversal:");
+          if (lineIdx !== -1) {
+            matchKey = desc.substring(lineIdx + "reversal:".length).trim();
+            break;
+          }
+        }
+      }
+
+      // Look up candidates by matching narration
+      let matchedAccrual = null;
+      if (matchKey) {
+        const candidates = accrualsByNarration.get(matchKey) || [];
+        // Filter candidates: must be dated BEFORE the reversal
+        const dateValid = candidates.filter(c => c.date.split("T")[0] < revDate);
+
+        // Verify sign-flip on line amounts (per account code, amounts should
+        // cancel exactly between accrual and reversal)
+        for (const candidate of dateValid) {
+          if (linesAreSignFlip(candidate.journalLines, rev.journalLines)) {
+            matchedAccrual = candidate;
+            break;
+          }
+        }
+      }
+
+      const journalDetail = buildJournalDetail(rev, accountTypeMap);
+
+      if (matchedAccrual) {
+        matchedReversals.push({
+          reversal: { id: rev.manualJournalID, date: revDate, narration: rev.narration },
+          accrual: { id: matchedAccrual.manualJournalID, date: matchedAccrual.date.split("T")[0], narration: matchedAccrual.narration }
+        });
+      } else {
+        // ORPHAN — no matching accrual found
+        orphanReversals.push({ ...journalDetail, matchKey });
+
+        // Aggregate P&L impact (orphans only)
+        for (const line of journalDetail.lines) {
+          if (line.plCategory === "revenue") revenueAdjustment += line.lineAmount;
+          else if (line.plCategory === "cogs") cogsAdjustment += line.lineAmount;
+          else if (line.plCategory === "expense") expenseAdjustment += line.lineAmount;
+        }
+      }
+    }
+
+    const netProfitAdjustment = revenueAdjustment + cogsAdjustment + expenseAdjustment;
+
+    console.log(`[orphan-reversals] result: ${orphanReversals.length} orphans, ${matchedReversals.length} matched. NP impact: $${netProfitAdjustment.toFixed(2)}`);
+
+    res.json({
+      tenantId: req.params.tenantId,
+      tenantName: tokenData.tenantName,
+      dateFrom,
+      dateTo,
+      lookbackDate: lookbackDateStr,
+      lookbackMonths,
+      diagnostics: {
+        totalJournalsInWindow: allJournals.length,
+        accrualsInWindow: accruals.length,
+        reversalsInWindow: reversals.length,
+        reversalsInRequestedPeriod: orphanReversals.length + matchedReversals.length,
+        orphanReversalsCount: orphanReversals.length,
+        matchedReversalsCount: matchedReversals.length,
+        sampleMatches: matchedReversals.slice(0, 5),
+      },
+      orphanCount: orphanReversals.length,
+      plImpact: {
+        revenueAdjustment: Math.round(revenueAdjustment * 100) / 100,
+        cogsAdjustment: Math.round(cogsAdjustment * 100) / 100,
+        expenseAdjustment: Math.round(expenseAdjustment * 100) / 100,
+        netProfitAdjustment: Math.round(netProfitAdjustment * 100) / 100,
+        description: "P&L impact of ORPHAN reversals only — reversals with no matching accrual found in lookback window."
+      },
+      orphanReversals,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("[orphan-reversals] error:", error);
+    res.status(500).json({
+      error: "Failed to get orphan reversals",
+      details: error.message,
+    });
+  }
+});
+
+// POST wrapper — mirrors /api/reversal-journals pattern
+app.post("/api/orphan-reversals", async (req, res) => {
+  try {
+    const { organizationName, tenantId, dateFrom, dateTo, lookbackMonths } = req.body;
+    if (!organizationName && !tenantId) {
+      return res.status(400).json({ error: "Organization name or tenant ID required" });
+    }
+
+    let actualTenantId = tenantId;
+    if (organizationName && !tenantId) {
+      const connections = await tokenStorage.getAllXeroConnections();
+      const connection = connections.find((c) =>
+        c.tenantName.toLowerCase().includes(organizationName.toLowerCase())
+      );
+      if (connection) {
+        actualTenantId = connection.tenantId;
+      } else {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+    }
+
+    const params = new URLSearchParams();
+    if (dateFrom) params.append("dateFrom", dateFrom);
+    if (dateTo) params.append("dateTo", dateTo);
+    if (lookbackMonths) params.append("lookbackMonths", lookbackMonths);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const url = `${req.protocol}://${req.get("host")}/api/orphan-reversals/${actualTenantId}${qs}`;
+    const response = await fetch(url);
+    const result = await response.json();
+    res.json(result);
+  } catch (error) {
+    console.error("[orphan-reversals] POST error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Helpers for orphan-reversals endpoint
+// ----------------------------------------------------------------------------
+
+// Check whether two sets of journal lines are sign-flips of each other.
+// For each line in A, there must be a corresponding line in B on the same
+// account with the opposite sign and matching magnitude. Tolerance: 1 cent.
+function linesAreSignFlip(linesA, linesB) {
+  if (!linesA || !linesB) return false;
+  if (linesA.length !== linesB.length) return false;
+
+  // Sum lineAmount per accountCode for each set
+  const sumA = {};
+  const sumB = {};
+  for (const l of linesA) {
+    sumA[l.accountCode] = (sumA[l.accountCode] || 0) + (l.lineAmount || 0);
+  }
+  for (const l of linesB) {
+    sumB[l.accountCode] = (sumB[l.accountCode] || 0) + (l.lineAmount || 0);
+  }
+
+  // Account codes must match
+  const codesA = Object.keys(sumA).sort();
+  const codesB = Object.keys(sumB).sort();
+  if (codesA.length !== codesB.length) return false;
+  for (let i = 0; i < codesA.length; i++) {
+    if (codesA[i] !== codesB[i]) return false;
+  }
+
+  // For each account, the sums should add to ~0 (sign-flipped)
+  for (const code of codesA) {
+    if (Math.abs(sumA[code] + sumB[code]) > 0.01) return false;
+  }
+  return true;
+}
+
+// Build standardised journal detail object (lines + P&L category mapping)
+function buildJournalDetail(journal, accountTypeMap) {
+  const detail = {
+    journalID: journal.manualJournalID,
+    journalNumber: journal.journalNumber,
+    reference: journal.reference || "",
+    narration: journal.narration || "",
+    date: journal.date,
+    status: journal.status,
+    lines: [],
+    totalDebits: 0,
+    totalCredits: 0,
+  };
+
+  (journal.journalLines || []).forEach(line => {
+    const info = accountTypeMap[line.accountCode] || {};
+    const accountClass = (info.class || "").toUpperCase();
+    const accountType = (info.type || "").toUpperCase();
+    const lineAmount = line.lineAmount || 0;
+
+    let plCategory = "other";
+    if (accountClass === "REVENUE" || accountType === "REVENUE" || accountType === "SALES") {
+      plCategory = "revenue";
+    } else if (accountType === "DIRECTCOSTS") {
+      plCategory = "cogs";
+    } else if (accountClass === "EXPENSE" || accountType === "EXPENSE" || accountType === "OVERHEADS") {
+      plCategory = "expense";
+    }
+
+    detail.lines.push({
+      accountCode: line.accountCode,
+      accountName: info.name || line.accountCode,
+      accountType,
+      plCategory,
+      description: line.description || "",
+      lineAmount,
+      isDebit: lineAmount > 0,
+    });
+    if (lineAmount > 0) detail.totalDebits += lineAmount;
+    if (lineAmount < 0) detail.totalCredits += Math.abs(lineAmount);
+  });
+
+  return detail;
+}
+
   // ========== INVOICES DETAIL (with line items) ==========
 // GET endpoint - fetches all sales invoices with line items for a date range
 app.get("/api/invoices-detail/:tenantId", async (req, res) => {
