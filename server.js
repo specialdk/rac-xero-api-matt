@@ -6589,7 +6589,7 @@ app.get("/api/orphan-reversals/:tenantId", async (req, res) => {
     let expenseAdjustment = 0;
 
     for (const rev of reversals) {
-      const revDate = rev.date.split("T")[0];
+      const revDate = toDateString(rev.date);
 
       // Only consider reversals dated within the requested period
       if (revDate < dateFrom || revDate > dateTo) continue;
@@ -6619,7 +6619,7 @@ app.get("/api/orphan-reversals/:tenantId", async (req, res) => {
       if (matchKey) {
         const candidates = accrualsByNarration.get(matchKey) || [];
         // Filter candidates: must be dated BEFORE the reversal
-        const dateValid = candidates.filter(c => c.date.split("T")[0] < revDate);
+        const dateValid = candidates.filter(c => toDateString(c.date) < revDate);
 
         // Verify sign-flip on line amounts (per account code, amounts should
         // cancel exactly between accrual and reversal)
@@ -6636,7 +6636,7 @@ app.get("/api/orphan-reversals/:tenantId", async (req, res) => {
       if (matchedAccrual) {
         matchedReversals.push({
           reversal: { id: rev.manualJournalID, date: revDate, narration: rev.narration },
-          accrual: { id: matchedAccrual.manualJournalID, date: matchedAccrual.date.split("T")[0], narration: matchedAccrual.narration }
+          accrual: { id: matchedAccrual.manualJournalID, date: toDateString(matchedAccrual.date), narration: matchedAccrual.narration }
         });
       } else {
         // ORPHAN — no matching accrual found
