@@ -763,6 +763,31 @@
   // ========================================================================
   // LOAD — fetch all saved sections for current org+period, hydrate the UI
   // ========================================================================
+  // Cache the original AI-draft HTML for each wired section, so we can
+  // restore it when switching to an entity/period with no saved content.
+  // Populated once, on DOMContentLoaded.
+  const aiDrafts = {};
+  function captureAIDrafts() {
+    $$(".editable[data-section-key]").forEach((el) => {
+      const key = el.dataset.sectionKey;
+      // Clone without the AI badge — that's UI chrome, not draft content
+      const clone = el.cloneNode(true);
+      const badge = clone.querySelector(".ai-badge");
+      if (badge) badge.remove();
+      aiDrafts[key] = clone.innerHTML.trim();
+    });
+  }
+
+  function applySectionContent(el, html, isEdited) {
+    el.innerHTML = html;
+    // Re-insert the AI badge (always — it's part of the visual)
+    const newBadge = document.createElement("span");
+    newBadge.className = "ai-badge";
+    newBadge.textContent = "AI Draft";
+    el.prepend(newBadge);
+    el.classList.toggle("edited", isEdited);
+  }
+
   async function loadReport() {
     setIndicator("Loading…", "saving");
     try {
@@ -775,25 +800,15 @@
       const data = await resp.json();
       state.saved = data.sections || {};
 
-      // Hydrate any editable block whose section_key has saved content
+      // For each wired section: restore saved content if it exists,
+      // OTHERWISE restore the cached original AI draft.
       $$(".editable[data-section-key]").forEach((el) => {
         const key = el.dataset.sectionKey;
         const saved = state.saved[key];
         if (saved) {
-          // Restore saved content (HTML)
-          // Keep the AI badge element from the template
-          const badge = el.querySelector(".ai-badge");
-          el.innerHTML = saved.content;
-          if (badge) {
-            // Re-insert badge if it was wiped, with edited state if applicable
-            const newBadge = document.createElement("span");
-            newBadge.className = "ai-badge";
-            newBadge.textContent = "AI Draft";
-            el.prepend(newBadge);
-            if (!saved.aiDrafted) {
-              el.classList.add("edited");
-            }
-          }
+          applySectionContent(el, saved.content, !saved.aiDrafted);
+        } else if (aiDrafts[key] !== undefined) {
+          applySectionContent(el, aiDrafts[key], false);
         }
       });
 
@@ -924,6 +939,7 @@
   // INIT
   // ========================================================================
   document.addEventListener("DOMContentLoaded", () => {
+    captureAIDrafts();   // ← capture defaults BEFORE first load
     wireEditables();
     wireSelectors();
     loadReport();
