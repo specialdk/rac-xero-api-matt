@@ -12,6 +12,8 @@ const { XeroAccessToken, XeroIdToken, XeroClient } = pkg;
 import { Pool } from "pg";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import cookieParser from "cookie-parser";
+import crypto from "crypto";
 
 // Spend & Revenue classifier modules — see /lib/classifier.js and
 // /lib/revenue-classifier.js. Imported as namespaces with renamed
@@ -292,8 +294,108 @@ const tokenStorage = {
 };
 
 // Middleware
-app.use(express.static(path.join(__dirname, "public"), { index: false }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+// === Shared-passphrase access gate ===
+// Sits in front of static files and every route. Fails CLOSED when env vars
+// are missing. Allowlist is intentionally tiny — OAuth callbacks only, since
+// they cannot carry the gate cookie back from Xero/ApprovalMax.
+const GATE_PASSWORD = process.env.DASHBOARD_GATE_PASSWORD;
+const GATE_COOKIE_SECRET = process.env.GATE_COOKIE_SECRET;
+const GATE_ENABLED = Boolean(GATE_PASSWORD && GATE_COOKIE_SECRET);
+if (!GATE_ENABLED) {
+  console.error("[GATE] FAIL-CLOSED: gate env vars missing");
+}
+
+const GATE_ALLOWLIST = new Set([
+  "/auth",
+  "/callback",
+  "/callback/approvalmax",
+]);
+
+const GATE_PAGE = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAC Finance &mdash; Access</title>
+<style>
+  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f4f4f6;margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh}
+  form{background:#fff;padding:1.75rem 2rem;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08);width:320px;max-width:90vw}
+  h1{font-size:1.05rem;margin:0 0 1rem;color:#222;font-weight:600}
+  label{display:block;font-size:.85rem;color:#555;margin-bottom:.4rem}
+  input[type=password]{width:100%;padding:.6rem .7rem;border:1px solid #ccc;border-radius:4px;font-size:1rem;box-sizing:border-box}
+  button{margin-top:1rem;width:100%;padding:.7rem;background:#1a3a52;color:#fff;border:0;border-radius:4px;font-size:1rem;cursor:pointer}
+  button:hover{background:#244c6a}
+  .err{color:#a3261b;font-size:.85rem;margin-top:.6rem}
+</style></head>
+<body>
+  <form method="POST" action="/gate-login" autocomplete="off">
+    <h1>RAC Finance &mdash; access required</h1>
+    <label for="p">Passphrase</label>
+    <input id="p" name="passphrase" type="password" autofocus required>
+    <button type="submit">Continue</button>
+    __ERROR__
+  </form>
+</body></html>`;
+
+function renderGatePage(showError) {
+  return GATE_PAGE.replace(
+    "__ERROR__",
+    showError ? '<div class="err">Incorrect passphrase.</div>' : ""
+  );
+}
+
+function gateMiddleware(req, res, next) {
+  if (GATE_ALLOWLIST.has(req.path)) {
+    return next();
+  }
+
+  if (!GATE_ENABLED) {
+    return res
+      .status(503)
+      .type("text/plain")
+      .send("Service unavailable");
+  }
+
+  if (req.signedCookies && req.signedCookies.gate_ok === "1") {
+    return next();
+  }
+
+  if (req.method === "POST" && req.path === "/gate-login") {
+    const submitted =
+      req.body && typeof req.body.passphrase === "string"
+        ? req.body.passphrase
+        : "";
+    const submittedBuf = Buffer.from(submitted, "utf8");
+    const expectedBuf = Buffer.from(GATE_PASSWORD, "utf8");
+    let ok = false;
+    if (submittedBuf.length === expectedBuf.length) {
+      try {
+        ok = crypto.timingSafeEqual(submittedBuf, expectedBuf);
+      } catch {
+        ok = false;
+      }
+    }
+    if (ok) {
+      res.cookie("gate_ok", "1", {
+        httpOnly: true,
+        signed: true,
+        sameSite: "lax",
+        secure: true,
+        maxAge: 12 * 60 * 60 * 1000,
+      });
+      return res.redirect("/");
+    }
+    return res.status(401).type("text/html").send(renderGatePage(true));
+  }
+
+  return res.status(200).type("text/html").send(renderGatePage(false));
+}
+
+app.use(cookieParser(GATE_COOKIE_SECRET));
+app.use(gateMiddleware);
+
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
 // Initialize Xero client with reports scope
 const xero = new XeroClient({
