@@ -1849,12 +1849,9 @@ app.post("/api/financial-ratios", async (req, res) => {
     const { organizationName, tenantId, date } = req.body;
 
     if (!organizationName && !tenantId) {
-      return res
-        .status(400)
-        .json({ error: "Organization name or tenant ID required" });
+      return res.status(400).json({ error: "Organization name or tenant ID required" });
     }
 
-    // Find tenant ID if organization name provided
     let actualTenantId = tenantId;
     if (organizationName && !tenantId) {
       const connections = await tokenStorage.getAllXeroConnections();
@@ -1868,23 +1865,12 @@ app.post("/api/financial-ratios", async (req, res) => {
       }
     }
 
-    // Call your existing GET endpoint internally
-    const dateParam = date ? `?date=${date}` : "";
-    const response = await fetch(
-      `${req.protocol}://${req.get(
-        "host"
-      )}/api/financial-ratios/${actualTenantId}${dateParam}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`Financial ratios request failed: ${response.status}`);
-    }
-
-    const result = await response.json();
+    const result = await fetchFinancialRatios(actualTenantId, { date });
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Financial ratios API error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Financial ratios API error:", error);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.message });
   }
 });
 
@@ -2174,6 +2160,90 @@ app.post("/api/expense-analysis", async (req, res) => {
 // across all 7 tenants — deferrable to v2.
 // ─────────────────────────────────────────────────────────────────────────
 
+// ============================================================================
+// SHARED HELPER: Fetch expense analysis directly from Xero — no HTTP hop.
+// ============================================================================
+async function fetchExpenseAnalysis(tenantId, { date, periodMonths = 12 } = {}) {
+  const tokenData = await tokenStorage.getXeroToken(tenantId);
+  if (!tokenData) {
+    const err = new Error("Tenant not found or token expired");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await xero.setTokenSet(tokenData);
+
+  const reportDate = date || new Date().toISOString().split("T")[0];
+  const fromDate = new Date(reportDate);
+  fromDate.setMonth(fromDate.getMonth() - periodMonths);
+  const fromDateStr = fromDate.toISOString().split("T")[0];
+
+  console.log(`Getting expense analysis for ${tokenData.tenantName}`);
+  const response = await xero.accountingApi.getReportProfitAndLoss(
+    tenantId,
+    fromDateStr,
+    reportDate
+  );
+
+  const plRows = response.body.reports?.[0]?.rows || [];
+
+  const expenseAnalysis = {
+    totalExpenses: 0,
+    expenseCategories: [],
+    topExpenses: [],
+    monthlyAverage: 0,
+  };
+
+  plRows.forEach((section) => {
+    if (section.rowType === "Section" && section.rows && section.title) {
+      const sectionTitle = section.title.toLowerCase();
+      if (sectionTitle.includes("expense") || sectionTitle.includes("cost")) {
+        section.rows.forEach((row) => {
+          if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
+            const accountName = row.cells[0]?.value || "";
+            const amount = parseFloat(row.cells[1]?.value || 0);
+            if (!accountName.toLowerCase().includes("total") && amount > 0) {
+              expenseAnalysis.expenseCategories.push({
+                accountName,
+                amount,
+                monthlyAverage: Math.abs(amount) / periodMonths,
+                category: categorizeExpense(accountName),
+              });
+              expenseAnalysis.totalExpenses += Math.abs(amount);
+            }
+          }
+        });
+      }
+    }
+  });
+
+  expenseAnalysis.expenseCategories.sort((a, b) => b.amount - a.amount);
+  expenseAnalysis.topExpenses = expenseAnalysis.expenseCategories.slice(0, 10);
+  expenseAnalysis.monthlyAverage = expenseAnalysis.totalExpenses / periodMonths;
+
+  const categoryTotals = {};
+  expenseAnalysis.expenseCategories.forEach((expense) => {
+    categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
+  });
+
+  expenseAnalysis.categoryBreakdown = Object.entries(categoryTotals)
+    .map(([category, total]) => ({
+      category,
+      total,
+      percentage: ((total / expenseAnalysis.totalExpenses) * 100).toFixed(1),
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  return {
+    tenantId,
+    tenantName: tokenData.tenantName,
+    period: { from: fromDateStr, to: reportDate, months: periodMonths },
+    analysis: expenseAnalysis,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+
 app.post("/api/spend-classification", async (req, res) => {
   try {
     const { organizationName, tenantId, date, periodMonths } = req.body;
@@ -2181,13 +2251,11 @@ app.post("/api/spend-classification", async (req, res) => {
     if (!organizationName && !tenantId) {
       return res.status(400).json({ error: "Organization name or tenant ID required" });
     }
-    // Reject ALL/consolidated for v1 — single entity only
     const normalised = String(organizationName || "").toLowerCase();
     if (["all", "all entities", "consolidated"].includes(normalised)) {
       return res.status(400).json({ error: "Spend classification is single-entity only in v1. Pick a specific entity." });
     }
 
-    // Resolve organisation name to tenantId (matches existing endpoint pattern)
     let actualTenantId = tenantId;
     let actualTenantName = "";
     if (organizationName && !tenantId) {
@@ -2203,32 +2271,14 @@ app.post("/api/spend-classification", async (req, res) => {
       }
     }
 
-    // Call the existing expense-analysis endpoint to get raw expense data
-    const params = new URLSearchParams();
-    if (date) params.append("date", date);
-    if (periodMonths) params.append("periodMonths", periodMonths.toString());
-    const queryString = params.toString() ? `?${params.toString()}` : "";
+    // Call shared helper directly — no HTTP hop
+    const expenseData = await fetchExpenseAnalysis(actualTenantId, {
+      date,
+      periodMonths: periodMonths || 12,
+    });
 
-    const upstream = await fetch(
-      `${req.protocol}://${req.get("host")}/api/expense-analysis/${actualTenantId}${queryString}`
-    );
-
-    if (!upstream.ok) {
-      throw new Error(`Upstream expense-analysis failed: ${upstream.status}`);
-    }
-
-    const expenseData = await upstream.json();
-    // Real shape (verified): { tenantId, tenantName, period, analysis, generatedAt }
-    // Where analysis = { totalExpenses, expenseCategories: [{accountName, amount, ...}], topExpenses, monthlyAverage }
-    // Earlier draft assumed top-level expenseCategories — defensive read covers both.
-    const categories = expenseData.analysis?.expenseCategories
-      || expenseData.expenseCategories
-      || [];
-    const reportedTotal = expenseData.analysis?.totalExpenses
-      ?? expenseData.totalExpenses
-      ?? null;
-
-    // Run the classifier
+    const categories = expenseData.analysis?.expenseCategories || [];
+    const reportedTotal = expenseData.analysis?.totalExpenses ?? null;
     const classification = summariseSpend(categories);
 
     res.json({
@@ -2236,9 +2286,7 @@ app.post("/api/spend-classification", async (req, res) => {
       tenantName: actualTenantName || expenseData.tenantName,
       period: { date, periodMonths: periodMonths || 12 },
       classification,
-      // Round-trip the upstream total for sanity-check / reconciliation
       reportedTotalExpenses: reportedTotal,
-      // Account count by bucket — handy for the UI
       bucketCounts: Object.fromEntries(
         Object.entries(classification.detailed || {}).map(([k, v]) => [k, v.length])
       ),
@@ -2246,7 +2294,8 @@ app.post("/api/spend-classification", async (req, res) => {
     });
   } catch (error) {
     console.error("Spend classification API error:", error?.stack || error);
-    res.status(500).json({ error: error.message, stack: error?.stack });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.message });
   }
 });
 
@@ -2277,29 +2326,13 @@ app.post("/api/revenue-classification", async (req, res) => {
       }
     }
 
-    // Call the existing profit-loss GET endpoint directly (same pattern as
-    // spend → expense-analysis). Going through the POST wrapper introduced an
-    // extra HTTP hop that 404'd intermittently under concurrent token state.
-    const params = new URLSearchParams();
-    if (date) params.append("date", date);
-    params.append("periodMonths", (periodMonths || 12).toString());
-    const queryString = params.toString() ? `?${params.toString()}` : "";
+    // Reuse the shared P&L helper we already extracted — no HTTP hop
+    const plData = await fetchProfitLossData(actualTenantId, {
+      date,
+      periodMonths: periodMonths || 12,
+    });
 
-    const upstream = await fetch(
-      `${req.protocol}://${req.get("host")}/api/profit-loss/${actualTenantId}${queryString}`
-    );
-
-    if (!upstream.ok) {
-      throw new Error(`Upstream profit-loss failed: ${upstream.status}`);
-    }
-
-    const plData = await upstream.json();
-    // Real shape (verified): { tenantId, tenantName, period, summary, generatedAt }
-    // Where summary = { totalRevenue, totalCOGS, grossProfit, totalExpenses, netProfit,
-    //                    revenueAccounts: [{name, amount}], cogsAccounts, expenseAccounts }
     const revenueAccounts = plData?.summary?.revenueAccounts || [];
-
-    // Run the classifier
     const classification = summariseRevenue(revenueAccounts);
 
     res.json({
@@ -2307,7 +2340,6 @@ app.post("/api/revenue-classification", async (req, res) => {
       tenantName: actualTenantName || plData.tenantName,
       period: plData.period || { date, periodMonths: periodMonths || 12 },
       classification,
-      // Round-trip the upstream total for reconciliation
       reportedTotalRevenue: plData?.summary?.totalRevenue,
       bucketCounts: Object.fromEntries(
         Object.entries(classification.detailed || {}).map(([k, v]) => [k, v.length])
@@ -2316,7 +2348,8 @@ app.post("/api/revenue-classification", async (req, res) => {
     });
   } catch (error) {
     console.error("Revenue classification API error:", error?.stack || error);
-    res.status(500).json({ error: error.message, stack: error?.stack });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.message });
   }
 });
 
@@ -4919,115 +4952,95 @@ app.get("/api/intercompany/:tenantId", async (req, res) => {
   }
 });
 
+// ============================================================================
+// SHARED HELPER: Calculate financial ratios — no HTTP hop.
+// Reuses fetchTrialBalance and fetchProfitLossData helpers.
+// ============================================================================
+async function fetchFinancialRatios(tenantId, { date } = {}) {
+  const tokenData = await tokenStorage.getXeroToken(tenantId);
+  if (!tokenData) {
+    const err = new Error("Tenant not found or token expired");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const reportDate = date || new Date().toISOString().split("T")[0];
+
+  // Call the helpers directly in parallel — no HTTP hop
+  const [tbData, plData] = await Promise.all([
+    fetchTrialBalance(tenantId, { reportDate }),
+    fetchProfitLossData(tenantId, { date: reportDate, periodMonths: 1 }),
+  ]);
+
+  const totals = tbData.trialBalance.totals;
+  const plSummary = plData.summary;
+
+  const ratios = {
+    liquidity: {
+      currentRatio: totals.totalAssets / Math.max(totals.totalLiabilities, 1),
+      workingCapital: totals.totalAssets - totals.totalLiabilities,
+    },
+    leverage: {
+      debtToEquity: Math.abs(totals.totalLiabilities) / Math.max(totals.totalEquity, 1),
+      equityRatio: totals.totalEquity / Math.max(totals.totalAssets, 1),
+    },
+    profitability: {
+      netProfitMargin: (plSummary.netProfit / Math.max(Math.abs(plSummary.totalRevenue), 1)) * 100,
+      returnOnAssets: (plSummary.netProfit / Math.max(totals.totalAssets, 1)) * 100,
+      returnOnEquity: (plSummary.netProfit / Math.max(Math.abs(totals.totalEquity), 1)) * 100,
+    },
+    efficiency: {
+      assetTurnover: plSummary.totalRevenue / Math.max(totals.totalAssets, 1),
+      expenseRatio: (plSummary.totalExpenses / Math.max(Math.abs(plSummary.totalRevenue), 1)) * 100,
+    },
+  };
+
+  const interpretations = {
+    currentRatio:
+      ratios.liquidity.currentRatio > 2 ? "Strong"
+      : ratios.liquidity.currentRatio > 1 ? "Adequate"
+      : "Concerning",
+    debtToEquity:
+      ratios.leverage.debtToEquity < 0.3 ? "Conservative"
+      : ratios.leverage.debtToEquity < 1 ? "Moderate"
+      : "High",
+    profitability:
+      ratios.profitability.netProfitMargin > 10 ? "Excellent"
+      : ratios.profitability.netProfitMargin > 5 ? "Good"
+      : ratios.profitability.netProfitMargin > 0 ? "Break-even"
+      : "Loss",
+  };
+
+  return {
+    tenantId,
+    tenantName: tokenData.tenantName,
+    reportDate,
+    ratios,
+    interpretations,
+    dataSource: {
+      totalAssets: totals.totalAssets,
+      totalLiabilities: totals.totalLiabilities,
+      totalEquity: totals.totalEquity,
+      totalRevenue: plSummary.totalRevenue,
+      totalExpenses: plSummary.totalExpenses,
+      netProfit: plSummary.netProfit,
+    },
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+// Get financial ratios
 // Get financial ratios
 app.get("/api/financial-ratios/:tenantId", async (req, res) => {
   try {
-    const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
-    if (!tokenData) {
-      return res
-        .status(404)
-        .json({ error: "Tenant not found or token expired" });
-    }
-
-    const reportDate = req.query.date || new Date().toISOString().split("T")[0];
-
-    // Get trial balance and P&L data
-    const [tbResponse, plResponse] = await Promise.all([
-      fetch(
-        `${req.protocol}://${req.get("host")}/api/trial-balance/${
-          req.params.tenantId
-        }?date=${reportDate}`
-      ),
-      fetch(
-        `${req.protocol}://${req.get("host")}/api/profit-loss/${
-          req.params.tenantId
-        }?date=${reportDate}`
-      ),
-    ]);
-
-    if (!tbResponse.ok || !plResponse.ok) {
-      throw new Error(
-        "Failed to retrieve financial data for ratio calculation"
-      );
-    }
-
-    const [tbData, plData] = await Promise.all([
-      tbResponse.json(),
-      plResponse.json(),
-    ]);
-
-    const totals = tbData.trialBalance.totals;
-    const plSummary = plData.summary;
-
-    // Calculate key financial ratios
-    const ratios = {
-      liquidity: {
-        currentRatio: totals.totalAssets / Math.max(totals.totalLiabilities, 1),
-        workingCapital: totals.totalAssets - totals.totalLiabilities,
-      },
-      leverage: {
-        debtToEquity:
-          Math.abs(totals.totalLiabilities) / Math.max(totals.totalEquity, 1),
-        equityRatio: totals.totalEquity / Math.max(totals.totalAssets, 1),
-      },
-      profitability: {
-        netProfitMargin:
-          (plSummary.netProfit / Math.max(Math.abs(plSummary.totalRevenue), 1)) * 100,
-        returnOnAssets:
-          (plSummary.netProfit / Math.max(totals.totalAssets, 1)) * 100,
-        returnOnEquity:
-          (plSummary.netProfit / Math.max(Math.abs(totals.totalEquity), 1)) * 100,
-      },
-      efficiency: {
-        assetTurnover: plSummary.totalRevenue / Math.max(totals.totalAssets, 1),
-        expenseRatio:
-          (plSummary.totalExpenses / Math.max(Math.abs(plSummary.totalRevenue), 1)) * 100,
-      },
-    };
-
-    // Add ratio interpretations
-    const interpretations = {
-      currentRatio:
-        ratios.liquidity.currentRatio > 2
-          ? "Strong"
-          : ratios.liquidity.currentRatio > 1
-          ? "Adequate"
-          : "Concerning",
-      debtToEquity:
-        ratios.leverage.debtToEquity < 0.3
-          ? "Conservative"
-          : ratios.leverage.debtToEquity < 1
-          ? "Moderate"
-          : "High",
-      profitability:
-        ratios.profitability.netProfitMargin > 10
-          ? "Excellent"
-          : ratios.profitability.netProfitMargin > 5
-          ? "Good"
-          : ratios.profitability.netProfitMargin > 0
-          ? "Break-even"
-          : "Loss",
-    };
-
-    res.json({
-      tenantId: req.params.tenantId,
-      tenantName: tokenData.tenantName,
-      reportDate,
-      ratios,
-      interpretations,
-      dataSource: {
-        totalAssets: totals.totalAssets,
-        totalLiabilities: totals.totalLiabilities,
-        totalEquity: totals.totalEquity,
-        totalRevenue: plSummary.totalRevenue,
-        totalExpenses: plSummary.totalExpenses,
-        netProfit: plSummary.netProfit,
-      },
-      generatedAt: new Date().toISOString(),
+    const result = await fetchFinancialRatios(req.params.tenantId, {
+      date: req.query.date,
     });
+    res.json(result);
   } catch (error) {
     console.error("Error calculating financial ratios:", error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
       error: "Failed to calculate financial ratios",
       details: error.message,
     });
@@ -7299,6 +7312,117 @@ app.get("/api/invoices-detail/:tenantId", async (req, res) => {
   }
 });
 
+// ============================================================================
+// SHARED HELPER: Fetch invoice details with line items — no HTTP hop.
+// Xero requires page parameter to return line items.
+// ============================================================================
+async function fetchInvoicesDetail(tenantId, { dateFrom, dateTo, status } = {}) {
+  const tokenData = await tokenStorage.getXeroToken(tenantId);
+  if (!tokenData) {
+    const err = new Error("Tenant not found or token expired");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await xero.setTokenSet(tokenData);
+
+  const effectiveFrom = dateFrom || "2024-01-01";
+  const effectiveTo = dateTo || new Date().toISOString().split("T")[0];
+
+  console.log(`📋 Fetching detailed invoices for ${tokenData.tenantName} from ${effectiveFrom} to ${effectiveTo}`);
+
+  let whereClause = `Type=="ACCREC" AND Date >= DateTime(${effectiveFrom.replace(/-/g, ",")}) AND Date <= DateTime(${effectiveTo.replace(/-/g, ",")})`;
+  if (status) {
+    whereClause += ` AND Status=="${status}"`;
+  }
+
+  let allInvoices = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const response = await xero.accountingApi.getInvoices(
+      tenantId,
+      null,           // ifModifiedSince
+      whereClause,    // where
+      "Date DESC",    // order
+      null,           // ids
+      null,           // invoiceNumbers
+      null,           // contactIDs
+      null,           // statuses
+      page,           // page — triggers line items
+      false,          // includeArchived
+      null,           // createdByMyApp
+      4,              // unitdp
+      false           // summaryOnly — MUST be false
+    );
+
+    const invoices = response.body.invoices || [];
+    console.log(`  Page ${page}: ${invoices.length} invoices`);
+
+    if (invoices.length === 0) {
+      hasMore = false;
+    } else {
+      allInvoices = allInvoices.concat(invoices);
+      page++;
+      if (page > 50) {
+        console.warn("⚠️ Hit 50 page limit, stopping pagination");
+        hasMore = false;
+      }
+    }
+  }
+
+  console.log(`✅ Total invoices found: ${allInvoices.length}`);
+
+  const result = allInvoices.map((inv) => ({
+    invoiceID: inv.invoiceID,
+    invoiceNumber: inv.invoiceNumber,
+    reference: inv.reference || "",
+    contact: inv.contact?.name || "Unknown",
+    contactID: inv.contact?.contactID || "",
+    status: inv.status,
+    date: inv.date,
+    dueDate: inv.dueDate,
+    subTotal: parseFloat(inv.subTotal) || 0,
+    totalTax: parseFloat(inv.totalTax) || 0,
+    total: parseFloat(inv.total) || 0,
+    amountDue: parseFloat(inv.amountDue) || 0,
+    amountPaid: parseFloat(inv.amountPaid) || 0,
+    currencyCode: inv.currencyCode || "AUD",
+    lineItems: (inv.lineItems || []).map((line) => ({
+      lineItemID: line.lineItemID,
+      description: line.description || "",
+      quantity: parseFloat(line.quantity) || 0,
+      unitAmount: parseFloat(line.unitAmount) || 0,
+      lineAmount: parseFloat(line.lineAmount) || 0,
+      accountCode: line.accountCode || "",
+      accountName: line.accountCode || "",
+      taxType: line.taxType || "",
+      taxAmount: parseFloat(line.taxAmount) || 0,
+      itemCode: line.itemCode || "",
+      discountRate: parseFloat(line.discountRate) || 0,
+    })),
+  }));
+
+  const totalRevenue = result.reduce((sum, inv) => sum + inv.total, 0);
+  const totalPaid = result.reduce((sum, inv) => sum + inv.amountPaid, 0);
+  const totalOutstanding = result.reduce((sum, inv) => sum + inv.amountDue, 0);
+
+  return {
+    tenantId,
+    tenantName: tokenData.tenantName,
+    dateFrom: effectiveFrom,
+    dateTo: effectiveTo,
+    statusFilter: status || "ALL",
+    totalInvoices: result.length,
+    totalRevenue: Math.round(totalRevenue * 100) / 100,
+    totalPaid: Math.round(totalPaid * 100) / 100,
+    totalOutstanding: Math.round(totalOutstanding * 100) / 100,
+    invoices: result,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 // POST endpoint - organization name lookup wrapper
 app.post("/api/invoices-detail", async (req, res) => {
   try {
@@ -7321,19 +7445,13 @@ app.post("/api/invoices-detail", async (req, res) => {
       }
     }
 
-    const params = new URLSearchParams();
-    if (dateFrom) params.append("dateFrom", dateFrom);
-    if (dateTo) params.append("dateTo", dateTo);
-    if (status) params.append("status", status);
-    const qs = params.toString() ? `?${params.toString()}` : "";
-
-    const url = `${req.protocol}://${req.get("host")}/api/invoices-detail/${actualTenantId}${qs}`;
-    const response = await fetch(url);
-    const result = await response.json();
+    // Call shared helper directly — no HTTP hop
+    const result = await fetchInvoicesDetail(actualTenantId, { dateFrom, dateTo, status });
     res.json(result);
   } catch (error) {
     console.error("Invoices detail POST error:", error);
-    res.status(500).json({ error: error.message });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.message });
   }
 });
 
