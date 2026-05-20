@@ -1475,15 +1475,114 @@ app.post("/api/cash-position", async (req, res) => {
   }
 });
 
-// Also update the POST endpoint for P&L
+// ============================================================================
+// SHARED HELPER: Fetch P&L data directly from Xero — no internal HTTP hop.
+// Replaces the self-fetch through Railway's edge proxy that started 500'ing
+// after the 20 May 2026 outage (HTML returned instead of JSON).
+// Mirrors the logic in the GET /api/profit-loss/:tenantId endpoint.
+// ============================================================================
+async function fetchProfitLossData(tenantId, { date, periodMonths = 1 } = {}) {
+  const tokenData = await tokenStorage.getXeroToken(tenantId);
+  if (!tokenData) {
+    const err = new Error("Tenant not found or token expired");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await xero.setTokenSet(tokenData);
+
+  const reportDate = date || new Date().toISOString().split("T")[0];
+  const reportEndDate = new Date(reportDate);
+  if (isNaN(reportEndDate.getTime())) {
+    const err = new Error("Invalid report date provided");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let fromDate;
+  if (periodMonths === 1) {
+    fromDate = new Date(reportEndDate.getFullYear(), reportEndDate.getMonth(), 1);
+  } else {
+    fromDate = new Date(reportEndDate);
+    fromDate.setMonth(fromDate.getMonth() - (periodMonths - 1));
+    fromDate.setDate(1);
+  }
+
+  const fromDateStr = fromDate.toISOString().split("T")[0];
+  const actualReportDateStr = reportEndDate.toISOString().split("T")[0];
+
+  console.log(`P&L Date Range: ${fromDateStr} to ${actualReportDateStr} (${periodMonths} month period)`);
+
+  const response = await xero.accountingApi.getReportProfitAndLoss(
+    tenantId,
+    fromDateStr,
+    actualReportDateStr
+  );
+
+  const plRows = response.body.reports?.[0]?.rows || [];
+
+  const plSummary = {
+    totalRevenue: 0,
+    totalCOGS: 0,
+    grossProfit: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    revenueAccounts: [],
+    cogsAccounts: [],
+    expenseAccounts: [],
+  };
+
+  plRows.forEach((section) => {
+    if (section.rowType === "Section" && section.rows && section.title) {
+      const category = categorizeSection(section.title);
+      if (category === "skip") return;
+
+      section.rows.forEach((row) => {
+        if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
+          const accountName = row.cells[0]?.value || "";
+          if (accountName.toLowerCase().includes("total")) return;
+
+          const amount = sumPLRowCells(row.cells);
+          if (amount === 0) return;
+
+          if (category === "revenue") {
+            plSummary.revenueAccounts.push({ name: accountName, amount });
+            plSummary.totalRevenue += amount;
+          } else if (category === "cogs") {
+            plSummary.cogsAccounts.push({ name: accountName, amount });
+            plSummary.totalCOGS += amount;
+          } else {
+            plSummary.expenseAccounts.push({ name: accountName, amount });
+            plSummary.totalExpenses += amount;
+          }
+        }
+      });
+    }
+  });
+
+  plSummary.grossProfit = plSummary.totalRevenue - plSummary.totalCOGS;
+  plSummary.netProfit = plSummary.grossProfit - plSummary.totalExpenses;
+
+  return {
+    tenantId,
+    tenantName: tokenData.tenantName,
+    period: {
+      from: fromDateStr,
+      to: actualReportDateStr,
+      months: periodMonths,
+      description: periodMonths === 1 ? "Current Month" : `${periodMonths} Month Period`,
+    },
+    summary: plSummary,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 app.post("/api/profit-loss-summary", async (req, res) => {
   try {
     const { organizationName, tenantId, date, periodMonths } = req.body;
 
     if (!organizationName && !tenantId) {
-      return res
-        .status(400)
-        .json({ error: "Organization name or tenant ID required" });
+      return res.status(400).json({ error: "Organization name or tenant ID required" });
     }
 
     // Find tenant ID if organization name provided
@@ -1500,30 +1599,16 @@ app.post("/api/profit-loss-summary", async (req, res) => {
       }
     }
 
-    // Build parameters with updated defaults
-    const params = new URLSearchParams();
-    if (date) params.append("date", date);
-    // Default to 1 month instead of 12 for current month behavior
-    params.append("periodMonths", (periodMonths || 1).toString());
-    const queryString = params.toString()
-      ? `?${params.toString()}`
-      : "?periodMonths=1";
-
-    const response = await fetch(
-      `${req.protocol}://${req.get(
-        "host"
-      )}/api/profit-loss/${actualTenantId}${queryString}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`P&L request failed: ${response.status}`);
-    }
-
-    const result = await response.json();
+    // Call the shared function directly — NO HTTP hop through Railway's edge proxy
+    const result = await fetchProfitLossData(actualTenantId, {
+      date,
+      periodMonths: periodMonths || 1,
+    });
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ P&L summary API error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("P&L summary API error:", error);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.message });
   }
 });
 
