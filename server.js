@@ -1347,15 +1347,182 @@ app.post("/api/refresh-tokens", async (req, res) => {
   }
 });
 
-// POST Trial Balance endpoint (for web chat interface)
+// ============================================================================
+// SHARED HELPER: Fetch trial balance directly from Xero — no HTTP hop.
+// Replaces the self-fetch that started 500'ing after the 20 May 2026 outage.
+// Builds from Balance Sheet + P&L reports (Xero doesn't expose a trial balance
+// report directly, so we synthesise it here).
+// ============================================================================
+async function fetchTrialBalance(tenantId, { reportDate } = {}) {
+  const tokenData = await tokenStorage.getXeroToken(tenantId);
+  if (!tokenData) {
+    const err = new Error("Tenant not found or token expired");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await xero.setTokenSet(tokenData);
+
+  const effectiveDate = reportDate || new Date().toISOString().split("T")[0];
+
+  // Balance Sheet for the date
+  const balanceSheetResponse = await xero.accountingApi.getReportBalanceSheet(
+    tenantId,
+    effectiveDate
+  );
+  const balanceSheetRows = balanceSheetResponse.body.reports?.[0]?.rows || [];
+
+  const trialBalance = {
+    assets: [],
+    liabilities: [],
+    equity: [],
+    revenue: [],
+    expenses: [],
+    totals: {
+      totalDebits: 0,
+      totalCredits: 0,
+      totalAssets: 0,
+      totalLiabilities: 0,
+      totalEquity: 0,
+      totalRevenue: 0,
+      totalExpenses: 0,
+    },
+  };
+
+  let processedAccounts = 0;
+
+  balanceSheetRows.forEach((section) => {
+    if (section.rowType === "Section" && section.rows && section.title) {
+      const sectionTitle = section.title.toLowerCase();
+
+      section.rows.forEach((row) => {
+        if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
+          const accountName = row.cells[0]?.value || "";
+          const currentBalance = parseFloat(row.cells[1]?.value || 0);
+
+          if (accountName.toLowerCase().includes("total") || currentBalance === 0) return;
+
+          processedAccounts++;
+          const accountInfo = {
+            name: accountName,
+            balance: currentBalance,
+            debit: 0,
+            credit: 0,
+            section: section.title,
+          };
+
+          if (sectionTitle.includes("bank") || sectionTitle.includes("asset")) {
+            accountInfo.debit = currentBalance >= 0 ? currentBalance : 0;
+            accountInfo.credit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+            trialBalance.assets.push(accountInfo);
+            trialBalance.totals.totalAssets += currentBalance;
+          } else if (sectionTitle.includes("liabilit")) {
+            accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
+            accountInfo.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+            trialBalance.liabilities.push(accountInfo);
+            trialBalance.totals.totalLiabilities += currentBalance;
+          } else if (sectionTitle.includes("equity")) {
+            accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
+            accountInfo.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+            trialBalance.equity.push(accountInfo);
+            trialBalance.totals.totalEquity += currentBalance;
+          }
+
+          trialBalance.totals.totalDebits += accountInfo.debit;
+          trialBalance.totals.totalCredits += accountInfo.credit;
+        }
+      });
+    }
+  });
+
+  // P&L for revenue/expenses on the same date
+  try {
+    const plResponse = await xero.accountingApi.getReportProfitAndLoss(
+      tenantId,
+      effectiveDate,
+      effectiveDate
+    );
+    const plRows = plResponse.body.reports?.[0]?.rows || [];
+
+    plRows.forEach((section) => {
+      if (section.rowType === "Section" && section.rows && section.title) {
+        const category = categorizeSection(section.title);
+        if (category === "skip") return;
+
+        section.rows.forEach((row) => {
+          if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
+            const accountName = row.cells[0]?.value || "";
+            const currentAmount = parseFloat(row.cells[1]?.value || 0);
+
+            if (accountName.toLowerCase().includes("total") || currentAmount === 0) return;
+
+            processedAccounts++;
+            const accountInfo = {
+              name: accountName,
+              balance: currentAmount,
+              debit: 0,
+              credit: 0,
+              section: section.title,
+            };
+
+            if (category === "revenue") {
+              accountInfo.credit = Math.abs(currentAmount);
+              trialBalance.revenue.push(accountInfo);
+              trialBalance.totals.totalRevenue += Math.abs(currentAmount);
+            } else {
+              accountInfo.debit = Math.abs(currentAmount);
+              trialBalance.expenses.push(accountInfo);
+              trialBalance.totals.totalExpenses += Math.abs(currentAmount);
+            }
+
+            trialBalance.totals.totalDebits += accountInfo.debit;
+            trialBalance.totals.totalCredits += accountInfo.credit;
+          }
+        });
+      }
+    });
+  } catch (plError) {
+    console.error("Could not fetch P&L data for trial balance:", plError.message);
+  }
+
+  ["assets", "liabilities", "equity", "revenue", "expenses"].forEach((category) => {
+    trialBalance[category].sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  const balanceCheck = {
+    debitsEqualCredits:
+      Math.abs(trialBalance.totals.totalDebits - trialBalance.totals.totalCredits) < 0.01,
+    difference: trialBalance.totals.totalDebits - trialBalance.totals.totalCredits,
+    accountingEquation: {
+      assets: trialBalance.totals.totalAssets,
+      liabilitiesAndEquity:
+        trialBalance.totals.totalLiabilities + trialBalance.totals.totalEquity,
+      balanced:
+        Math.abs(
+          trialBalance.totals.totalAssets -
+            (trialBalance.totals.totalLiabilities + trialBalance.totals.totalEquity)
+        ) < 0.01,
+    },
+  };
+
+  return {
+    tenantId,
+    tenantName: tokenData.tenantName,
+    trialBalance,
+    balanceCheck,
+    generatedAt: new Date().toISOString(),
+    reportDate: effectiveDate,
+    processedAccounts,
+    dataSource: "Balance Sheet + P&L Reports",
+  };
+}
+
 app.post("/api/trial-balance", async (req, res) => {
   try {
     const { organizationName, tenantId, reportDate } = req.body;
 
     if (!organizationName && !tenantId) {
-      return res
-        .status(400)
-        .json({ error: "Organization name or tenant ID required" });
+      return res.status(400).json({ error: "Organization name or tenant ID required" });
     }
 
     // Find tenant ID if organization name provided
@@ -1372,22 +1539,13 @@ app.post("/api/trial-balance", async (req, res) => {
       }
     }
 
-    // Call your existing GET endpoint internally
-    const dateParam = reportDate ? `?date=${reportDate}` : "";
-    const trialBalanceUrl = `${req.protocol}://${req.get(
-      "host"
-    )}/api/trial-balance/${actualTenantId}${dateParam}`;
-    const response = await fetch(trialBalanceUrl);
-
-    if (!response.ok) {
-      throw new Error(`Trial balance request failed: ${response.status}`);
-    }
-
-    const result = await response.json();
+    // Call shared function directly — no HTTP hop through Railway's edge
+    const result = await fetchTrialBalance(actualTenantId, { reportDate });
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Trial balance POST API error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Trial balance POST API error:", error);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.message });
   }
 });
 
@@ -1612,15 +1770,53 @@ app.post("/api/profit-loss-summary", async (req, res) => {
   }
 });
 
+// ============================================================================
+// SHARED HELPER: Fetch outstanding invoices directly from Xero — no HTTP hop.
+// Replaces the self-fetch that started 500'ing after the 20 May 2026 outage.
+// ============================================================================
+async function fetchOutstandingInvoices(tenantId) {
+  const tokenData = await tokenStorage.getXeroToken(tenantId);
+  if (!tokenData) {
+    const err = new Error("Tenant not found or token expired");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await xero.setTokenSet(tokenData);
+
+  const response = await xero.accountingApi.getInvoices(
+    tenantId,
+    null,
+    null,
+    'Status=="AUTHORISED"&&Type=="ACCREC"'
+  );
+  const invoices = response.body.invoices || [];
+
+  const outstandingInvoices = invoices.filter(
+    (inv) =>
+      inv.status === "AUTHORISED" &&
+      inv.type === "ACCREC" &&
+      parseFloat(inv.amountDue) > 0
+  );
+
+  return outstandingInvoices.map((inv) => ({
+    invoiceID: inv.invoiceID,
+    invoiceNumber: inv.invoiceNumber,
+    contact: inv.contact?.name,
+    amountDue: parseFloat(inv.amountDue),
+    total: parseFloat(inv.total),
+    date: inv.date,
+    dueDate: inv.dueDate,
+  }));
+}
+
 // Outstanding Invoices endpoint
 app.post("/api/outstanding-invoices", async (req, res) => {
   try {
     const { organizationName, tenantId } = req.body;
 
     if (!organizationName && !tenantId) {
-      return res
-        .status(400)
-        .json({ error: "Organization name or tenant ID required" });
+      return res.status(400).json({ error: "Organization name or tenant ID required" });
     }
 
     // Find tenant ID if organization name provided
@@ -1637,24 +1833,13 @@ app.post("/api/outstanding-invoices", async (req, res) => {
       }
     }
 
-    // Call your existing GET endpoint internally
-    const response = await fetch(
-      `${req.protocol}://${req.get(
-        "host"
-      )}/api/outstanding-invoices/${actualTenantId}`
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Outstanding invoices request failed: ${response.status}`
-      );
-    }
-
-    const result = await response.json();
+    // Call shared function directly — no HTTP hop through Railway's edge
+    const result = await fetchOutstandingInvoices(actualTenantId);
     res.json(result);
   } catch (error) {
-    console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Outstanding invoices API error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Outstanding invoices API error:", error);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ error: error.message });
   }
 });
 
