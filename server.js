@@ -46,8 +46,8 @@ const pool = new Pool({
       ? { rejectUnauthorized: false }
       : false,
   max: 3,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 30000,
   allowExitOnIdle: false,
 });
 
