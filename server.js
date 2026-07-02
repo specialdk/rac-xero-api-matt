@@ -5689,14 +5689,19 @@ function getCurrentFYStart() {
 }
 
 // Returns [{ periodMonth: 'YYYY-MM', endDate: 'YYYY-MM-DD' }] for every COMPLETED
-// month in the current FY (i.e. months whose last day is strictly before today).
+// month across the previous and current FY (i.e. months whose last day is strictly
+// before today). Spanning two years ensures early-July runs still capture the
+// just-finished FY (e.g. May/June 2026 on 2 July 2026).
 function getCompletedMonthsInCurrentFY() {
   const today = new Date();
   const fyStart = getCurrentFYStart();
+  // Start from the PREVIOUS FY's July to catch months like May/Jun
+  // that fall at the end of the just-finished year.
+  const scanStart = new Date(fyStart.getFullYear() - 1, 6, 1); // July 1 of prior year
   const months = [];
-  let cursor = new Date(fyStart);
+  let cursor = new Date(scanStart);
   while (cursor < today) {
-    const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0); // last day of month
+    const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
     if (monthEnd < today) {
       months.push({
         periodMonth: `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`,
