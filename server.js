@@ -6135,6 +6135,7 @@ app.post('/api/finalize-month', async (req, res) => {
           // so the caller sees which orgs couldn't be resolved.
           workItems.push({
             tenantName: null,
+            tenantId: conn.tenantId,  
             orgShortName: t.org,
             periodMonth: t.periodMonth,
             resolveError: `No active connection for org "${t.org}"`,
@@ -6143,6 +6144,7 @@ app.post('/api/finalize-month', async (req, res) => {
         }
         workItems.push({
           tenantName: conn.tenantName,
+          tenantId: conn.tenantId,  
           orgShortName: t.org,
           periodMonth: t.periodMonth,
         });
@@ -6178,7 +6180,7 @@ app.post('/api/finalize-month', async (req, res) => {
     const errors = [];
 
     for (const item of workItems) {
-      const { tenantName, orgShortName, periodMonth, resolveError } = item;
+      const { tenantName, tenantId, orgShortName, periodMonth, resolveError } = item;
 
       // Couldn't resolve org → no Xero call possible
       if (resolveError) {
@@ -6201,11 +6203,16 @@ app.post('/api/finalize-month', async (req, res) => {
 
         // Re-fetch P&L for this exact month
         const endDate = periodMonthToEndDate(periodMonth);
-        const plResp = await snapshotFetchInternal('/api/profit-loss-summary', {
-          organizationName: tenantName,
-          date: endDate,
-          periodMonths: 1,
-        });
+const finalizeConn = activeConnections.find(c => c.tenantName === tenantName);
+if (!finalizeConn) {
+  errors.push({ org: orgShortName, periodMonth, error: 'Could not resolve tenantId for ' + tenantName });
+  continue;
+}
+const plResp = await fetchProfitLossDirect({
+  tenantId: finalizeConn.tenantId,
+  date: endDate,
+  periodMonths: 1,
+});
 
         if (plResp.error || !plResp.summary) {
           errors.push({
@@ -6381,11 +6388,11 @@ app.post('/api/backfill-historical-months', async (req, res) => {
 
           // Fetch P&L for that month
           const endDate = periodMonthToEndDate(periodMonth);
-          const plResp = await snapshotFetchInternal('/api/profit-loss-summary', {
-            organizationName: conn.tenantName,
-            date: endDate,
-            periodMonths: 1,
-          });
+const plResp = await fetchProfitLossDirect({
+  tenantId: conn.tenantId,
+  date: endDate,
+  periodMonths: 1,
+});
 
           if (plResp.error || !plResp.summary) {
             errors.push({
