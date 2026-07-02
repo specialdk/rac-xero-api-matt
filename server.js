@@ -5713,6 +5713,53 @@ function getCompletedMonthsInCurrentFY() {
   return months;
 }
 
+async function fetchProfitLossDirect({ tenantId, date, periodMonths = 1 }) {
+  const tokenData = await tokenStorage.getXeroToken(tenantId);
+  if (!tokenData) throw new Error('Token not available');
+  await xero.setTokenSet(tokenData);
+
+  const reportEndDate = new Date(date);
+  let fromDate;
+  if (periodMonths === 1) {
+    fromDate = new Date(reportEndDate.getFullYear(), reportEndDate.getMonth(), 1);
+  } else {
+    fromDate = new Date(reportEndDate);
+    fromDate.setMonth(fromDate.getMonth() - (periodMonths - 1));
+    fromDate.setDate(1);
+  }
+  const fromDateStr = fromDate.toISOString().split('T')[0];
+  const toDateStr = reportEndDate.toISOString().split('T')[0];
+
+  console.log(`P&L Date Range: ${fromDateStr} to ${toDateStr} (${periodMonths} month period)`);
+
+  const response = await xero.accountingApi.getReportProfitAndLoss(tenantId, fromDateStr, toDateStr);
+  const plRows = response.body.reports?.[0]?.rows || [];
+
+  const summary = { totalRevenue: 0, totalCOGS: 0, grossProfit: 0, totalExpenses: 0, netProfit: 0, revenueAccounts: [], cogsAccounts: [], expenseAccounts: [] };
+
+  plRows.forEach((section) => {
+    if (section.rowType === 'Section' && section.rows && section.title) {
+      const category = categorizeSection(section.title);
+      if (category === 'skip') return;
+      section.rows.forEach((row) => {
+        if (row.rowType === 'Row' && row.cells && row.cells.length >= 2) {
+          const accountName = row.cells[0]?.value || '';
+          if (accountName.toLowerCase().includes('total')) return;
+          const amount = sumPLRowCells(row.cells);
+          if (amount === 0) return;
+          if (category === 'revenue') { summary.revenueAccounts.push({ name: accountName, amount }); summary.totalRevenue += amount; }
+          else if (category === 'cogs') { summary.cogsAccounts.push({ name: accountName, amount }); summary.totalCOGS += amount; }
+          else { summary.expenseAccounts.push({ name: accountName, amount }); summary.totalExpenses += amount; }
+        }
+      });
+    }
+  });
+  summary.grossProfit = summary.totalRevenue - summary.totalCOGS;
+  summary.netProfit = summary.grossProfit - summary.totalExpenses;
+
+  return { summary, period: { from: fromDateStr, to: toDateStr, months: periodMonths }, tenantId, tenantName: tokenData.tenantName };
+}
+
 // Self-loopback fetch helper. Reuses our own /api/profit-loss-summary so we
 // don't reimplement Xero P&L parsing inside the snapshot function.
 async function snapshotFetchInternal(endpoint, body) {
@@ -5918,11 +5965,11 @@ async function runDailySnapshot(triggeredBy = 'scheduler') {
           );
         }
 
-        const plResp = await snapshotFetchInternal('/api/profit-loss-summary', {
-          organizationName: conn.tenantName,
-          date: endDate,
-          periodMonths: 1,
-        });
+        const plResp = await fetchProfitLossDirect({
+  tenantId: conn.tenantId,
+  date: endDate,
+  periodMonths: 1,
+});
 
         if (plResp.error || !plResp.summary) {
           errors.push({ org: orgShortName, periodMonth, type: 'monthly', error: plResp.error || 'no summary returned' });
