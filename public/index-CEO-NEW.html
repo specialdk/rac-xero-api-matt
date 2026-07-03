@@ -3997,7 +3997,7 @@ function getQuarterDates(quarter) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   organizationName: entity,
-                  date: quarterInfo.endDate,
+                  date: quarterInfo.isComplete ? quarterInfo.endDate : new Date().toISOString().split('T')[0],
                   periodMonths: quarterInfo.periodMonths,
                 }),
               });
@@ -4235,7 +4235,9 @@ function getQuarterDates(quarter) {
           // not "today". For Last Month view, this means Apr 30 balances; for Q1
           // (completed), Sep 30 balances. For YTD or current month MTD, today's date.
           // If no quarterInfo passed, defaults to today (server-side).
-          const reportDate = (quarterInfo && quarterInfo.endDate) ? quarterInfo.endDate : null;
+          const reportDate = (quarterInfo && quarterInfo.endDate) 
+  ? (quarterInfo.isComplete ? quarterInfo.endDate : new Date().toISOString().split('T')[0])
+  : null;
           const periodCode = (quarterInfo && quarterInfo.quarterCode) || 'NONE';
           const cacheKey = `tb::${getSelectedEntity()}::${periodCode}`;
 
@@ -4283,7 +4285,7 @@ function getQuarterDates(quarter) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 organizationName: getSelectedEntity(),
-                date: quarterInfo.endDate,
+                date: quarterInfo.isComplete ? quarterInfo.endDate : new Date().toISOString().split('T')[0],
                 periodMonths: periodMonths,
               }),
             });
