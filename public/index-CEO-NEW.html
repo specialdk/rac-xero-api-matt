@@ -7879,8 +7879,9 @@ function getQuarterDates(quarter) {
 
       // ========== INITIALIZE ==========
       document.addEventListener('DOMContentLoaded', () => {
-        // Set period selector to current financial period
-        const currentPeriod = getCurrentFinancialPeriod();
+  populateFYSelector(); // ← ADD THIS LINE
+  // Set period selector to current financial period
+  const currentPeriod = getCurrentFinancialPeriod();
         const periodSel = document.getElementById('periodSelector');
         if (periodSel) periodSel.value = currentPeriod;
 
