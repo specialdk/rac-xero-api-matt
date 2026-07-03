@@ -109,7 +109,7 @@
         --rac-space-6: 2rem;      /* 32px */
 
         --rac-gap-newspaper: 1px;
-        --rac-container-max: 1400px;
+        --rac-container-max: 1600px;
         --rac-container-pad: 0.5rem;
 
         /* --- Shadow & focus (§2.7) --- */
@@ -1625,7 +1625,7 @@
       /* ========== CONTROLS BAR (Design System — page-tier interaction layer) ========== */
       .rac-controls-bar {
         display: grid;
-        grid-template-columns: 1fr 1fr 5fr;  /* 7 equal-width slots: Entity | Period | 5 buttons */
+        grid-template-columns: 1fr 1fr 1fr 5fr;  /* 8 equal-width slots: Entity | FY | Period | 5 buttons */
         column-gap: var(--rac-space-3);
         max-width: var(--rac-container-max);
         margin: 0 auto;
@@ -2548,17 +2548,24 @@
             </div>
           </div>
 
+          <!-- FY group -->
+          <div class="rac-controls-group">
+            <div class="rac-controls-label">FY</div>
+            <select class="period-selector" id="fySelector" onchange="loadDashboard()">
+            </select>
+          </div>
+
           <!-- PERIOD group -->
           <div class="rac-controls-group">
             <div class="rac-controls-label">Period</div>
             <select class="period-selector" id="periodSelector" onchange="loadDashboard()">
               <option value="LAST_MONTH">Last Month</option>
               <option value="THIS_MONTH">This Month (MTD)</option>
-              <option value="YTD">YTD FY25/26</option>
-              <option value="Q1">Q1 FY25/26 (Jul-Sep)</option>
-              <option value="Q2">Q2 FY25/26 (Oct-Dec)</option>
-              <option value="Q3">Q3 FY25/26 (Jan-Mar)</option>
-              <option value="Q4">Q4 FY25/26 (Apr-Jun)</option>
+              <option value="FULL_YEAR">Full Year</option>
+              <option value="Q1">Q1 (Jul-Sep)</option>
+              <option value="Q2">Q2 (Oct-Dec)</option>
+              <option value="Q3">Q3 (Jan-Mar)</option>
+              <option value="Q4">Q4 (Apr-Jun)</option>
             </select>
           </div>
 
@@ -3595,10 +3602,140 @@
       // Returns a quarterInfo object describing the selected period.
       // Supported codes: YTD, Q1-Q4, LAST_MONTH, THIS_MONTH
       // periodLabel is a human-readable label used in subheadings (e.g. "Apr 2026", "Q4 FY25/26", "May 2026 (MTD)")
-      function getQuarterDates(quarter) {
-        const today = new Date();
-        const year = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
-        const fyLabel = `FY${String(year).slice(-2)}/${String(year + 1).slice(-2)}`;
+      function getSelectedFY() {
+  const sel = document.getElementById('fySelector');
+  if (sel && sel.value) return parseInt(sel.value);
+  // Default: current FY start year
+  const today = new Date();
+  return today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
+}
+
+function populateFYSelector() {
+  const sel = document.getElementById('fySelector');
+  if (!sel) return;
+  const today = new Date();
+  const currentFYStart = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
+  // Show current FY and prior FY
+  const fys = [currentFYStart, currentFYStart - 1];
+  sel.innerHTML = fys.map(y => {
+    const label = `FY${String(y).slice(-2)}/${String(y + 1).slice(-2)}`;
+    return `<option value="${y}" ${y === currentFYStart ? 'selected' : ''}>${label}</option>`;
+  }).join('');
+}
+
+function getQuarterDates(quarter) {
+  const today = new Date();
+  const year = getSelectedFY();
+  const fyLabel = `FY${String(year).slice(-2)}/${String(year + 1).slice(-2)}`;
+
+  // ---- LAST_MONTH ----
+  if (quarter === 'LAST_MONTH') {
+    const firstOfThis = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastOfLast = new Date(firstOfThis.getTime() - 24 * 60 * 60 * 1000);
+    const firstOfLast = new Date(lastOfLast.getFullYear(), lastOfLast.getMonth(), 1);
+    const startStr = `${firstOfLast.getFullYear()}-${String(firstOfLast.getMonth() + 1).padStart(2, '0')}-01`;
+    const endStr   = `${lastOfLast.getFullYear()}-${String(lastOfLast.getMonth() + 1).padStart(2, '0')}-${String(lastOfLast.getDate()).padStart(2, '0')}`;
+    const monthName = firstOfLast.toLocaleString('en-AU', { month: 'short', year: 'numeric' });
+    const totalDays = lastOfLast.getDate();
+    return {
+      quarterCode: 'LAST_MONTH',
+      periodLabel: monthName,
+      startDate: startStr,
+      endDate: endStr,
+      totalDays: totalDays,
+      daysElapsed: totalDays,
+      isComplete: true,
+      hasStarted: true,
+      proRateFactor: 1.0,
+      periodMonths: 1,
+      isYTD: false,
+      isMonth: true,
+    };
+  }
+
+  // ---- THIS_MONTH (MTD) ----
+  if (quarter === 'THIS_MONTH') {
+    const firstOfThis = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastOfThis  = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const startStr = `${firstOfThis.getFullYear()}-${String(firstOfThis.getMonth() + 1).padStart(2, '0')}-01`;
+    const endStr   = today.toISOString().split('T')[0];
+    const monthName = today.toLocaleString('en-AU', { month: 'short', year: 'numeric' });
+    const totalDays = lastOfThis.getDate();
+    const daysElapsed = today.getDate();
+    return {
+      quarterCode: 'THIS_MONTH',
+      periodLabel: `${monthName} (MTD)`,
+      startDate: startStr,
+      endDate: endStr,
+      totalDays: totalDays,
+      daysElapsed: daysElapsed,
+      isComplete: false,
+      hasStarted: true,
+      proRateFactor: daysElapsed / totalDays,
+      periodMonths: 1,
+      isYTD: false,
+      isMonth: true,
+    };
+  }
+
+  // ---- FULL YEAR ----
+  if (quarter === 'FULL_YEAR') {
+    const startDate = `${year}-07-01`;
+    const endDate   = `${year + 1}-06-30`;
+    const start = new Date(startDate);
+    const end   = new Date(endDate);
+    const totalDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    const daysElapsed = today > end ? totalDays : Math.max(0, Math.round((today - start) / (1000 * 60 * 60 * 24)));
+    const isComplete = today > end;
+    return {
+      quarterCode: 'FULL_YEAR',
+      periodLabel: fyLabel,
+      startDate,
+      endDate,
+      totalDays,
+      daysElapsed,
+      isComplete,
+      hasStarted: today >= start,
+      proRateFactor: isComplete ? 1.0 : daysElapsed / totalDays,
+      periodMonths: 12,
+      isYTD: false,
+      isMonth: false,
+    };
+  }
+
+  // ---- QUARTERS ----
+  const quarters = {
+    Q1: { start: `${year}-07-01`,     end: `${year}-09-30`,     months: 3 },
+    Q2: { start: `${year}-10-01`,     end: `${year}-12-31`,     months: 3 },
+    Q3: { start: `${year + 1}-01-01`, end: `${year + 1}-03-31`, months: 3 },
+    Q4: { start: `${year + 1}-04-01`, end: `${year + 1}-06-30`, months: 3 },
+  };
+
+  const q = quarters[quarter];
+  if (!q) return quarters['Q1']; // fallback
+
+  const start = new Date(q.start);
+  const end   = new Date(q.end);
+  const totalDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+  const daysElapsed = today > end ? totalDays : today < start ? 0 : Math.round((today - start) / (1000 * 60 * 60 * 24)) + 1;
+  const isComplete = today > end;
+  const hasStarted = today >= start;
+
+  return {
+    quarterCode: quarter,
+    periodLabel: `${quarter} ${fyLabel}`,
+    startDate: q.start,
+    endDate: q.end,
+    totalDays,
+    daysElapsed,
+    isComplete,
+    hasStarted,
+    proRateFactor: isComplete ? 1.0 : hasStarted ? daysElapsed / totalDays : 0,
+    periodMonths: q.months,
+    isYTD: false,
+    isMonth: false,
+  };
+}
 
         // ---- LAST_MONTH ----
         // The most recent COMPLETED calendar month. Good default — no in-progress noise.
@@ -3717,7 +3854,7 @@
           isYTD: false,
           isMonth: false,
         };
-      }
+      
 
       // ========== SESSION CACHE ==========
       // In-memory cache for dashboard data. Survives period/entity switches within
