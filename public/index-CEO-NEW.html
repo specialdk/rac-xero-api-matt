@@ -7894,6 +7894,7 @@ snapPeriodToFY();
         // Refresh draft count when period changes — different period may have different drafts
         // Also re-render AI panel immediately so the scope label tracks the period selection
         // without waiting for the (slower) loadDashboard() data fetches to complete.
+        const periodSel = document.getElementById('periodSelector');
         if (periodSel) {
           periodSel.addEventListener('change', () => {
             loadDraftMonths();
