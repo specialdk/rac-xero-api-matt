@@ -2688,8 +2688,8 @@
             <div class="trend-toggles" id="trendToggles">
               <div class="trend-toggle-group">
                 <span class="trend-toggle-label">Years</span>
-                <button type="button" class="trend-toggle-btn active" data-year="FY26"><span class="trend-toggle-dot" style="background: var(--rac-ink)"></span>FY26</button>
-                <button type="button" class="trend-toggle-btn active" data-year="FY25"><span class="trend-toggle-dot dashed" style="background: var(--rac-ink-mute)"></span>FY25</button>
+                <button type="button" class="trend-toggle-btn active" id="trendBtnCurr" data-year="CURR_FY"><span class="trend-toggle-dot" style="background: var(--rac-ink)"></span>CurrFY</button>
+<button type="button" class="trend-toggle-btn active" id="trendBtnPrev" data-year="PREV_FY"><span class="trend-toggle-dot dashed" style="background: var(--rac-ink-mute)"></span>PrevFY</button>
               </div>
               <div class="trend-toggle-group">
                 <span class="trend-toggle-label">Metrics</span>
@@ -5694,7 +5694,13 @@ function getQuarterDates(quarter) {
 
       // ========== TREND CHART (YoY) ==========
       // State for which years/metrics are visible. Modified by toggle handlers.
-      window.trendYearsActive = window.trendYearsActive || ['FY26', 'FY25'];
+      (function() {
+  const today = new Date();
+  const fyEnd = today.getMonth() >= 6 ? today.getFullYear() + 1 : today.getFullYear();
+  window.TREND_CURR_FY = `FY${String(fyEnd).slice(-2)}`;
+  window.TREND_PREV_FY = `FY${String(fyEnd - 1).slice(-2)}`;
+})();
+window.trendYearsActive = window.trendYearsActive || [window.TREND_CURR_FY, window.TREND_PREV_FY];
       window.trendMetricsActive = window.trendMetricsActive || ['revenue', 'expenses', 'profit'];
 
       // FY axis: 12 months Jul→Jun. Same calendar overlay for YoY comparison.
@@ -5733,7 +5739,10 @@ function getQuarterDates(quarter) {
         monthly.forEach((m, i) => {
           const pm = m.period_month; // 'YYYY-MM' or 'YYYY-MM-01'
           const pmKey = (pm || '').slice(0, 7);
-          if (pmKey >= '2025-07' && pmKey <= '2026-06' && pmKey > latestPM) {
+          const _currFYEnd = parseInt(window.TREND_CURR_FY.replace('FY','')) + 2000;
+const _currFYStart = `${_currFYEnd - 1}-07`;
+const _currFYEndStr = `${_currFYEnd}-06`;
+if (pmKey >= _currFYStart && pmKey <= _currFYEndStr && pmKey > latestPM) {
             latestPM = pmKey;
             latestIdx = i;
           }
@@ -5823,7 +5832,7 @@ function getQuarterDates(quarter) {
 
       // Update the YoY summary bar (just above the chart).
       function updateYoYSummaryBar(fyData) {
-        const m = computeMatchedPeriodSums(fyData, 'FY26', 'FY25');
+        const m = computeMatchedPeriodSums(fyData, window.TREND_CURR_FY, window.TREND_PREV_FY);
         const r = document.getElementById('yoy-revenue-current');
         const rd = document.getElementById('yoy-revenue-delta');
         const e = document.getElementById('yoy-expenses-current');
@@ -5871,11 +5880,12 @@ function getQuarterDates(quarter) {
 
       // Colour helpers for chart datasets
       function trendColor(metric, year) {
-        const colors = {
-          revenue:  { FY26: RAC_CHART.moss,      FY25: RAC_CHART.fade(RAC_CHART.moss, 0.55)      },
-          expenses: { FY26: RAC_CHART.terraSoft, FY25: RAC_CHART.fade(RAC_CHART.terraSoft, 0.55) },
-          profit:   { FY26: RAC_CHART.inkSoft,   FY25: RAC_CHART.fade(RAC_CHART.inkSoft, 0.45)   },
-        };
+        const curr = window.TREND_CURR_FY, prev = window.TREND_PREV_FY;
+const colors = {
+  revenue:  { [curr]: RAC_CHART.moss,      [prev]: RAC_CHART.fade(RAC_CHART.moss, 0.55)      },
+  expenses: { [curr]: RAC_CHART.terraSoft, [prev]: RAC_CHART.fade(RAC_CHART.terraSoft, 0.55) },
+  profit:   { [curr]: RAC_CHART.inkSoft,   [prev]: RAC_CHART.fade(RAC_CHART.inkSoft, 0.45)   },
+};
         return (colors[metric] && colors[metric][year]) || RAC_CHART.inkFaint;
       }
 
@@ -5889,16 +5899,21 @@ function getQuarterDates(quarter) {
 
         // Build datasets for each (year, metric) combination that's currently active.
         // Order: draw FY25 first so FY26 sits on top visually.
-        const yearsActive = window.trendYearsActive || ['FY26', 'FY25'];
+        const yearsActive = window.trendYearsActive || [window.TREND_CURR_FY, window.TREND_PREV_FY];
+        // Update toggle button labels to actual FY names
+        const btnCurr = document.getElementById('trendBtnCurr');
+        const btnPrev = document.getElementById('trendBtnPrev');
+          if (btnCurr) btnCurr.childNodes[1].textContent = window.TREND_CURR_FY;
+          if (btnPrev) btnPrev.childNodes[1].textContent = window.TREND_PREV_FY;
         const metricsActive = window.trendMetricsActive || ['revenue', 'expenses', 'profit'];
-        const yearOrder = ['FY25', 'FY26']; // draw order, prior year underneath
+        const yearOrder = [window.TREND_PREV_FY, window.TREND_CURR_FY]; // draw order, prior year underneath
 
         const datasets = [];
         yearOrder.forEach(year => {
           if (!yearsActive.includes(year)) return;
           if (!fyData[year]) return;
           metricsActive.forEach(metric => {
-            const isCurrent = year === 'FY26';
+            const isCurrent = year === window.TREND_CURR_FY;
             datasets.push({
               label: `${metric.charAt(0).toUpperCase() + metric.slice(1)} ${year}`,
               data: fyData[year][metric],
