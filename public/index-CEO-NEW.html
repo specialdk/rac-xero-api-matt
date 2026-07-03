@@ -5109,7 +5109,7 @@ function getQuarterDates(quarter) {
         try {
           // Period info — match the dashboard's current selection
           const quarterInfo = window.dashboardData?.quarterInfo || {};
-          const reportDate = quarterInfo.endDate || new Date().toISOString().split('T')[0];
+          const reportDate = quarterInfo.isComplete ? quarterInfo.endDate : new Date().toISOString().split('T')[0];
           const periodMonths = quarterInfo.periodMonths || 12;
 
           const [spendResp, revenueResp] = await Promise.all([
