@@ -350,6 +350,12 @@ function gateMiddleware(req, res, next) {
     return next();
   }
 
+  // Allow MCP server and internal service calls via API key header
+  const internalKey = req.headers['x-internal-api-key'];
+  if (internalKey && process.env.INTERNAL_API_KEY && internalKey === process.env.INTERNAL_API_KEY) {
+    return next();
+  }
+
   if (!GATE_ENABLED) {
     return res
       .status(503)

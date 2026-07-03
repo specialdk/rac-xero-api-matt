@@ -20,7 +20,17 @@ console.log = originalConsoleLog;
 // Configuration
 const RAILWAY_API_BASE =
   process.env.RAILWAY_API_URL ||
-  "https://rac-financial-dashboard-production.up.railway.app";
+  "https://rac-xero-api-matt-production.up.railway.app";
+
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || '';
+
+function getHeaders(extra = {}) {
+  return {
+    'Content-Type': 'application/json',
+    'x-internal-api-key': INTERNAL_API_KEY,
+    ...extra,
+  };
+}
 
 // ============================================================================
 // CORE API UTILITIES
@@ -34,7 +44,7 @@ async function callRailwayAPI(endpoint) {
     const url = `${RAILWAY_API_BASE}${endpoint}`;
     console.error(`🌐 Calling: ${url}`);
 
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: getHeaders() });
 
     if (!response.ok) {
       throw new Error(
@@ -61,7 +71,7 @@ async function callRailwayAPIPOST(endpoint, body) {
 
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getHeaders(),
       body: JSON.stringify(body),
     });
 
