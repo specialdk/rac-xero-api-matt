@@ -2169,7 +2169,7 @@ app.post("/api/expense-analysis", async (req, res) => {
 // ============================================================================
 // SHARED HELPER: Fetch expense analysis directly from Xero — no HTTP hop.
 // ============================================================================
-async function fetchExpenseAnalysis(tenantId, { date, periodMonths = 12 } = {}) {
+async function fetchExpenseAnalysis(tenantId, { date, periodMonths = 12, startDate } = {}) {
   const tokenData = await tokenStorage.getXeroToken(tenantId);
   if (!tokenData) {
     const err = new Error("Tenant not found or token expired");
@@ -2180,9 +2180,11 @@ async function fetchExpenseAnalysis(tenantId, { date, periodMonths = 12 } = {}) 
   await xero.setTokenSet(tokenData);
 
   const reportDate = date || new Date().toISOString().split("T")[0];
-  const fromDate = new Date(reportDate);
-  fromDate.setMonth(fromDate.getMonth() - periodMonths);
-  const fromDateStr = fromDate.toISOString().split("T")[0];
+  const fromDateStr = startDate || (() => {
+    const fromDate = new Date(reportDate);
+    fromDate.setMonth(fromDate.getMonth() - periodMonths);
+    return fromDate.toISOString().split("T")[0];
+  })();
 
   console.log(`Getting expense analysis for ${tokenData.tenantName}`);
   const response = await xero.accountingApi.getReportProfitAndLoss(

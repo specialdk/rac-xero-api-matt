@@ -5116,12 +5116,12 @@ function getQuarterDates(quarter) {
             fetch(`${API_BASE}/api/spend-classification`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ organizationName: entityName, date: reportDate, periodMonths })
+              body: JSON.stringify({ organizationName: entityName, date: reportDate, periodMonths, startDate: quarterInfo.startDate })
             }),
             fetch(`${API_BASE}/api/revenue-classification`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ organizationName: entityName, date: reportDate, periodMonths })
+              body: JSON.stringify({ organizationName: entityName, date: reportDate, periodMonths, startDate: quarterInfo.startDate })
             })
           ]);
 
