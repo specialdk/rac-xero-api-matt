@@ -399,7 +399,7 @@ function gateMiddleware(req, res, next) {
 }
 
 app.use(cookieParser(GATE_COOKIE_SECRET));
-app.use(gateMiddleware);
+// app.use(gateMiddleware); // Temporarily disabled — SSO planned as replacement
 
 app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
