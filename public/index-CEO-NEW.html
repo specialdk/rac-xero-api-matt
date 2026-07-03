@@ -2477,7 +2477,7 @@
         <div class="mast-meta" id="mastDatetime">--</div>
       </div>
       <div class="rac-mast-row">
-        <div class="mast-subtitle">FY26 &middot; SOURCE OF TRUTH: XERO &middot; FINANCIAL INTELLIGENCE POWERED BY AI</div>
+        <div class="mast-subtitle" id="mastFYSubtitle">FY26 &middot; SOURCE OF TRUTH: XERO &middot; FINANCIAL INTELLIGENCE POWERED BY AI</div>
         <div class="mast-breadcrumb">EXECUTIVE DASHBOARD</div>
       </div>
     </div>
@@ -2551,7 +2551,7 @@
           <!-- FY group -->
           <div class="rac-controls-group">
             <div class="rac-controls-label">FY</div>
-            <select class="period-selector" id="fySelector" onchange="loadDashboard()">
+            <select class="period-selector" id="fySelector" onchange="updateMastFYLabel(); loadDashboard()">
             </select>
           </div>
 
@@ -3615,12 +3615,19 @@ function populateFYSelector() {
   if (!sel) return;
   const today = new Date();
   const currentFYStart = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
-  // Show current FY and prior FY
   const fys = [currentFYStart, currentFYStart - 1];
   sel.innerHTML = fys.map(y => {
     const label = `FY${String(y).slice(-2)}/${String(y + 1).slice(-2)}`;
     return `<option value="${y}" ${y === currentFYStart ? 'selected' : ''}>${label}</option>`;
   }).join('');
+  updateMastFYLabel(); // ← ADD THIS LINE
+}
+
+function updateMastFYLabel() {
+  const year = getSelectedFY();
+  const label = `FY${String(year).slice(-2)}/${String(year + 1).slice(-2)}`;
+  const el = document.getElementById('mastFYSubtitle');
+  if (el) el.innerHTML = `${label} &middot; SOURCE OF TRUTH: XERO &middot; FINANCIAL INTELLIGENCE POWERED BY AI`;
 }
 
 function getQuarterDates(quarter) {
