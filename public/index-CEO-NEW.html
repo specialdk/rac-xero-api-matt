@@ -7888,11 +7888,8 @@ function getQuarterDates(quarter) {
 
       // ========== INITIALIZE ==========
       document.addEventListener('DOMContentLoaded', () => {
-  populateFYSelector(); // ← ADD THIS LINE
-  // Set period selector to current financial period
-  const currentPeriod = getCurrentFinancialPeriod();
-        const periodSel = document.getElementById('periodSelector');
-        if (periodSel) periodSel.value = currentPeriod;
+  populateFYSelector();
+snapPeriodToFY();
 
         // Refresh draft count when period changes — different period may have different drafts
         // Also re-render AI panel immediately so the scope label tracks the period selection
