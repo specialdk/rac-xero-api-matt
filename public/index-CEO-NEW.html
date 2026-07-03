@@ -2551,7 +2551,7 @@
           <!-- FY group -->
           <div class="rac-controls-group">
             <div class="rac-controls-label">FY</div>
-            <select class="period-selector" id="fySelector" onchange="updateMastFYLabel(); loadDashboard()">
+            <select class="period-selector" id="fySelector" onchange="updateMastFYLabel(); snapPeriodToFY(); loadDashboard()">
             </select>
           </div>
 
@@ -3621,6 +3621,15 @@ function populateFYSelector() {
     return `<option value="${y}" ${y === currentFYStart ? 'selected' : ''}>${label}</option>`;
   }).join('');
   updateMastFYLabel(); // ← ADD THIS LINE
+}
+
+function snapPeriodToFY() {
+  const year = getSelectedFY();
+  const today = new Date();
+  const currentFYStart = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
+  const periodSel = document.getElementById('periodSelector');
+  if (!periodSel) return;
+  periodSel.value = (year === currentFYStart) ? 'Q1' : 'Q4';
 }
 
 function updateMastFYLabel() {
