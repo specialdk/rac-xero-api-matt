@@ -3999,11 +3999,13 @@ function getQuarterDates(quarter) {
                   organizationName: entity,
                   date: quarterInfo.isComplete ? quarterInfo.endDate : new Date().toISOString().split('T')[0],
                   periodMonths: quarterInfo.periodMonths,
+                  startDate: quarterInfo.startDate,
                 }),
               });
               plData = await plResp.json();
               dashCache.set(plKey, plData);
             }
+
             const entityRevenue = plData.summary?.totalRevenue || 0;
             const entityCogs = plData.summary?.totalCOGS || 0;
             const entityExpenses = plData.summary?.totalExpenses || 0;
@@ -4287,6 +4289,7 @@ function getQuarterDates(quarter) {
                 organizationName: getSelectedEntity(),
                 date: quarterInfo.isComplete ? quarterInfo.endDate : new Date().toISOString().split('T')[0],
                 periodMonths: periodMonths,
+                startDate: quarterInfo.startDate,
               }),
             });
             data = await response.json();

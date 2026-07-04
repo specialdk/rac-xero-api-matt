@@ -1743,7 +1743,7 @@ async function fetchProfitLossData(tenantId, { date, periodMonths = 1 } = {}) {
 
 app.post("/api/profit-loss-summary", async (req, res) => {
   try {
-    const { organizationName, tenantId, date, periodMonths } = req.body;
+    const { organizationName, tenantId, date, periodMonths, startDate } = req.body;
 
     if (!organizationName && !tenantId) {
       return res.status(400).json({ error: "Organization name or tenant ID required" });
@@ -4570,25 +4570,12 @@ app.post("/api/profit-loss-summary", async (req, res) => {
     }
 
     // Build parameters with updated defaults
-    const params = new URLSearchParams();
-    if (date) params.append("date", date);
-    // Default to 1 month instead of 12 for current month behavior
-    params.append("periodMonths", (periodMonths || 1).toString());
-    const queryString = params.toString()
-      ? `?${params.toString()}`
-      : "?periodMonths=1";
-
-    const response = await fetch(
-      `${req.protocol}://${req.get(
-        "host"
-      )}/api/profit-loss/${actualTenantId}${queryString}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`P&L request failed: ${response.status}`);
-    }
-
-    const result = await response.json();
+    const result = await fetchProfitLossDirect({
+      tenantId: actualTenantId,
+      date: date || new Date().toISOString().split('T')[0],
+      periodMonths: periodMonths || 1,
+      startDate: startDate || null,
+    });
     res.json(result);
   } catch (error) {
     console.error("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ P&L summary API error:", error);
@@ -5721,21 +5708,23 @@ function getCompletedMonthsInCurrentFY() {
   return months;
 }
 
-async function fetchProfitLossDirect({ tenantId, date, periodMonths = 1 }) {
+async function fetchProfitLossDirect({ tenantId, date, periodMonths = 1, startDate } = {}) {
   const tokenData = await tokenStorage.getXeroToken(tenantId);
   if (!tokenData) throw new Error('Token not available');
   await xero.setTokenSet(tokenData);
 
   const reportEndDate = new Date(date);
-  let fromDate;
-  if (periodMonths === 1) {
-    fromDate = new Date(reportEndDate.getFullYear(), reportEndDate.getMonth(), 1);
+  let fromDateStr;
+  if (startDate) {
+    fromDateStr = startDate;
+  } else if (periodMonths === 1) {
+    fromDateStr = new Date(reportEndDate.getFullYear(), reportEndDate.getMonth(), 1).toISOString().split('T')[0];
   } else {
-    fromDate = new Date(reportEndDate);
+    const fromDate = new Date(reportEndDate);
     fromDate.setMonth(fromDate.getMonth() - (periodMonths - 1));
     fromDate.setDate(1);
+    fromDateStr = fromDate.toISOString().split('T')[0];
   }
-  const fromDateStr = fromDate.toISOString().split('T')[0];
   const toDateStr = reportEndDate.toISOString().split('T')[0];
 
   console.log(`P&L Date Range: ${fromDateStr} to ${toDateStr} (${periodMonths} month period)`);
