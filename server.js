@@ -1764,9 +1764,11 @@ app.post("/api/profit-loss-summary", async (req, res) => {
     }
 
     // Call the shared function directly — NO HTTP hop through Railway's edge proxy
-    const result = await fetchProfitLossData(actualTenantId, {
-      date,
+    const result = await fetchProfitLossDirect({
+      tenantId: actualTenantId,
+      date: date || new Date().toISOString().split('T')[0],
       periodMonths: periodMonths || 1,
+      startDate: startDate || null,
     });
     res.json(result);
   } catch (error) {
