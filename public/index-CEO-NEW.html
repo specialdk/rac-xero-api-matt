@@ -2551,7 +2551,7 @@
           <!-- FY group -->
           <div class="rac-controls-group">
             <div class="rac-controls-label">FY</div>
-            <select class="period-selector" id="fySelector" onchange="updateMastFYLabel(); snapPeriodToFY(); loadDashboard()">
+            <select class="period-selector" id="fySelector" onchange="updateMastFYLabel(); snapPeriodToFY(); loadDashboard(); initTrendChart()">
             </select>
           </div>
 
@@ -5700,10 +5700,9 @@ function getQuarterDates(quarter) {
       // ========== TREND CHART (YoY) ==========
       // State for which years/metrics are visible. Modified by toggle handlers.
       (function() {
-  const today = new Date();
-  const fyEnd = today.getMonth() >= 6 ? today.getFullYear() + 1 : today.getFullYear();
-  window.TREND_CURR_FY = `FY${String(fyEnd).slice(-2)}`;
-  window.TREND_PREV_FY = `FY${String(fyEnd - 1).slice(-2)}`;
+  const fyYear = getSelectedFY();
+  window.TREND_CURR_FY = `FY${String(fyYear + 1).slice(-2)}`;
+  window.TREND_PREV_FY = `FY${String(fyYear).slice(-2)}`;
 })();
 window.trendYearsActive = window.trendYearsActive || [window.TREND_CURR_FY, window.TREND_PREV_FY];
       window.trendMetricsActive = window.trendMetricsActive || ['revenue', 'expenses', 'profit'];
