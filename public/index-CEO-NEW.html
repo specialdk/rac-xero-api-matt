@@ -5111,9 +5111,10 @@ function getQuarterDates(quarter) {
 
         try {
           // Period info — match the dashboard's current selection
-          const quarterInfo = window.dashboardData?.quarterInfo || {};
-          const reportDate = quarterInfo.isComplete ? quarterInfo.endDate : new Date().toISOString().split('T')[0];
-          const periodMonths = quarterInfo.periodMonths || 12;
+          const periodCode = document.getElementById('periodSelector')?.value || 'LAST_MONTH';
+const quarterInfo = getQuarterDates(periodCode);
+const reportDate = quarterInfo.isComplete ? quarterInfo.endDate : new Date().toISOString().split('T')[0];
+const periodMonths = quarterInfo.periodMonths || 1;
 
           const [spendResp, revenueResp] = await Promise.all([
             fetch(`${API_BASE}/api/spend-classification`, {
