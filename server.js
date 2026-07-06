@@ -2106,7 +2106,7 @@ app.post("/api/aged-receivables", async (req, res) => {
 // Expense Analysis endpoint
 app.post("/api/expense-analysis", async (req, res) => {
   try {
-    const { organizationName, tenantId, date, periodMonths } = req.body;
+    const { organizationName, tenantId, date, periodMonths, startDate } = req.body;
 
     if (!organizationName && !tenantId) {
       return res
@@ -2284,7 +2284,8 @@ app.post("/api/spend-classification", async (req, res) => {
     // Call shared helper directly — no HTTP hop
     const expenseData = await fetchExpenseAnalysis(actualTenantId, {
       date,
-      periodMonths: periodMonths || 12,
+      periodMonths: periodMonths || 1,
+      startDate: startDate || null,
     });
 
     const categories = expenseData.analysis?.expenseCategories || [];
@@ -2311,7 +2312,7 @@ app.post("/api/spend-classification", async (req, res) => {
 
 app.post("/api/revenue-classification", async (req, res) => {
   try {
-    const { organizationName, tenantId, date, periodMonths } = req.body;
+    const { organizationName, tenantId, date, periodMonths, startDate } = req.body;
 
     if (!organizationName && !tenantId) {
       return res.status(400).json({ error: "Organization name or tenant ID required" });
@@ -2337,9 +2338,11 @@ app.post("/api/revenue-classification", async (req, res) => {
     }
 
     // Reuse the shared P&L helper we already extracted — no HTTP hop
-    const plData = await fetchProfitLossData(actualTenantId, {
+    const plData = await fetchProfitLossDirect({
+      tenantId: actualTenantId,
       date,
-      periodMonths: periodMonths || 12,
+      periodMonths: periodMonths || 1,
+      startDate: startDate || null,
     });
 
     const revenueAccounts = plData?.summary?.revenueAccounts || [];
@@ -4549,7 +4552,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
 // Also update the POST endpoint for P&L
 app.post("/api/profit-loss-summary", async (req, res) => {
   try {
-    const { organizationName, tenantId, date, periodMonths } = req.body;
+    const { organizationName, tenantId, date, periodMonths, startDate } = req.body;
 
     if (!organizationName && !tenantId) {
       return res
