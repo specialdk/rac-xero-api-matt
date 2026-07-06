@@ -5699,12 +5699,8 @@ function getQuarterDates(quarter) {
 
       // ========== TREND CHART (YoY) ==========
       // State for which years/metrics are visible. Modified by toggle handlers.
-      (function() {
-  const fyYear = getSelectedFY();
-  window.TREND_CURR_FY = `FY${String(fyYear + 1).slice(-2)}`;
-  window.TREND_PREV_FY = `FY${String(fyYear).slice(-2)}`;
-})();
-window.trendYearsActive = window.trendYearsActive || [window.TREND_CURR_FY, window.TREND_PREV_FY];
+      
+      window.trendYearsActive = window.trendYearsActive || [window.TREND_CURR_FY, window.TREND_PREV_FY];
       window.trendMetricsActive = window.trendMetricsActive || ['revenue', 'expenses', 'profit'];
 
       // FY axis: 12 months Jul→Jun. Same calendar overlay for YoY comparison.
@@ -5903,6 +5899,11 @@ const colors = {
 
         // Build datasets for each (year, metric) combination that's currently active.
         // Order: draw FY25 first so FY26 sits on top visually.
+        const fyYear = getSelectedFY();
+        window.TREND_CURR_FY = `FY${String(fyYear + 1).slice(-2)}`;
+        window.TREND_PREV_FY = `FY${String(fyYear).slice(-2)}`;
+        window.trendYearsActive = [window.TREND_CURR_FY, window.TREND_PREV_FY];
+
         const yearsActive = window.trendYearsActive || [window.TREND_CURR_FY, window.TREND_PREV_FY];
         // Update toggle button labels to actual FY names
         const btnCurr = document.getElementById('trendBtnCurr');
