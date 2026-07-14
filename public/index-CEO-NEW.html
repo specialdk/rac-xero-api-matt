@@ -3113,6 +3113,21 @@
         document.getElementById('entityPicker').classList.toggle('open');
       }
 
+      // Toggle between the management (Dashboard) P&L and the Xero-style P&L
+function switchPLView(which) {
+  const showXero = which === 'xero';
+  const dash = document.getElementById('plViewDash');
+  const xero = document.getElementById('plViewXero');
+  if (!dash || !xero) return;
+  dash.style.display = showXero ? 'none' : 'block';
+  xero.style.display = showXero ? 'block' : 'none';
+  const bDash = document.getElementById('plBtnDash');
+  const bXero = document.getElementById('plBtnXero');
+  bDash.style.background = showXero ? 'transparent' : '#fff';
+  bDash.style.color      = showXero ? '#6b7280'     : '#111';
+  bXero.style.background = showXero ? '#fff'         : 'transparent';
+  bXero.style.color      = showXero ? '#111'         : '#6b7280';
+}
       // Handle radio button selection
       document.addEventListener('click', function(e) {
         const picker = document.getElementById('entityPicker');
@@ -6269,7 +6284,12 @@ const colors = {
                   <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                     Full P&L breakdown
                   </div>
-                  ${renderPLWaterfall(pl)}
+                  <div style="display:inline-flex; gap:4px; background:#eef0f3; padding:3px; border-radius:8px; margin:0 0 16px;">
+                    <button id="plBtnDash" onclick="switchPLView('dash')" style="border:none; cursor:pointer; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; background:#fff; color:#111;">Dashboard view</button>
+                    <button id="plBtnXero" onclick="switchPLView('xero')" style="border:none; cursor:pointer; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; background:transparent; color:#6b7280;">Xero view</button>
+                  </div>
+                  <div id="plViewDash">${renderPLWaterfall(pl)}</div>
+                  <div id="plViewXero" style="display:none;">${renderPLTraditional(pl)}</div>
                 </div>
               `;
             }
