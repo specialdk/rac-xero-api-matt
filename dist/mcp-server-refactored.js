@@ -270,10 +270,11 @@ const TOOLS = [
       properties: {
         tenantId: { type: "string" },
         organizationName: { type: "string" },
-        accountName: { type: "string", required: true },
+        accountName: { type: "string" },
         dateFrom: { type: "string" },
         dateTo: { type: "string" },
       },
+      required: ["accountName"],
     },
   },
   {
