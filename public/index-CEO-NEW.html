@@ -3113,6 +3113,22 @@
         document.getElementById('entityPicker').classList.toggle('open');
       }
 
+      // Toggle between the management (Dashboard) P&L and the Xero-style P&L
+function switchPLView(which) {
+  const showXero = which === 'xero';
+  const dash = document.getElementById('plViewDash');
+  const xero = document.getElementById('plViewXero');
+  if (!dash || !xero) return;
+  dash.style.display = showXero ? 'none' : 'block';
+  xero.style.display = showXero ? 'block' : 'none';
+  const bDash = document.getElementById('plBtnDash');
+  const bXero = document.getElementById('plBtnXero');
+  bDash.style.background = showXero ? 'transparent' : '#fff';
+  bDash.style.color      = showXero ? '#6b7280'     : '#111';
+  bXero.style.background = showXero ? '#fff'         : 'transparent';
+  bXero.style.color      = showXero ? '#111'         : '#6b7280';
+}
+
       // Handle radio button selection
       document.addEventListener('click', function(e) {
         const picker = document.getElementById('entityPicker');
@@ -6206,6 +6222,38 @@ const colors = {
               `;
             };
 
+            // NEW: Xero-style number formatter (2 decimals, negatives in brackets, no $)
+            const fmtX = (n) => {
+              const v = Number(n || 0);
+              const s = Math.abs(v).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              return v < 0 ? `(${s})` : s;
+            };
+
+            // NEW: Xero-style / traditional P&L — alphabetical, no invented COGS split
+            const renderPLTraditional = (data, title) => {
+              const amtCell = (n) => `<td style="text-align:right; font-variant-numeric:tabular-nums; ${Number(n) < 0 ? 'color:#B42318;' : ''}">${fmtX(n)}</td>`;
+              const income = (data.revenueAccounts || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+              const expenses = [...(data.cogsAccounts || []), ...(data.expenseAccounts || [])].sort((a, b) => a.name.localeCompare(b.name));
+              const totalIncome = data.revenue || 0;
+              const totalExpenses = (data.cogs || 0) + (data.opex || 0);
+              const net = data.netProfit || 0;
+              return `
+                ${title ? `<h3 style="margin: 16px 0 8px 0; font-size: 14px; color: #6366F1;">${title}</h3>` : ''}
+                <table class="data-table" style="margin-bottom: 16px;">
+                  <tbody>
+                    <tr style="background:#f9f9f9;"><td colspan="2" style="font-size:12px; font-weight:700; color: var(--color-text-muted);">TRADING INCOME</td></tr>
+                    ${income.map(acc => `<tr><td style="padding-left:12px; font-size:13px;">${acc.name}</td>${amtCell(acc.amount)}</tr>`).join('')}
+                    <tr style="font-weight:600; border-top:1px solid #ddd;"><td>Total Trading Income</td>${amtCell(totalIncome)}</tr>
+                    <tr style="font-weight:600; background:#E8F0FE;"><td>Gross Profit</td>${amtCell(totalIncome)}</tr>
+                    <tr style="background:#f9f9f9;"><td colspan="2" style="font-size:12px; font-weight:700; color: var(--color-text-muted); padding-top:8px;">OPERATING EXPENSES</td></tr>
+                    ${expenses.map(acc => `<tr><td style="padding-left:12px; font-size:13px;">${acc.name}</td>${amtCell(acc.amount)}</tr>`).join('')}
+                    <tr style="font-weight:600; border-top:1px solid #ddd;"><td>Total Operating Expenses</td>${amtCell(totalExpenses)}</tr>
+                    <tr style="font-weight:700; background:#f5f5f5; border-top: 2px solid #ddd; font-size: 15px;"><td>Net Profit</td>${amtCell(net)}</tr>
+                  </tbody>
+                </table>
+              `;
+            };
+
             if (pl.isConsolidated) {
               const breakdown = pl.entityBreakdown || [];
               return `
@@ -6237,7 +6285,12 @@ const colors = {
                   <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
                     Full P&L breakdown
                   </div>
-                  ${renderPLWaterfall(pl)}
+                  <div style="display:inline-flex; gap:4px; background:#eef0f3; padding:3px; border-radius:8px; margin:0 0 16px;">
+                    <button id="plBtnDash" onclick="switchPLView('dash')" style="border:none; cursor:pointer; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; background:#fff; color:#111;">Dashboard view</button>
+                    <button id="plBtnXero" onclick="switchPLView('xero')" style="border:none; cursor:pointer; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; background:transparent; color:#6b7280;">Xero view</button>
+                  </div>
+                  <div id="plViewDash">${renderPLWaterfall(pl)}</div>
+                  <div id="plViewXero" style="display:none;">${renderPLTraditional(pl)}</div>
                 </div>
               `;
             }
