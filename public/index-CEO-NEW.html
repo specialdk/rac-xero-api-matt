@@ -3129,6 +3129,22 @@ function switchPLView(which) {
   bXero.style.color      = showXero ? '#111'         : '#6b7280';
 }
 
+// Toggle between the flat (Dashboard) Balance Sheet and the Xero-style grouped one
+function switchBSView(which) {
+  const showXero = which === 'xero';
+  const dash = document.getElementById('bsViewDash');
+  const xero = document.getElementById('bsViewXero');
+  if (!dash || !xero) return;
+  dash.style.display = showXero ? 'none' : 'block';
+  xero.style.display = showXero ? 'block' : 'none';
+  const bDash = document.getElementById('bsBtnDash');
+  const bXero = document.getElementById('bsBtnXero');
+  bDash.style.background = showXero ? 'transparent' : '#fff';
+  bDash.style.color      = showXero ? '#6b7280'     : '#111';
+  bXero.style.background = showXero ? '#fff'         : 'transparent';
+  bXero.style.color      = showXero ? '#111'         : '#6b7280';
+}
+
       // Handle radio button selection
       document.addEventListener('click', function(e) {
         const picker = document.getElementById('entityPicker');
@@ -6343,64 +6359,90 @@ const colors = {
                   </div>
                 `;
               })() : (() => {
-                const assetAccounts = (balance.assets || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
-                const liabilityAccounts = (balance.liabilities || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
-                const equityAccounts = (balance.equity || []).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
-                return `
-                  <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
-                    $${(balance.totalEquity || 0).toLocaleString()}
-                  </div>
-                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 20px;">
-                    Net Equity
-                  </div>
+                // Xero-style number: 2 decimals, negatives in (brackets), no $
+                const fmtB = (n) => {
+                  const v = Number(n || 0);
+                  const s = Math.abs(v).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  return v < 0 ? `(${s})` : s;
+                };
+                const amtB = (n) => `<td style="text-align:right; font-variant-numeric:tabular-nums; ${Number(n) < 0 ? 'color:#B42318;' : ''}">${fmtB(n)}</td>`;
 
+                // ===== EXISTING flat "Dashboard" view (sorted by value) — retained =====
+                const assetAccounts = (balance.assets || []).slice().sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+                const liabilityAccounts = (balance.liabilities || []).slice().sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+                const equityAccounts = (balance.equity || []).slice().sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+                const dashView = `
                   <h3 style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-primary);">Assets</h3>
-                  <table class="data-table" style="margin-bottom: 16px;">
-                    <tbody>
-                      ${assetAccounts.map(acc => `
-                        <tr>
-                          <td style="font-size:13px;">${acc.name}</td>
-                          <td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td>
-                        </tr>
-                      `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No asset accounts</td></tr>'}
-                      <tr style="font-weight:600; background:#E8F0FE;">
-                        <td>Total Assets</td>
-                        <td style="text-align:right; color: var(--color-primary);">$${(balance.totalAssets || 0).toLocaleString()}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-
+                  <table class="data-table" style="margin-bottom: 16px;"><tbody>
+                    ${assetAccounts.map(acc => `<tr><td style="font-size:13px;">${acc.name}</td><td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No asset accounts</td></tr>'}
+                    <tr style="font-weight:600; background:#E8F0FE;"><td>Total Assets</td><td style="text-align:right; color: var(--color-primary);">$${(balance.totalAssets || 0).toLocaleString()}</td></tr>
+                  </tbody></table>
                   <h3 style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-warning);">Liabilities</h3>
-                  <table class="data-table" style="margin-bottom: 16px;">
-                    <tbody>
-                      ${liabilityAccounts.map(acc => `
-                        <tr>
-                          <td style="font-size:13px;">${acc.name}</td>
-                          <td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td>
-                        </tr>
-                      `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No liability accounts</td></tr>'}
-                      <tr style="font-weight:600; background:#FFF4E5;">
-                        <td>Total Liabilities</td>
-                        <td style="text-align:right; color: var(--color-warning);">$${(balance.totalLiabilities || 0).toLocaleString()}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-
+                  <table class="data-table" style="margin-bottom: 16px;"><tbody>
+                    ${liabilityAccounts.map(acc => `<tr><td style="font-size:13px;">${acc.name}</td><td style="text-align:right; font-size:13px;">$${(acc.balance || 0).toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No liability accounts</td></tr>'}
+                    <tr style="font-weight:600; background:#FFF4E5;"><td>Total Liabilities</td><td style="text-align:right; color: var(--color-warning);">$${(balance.totalLiabilities || 0).toLocaleString()}</td></tr>
+                  </tbody></table>
                   <h3 style="margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-positive);">Equity</h3>
-                  <table class="data-table">
-                    <tbody>
-                      ${equityAccounts.map(acc => `
-                        <tr>
-                          <td style="font-size:13px;">${acc.name}</td>
-                          <td style="text-align:right; font-size:13px; color: ${(acc.balance || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(acc.balance || 0).toLocaleString()}</td>
-                        </tr>
-                      `).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No equity accounts</td></tr>'}
-                      <tr style="font-weight:600; background:#E6F4EA;">
-                        <td>Net Equity</td>
-                        <td style="text-align:right; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(balance.totalEquity || 0).toLocaleString()}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <table class="data-table"><tbody>
+                    ${equityAccounts.map(acc => `<tr><td style="font-size:13px;">${acc.name}</td><td style="text-align:right; font-size:13px; color: ${(acc.balance || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(acc.balance || 0).toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="2" style="color: var(--color-text-muted);">No equity accounts</td></tr>'}
+                    <tr style="font-weight:600; background:#E6F4EA;"><td>Net Equity</td><td style="text-align:right; color: ${(balance.totalEquity || 0) >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'};">$${(balance.totalEquity || 0).toLocaleString()}</td></tr>
+                  </tbody></table>
+                `;
+
+                // ===== NEW Xero-style grouped view =====
+                // Group accounts by their Xero `section`, in Xero's order, alphabetical within each.
+                const groupBySection = (arr, order) => {
+                  const groups = {};
+                  (arr || []).forEach(a => { const s = a.section || 'Other'; (groups[s] = groups[s] || []).push(a); });
+                  const norm = (s) => String(s).toLowerCase().replace(/\s+/g, ' ').trim();
+                  return Object.keys(groups).sort((x, y) => {
+                    const ix = order.findIndex(o => norm(o) === norm(x)); const iy = order.findIndex(o => norm(o) === norm(y));
+                    return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy);
+                  }).map(k => ({
+                    section: k,
+                    items: groups[k].slice().sort((a, b) => a.name.localeCompare(b.name)),
+                    subtotal: groups[k].reduce((t, a) => t + Number(a.balance || 0), 0)
+                  }));
+                };
+                const sectionBlock = (g) => `
+                  <tr style="background:#f9f9f9;"><td colspan="2" style="font-size:11px; font-weight:700; color: var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; padding-top:8px;">${g.section}</td></tr>
+                  ${g.items.map(acc => `<tr><td style="padding-left:14px; font-size:13px;">${acc.name}</td>${amtB(acc.balance)}</tr>`).join('')}
+                  <tr style="font-weight:600; border-top:1px solid #eee;"><td style="padding-left:14px;">Total ${g.section}</td>${amtB(g.subtotal)}</tr>
+                `;
+                const assetGroups = groupBySection(balance.assets, ['Bank', 'Current Assets', 'Fixed Assets', 'Non-current Assets']);
+                const liabGroups  = groupBySection(balance.liabilities, ['Current Liabilities', 'Non-current Liabilities']);
+                const equityItems = (balance.equity || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+                const netAssets   = (balance.totalAssets || 0) - (balance.totalLiabilities || 0);
+                const xeroView = `
+                  <h3 style="margin:8px 0 6px; font-size:14px; font-weight:700;">Assets</h3>
+                  <table class="data-table" style="margin-bottom: 16px;"><tbody>
+                    ${assetGroups.map(sectionBlock).join('')}
+                    <tr style="font-weight:700; background:#E8F0FE; border-top:2px solid #cbd5e1;"><td>Total Assets</td>${amtB(balance.totalAssets)}</tr>
+                  </tbody></table>
+                  <h3 style="margin:8px 0 6px; font-size:14px; font-weight:700;">Liabilities</h3>
+                  <table class="data-table" style="margin-bottom: 16px;"><tbody>
+                    ${liabGroups.map(sectionBlock).join('')}
+                    <tr style="font-weight:700; background:#FFF4E5; border-top:2px solid #cbd5e1;"><td>Total Liabilities</td>${amtB(balance.totalLiabilities)}</tr>
+                  </tbody></table>
+                  <table class="data-table" style="margin-bottom: 16px;"><tbody>
+                    <tr style="font-weight:700; background:#F3F6FB;"><td>Net Assets</td>${amtB(netAssets)}</tr>
+                  </tbody></table>
+                  <h3 style="margin:8px 0 6px; font-size:14px; font-weight:700;">Equity</h3>
+                  <table class="data-table"><tbody>
+                    ${equityItems.map(acc => `<tr><td style="padding-left:14px; font-size:13px;">${acc.name}</td>${amtB(acc.balance)}</tr>`).join('')}
+                    <tr style="font-weight:700; background:#E6F4EA; border-top:2px solid #cbd5e1;"><td>Total Equity</td>${amtB(balance.totalEquity)}</tr>
+                  </tbody></table>
+                `;
+
+                return `
+                  <div style="font-size: 28px; font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">$${(balance.totalEquity || 0).toLocaleString()}</div>
+                  <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 12px;">Net Equity</div>
+                  <div style="display:inline-flex; gap:4px; background:#eef0f3; padding:3px; border-radius:8px; margin:0 0 16px;">
+                    <button id="bsBtnDash" onclick="switchBSView('dash')" style="border:none; cursor:pointer; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; background:#fff; color:#111;">Dashboard view</button>
+                    <button id="bsBtnXero" onclick="switchBSView('xero')" style="border:none; cursor:pointer; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; background:transparent; color:#6b7280;">Xero view</button>
+                  </div>
+                  <div id="bsViewDash">${dashView}</div>
+                  <div id="bsViewXero" style="display:none;">${xeroView}</div>
                 `;
               })()}
             </div>
