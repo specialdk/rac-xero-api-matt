@@ -1397,49 +1397,35 @@ async function fetchTrialBalance(tenantId, { reportDate } = {}) {
 
   let processedAccounts = 0;
 
-  balanceSheetRows.forEach((section) => {
-    if (section.rowType === "Section" && section.rows && section.title) {
-      const sectionTitle = section.title.toLowerCase();
+  const typeMap = await buildAccountTypeMap(tenantId);
+const leaves = collectReportRows(balanceSheetRows, '', []);
+for (const leaf of leaves) {
+  const accountName = leaf.cells[0]?.value || '';
+  const currentBalance = parseFloat(String(leaf.cells[1]?.value ?? '').replace(/,/g, '')) || 0;
+  if (!accountName || accountName.toLowerCase().includes('total') || currentBalance === 0) continue;
 
-      section.rows.forEach((row) => {
-        if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
-          const accountName = row.cells[0]?.value || "";
-          const currentBalance = parseFloat(row.cells[1]?.value || 0);
+  const cat = classifyBalanceSheetRow(accountName, typeMap, leaf.sectionTitle);
+  const info = { name: accountName, balance: currentBalance, debit: 0, credit: 0, section: leaf.sectionTitle };
 
-          if (accountName.toLowerCase().includes("total") || currentBalance === 0) return;
-
-          processedAccounts++;
-          const accountInfo = {
-            name: accountName,
-            balance: currentBalance,
-            debit: 0,
-            credit: 0,
-            section: section.title,
-          };
-
-          if (sectionTitle.includes("bank") || sectionTitle.includes("asset")) {
-            accountInfo.debit = currentBalance >= 0 ? currentBalance : 0;
-            accountInfo.credit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
-            trialBalance.assets.push(accountInfo);
-            trialBalance.totals.totalAssets += currentBalance;
-          } else if (sectionTitle.includes("liabilit")) {
-            accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
-            accountInfo.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
-            trialBalance.liabilities.push(accountInfo);
-            trialBalance.totals.totalLiabilities += currentBalance;
-          } else if (sectionTitle.includes("equity")) {
-            accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
-            accountInfo.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
-            trialBalance.equity.push(accountInfo);
-            trialBalance.totals.totalEquity += currentBalance;
-          }
-
-          trialBalance.totals.totalDebits += accountInfo.debit;
-          trialBalance.totals.totalCredits += accountInfo.credit;
-        }
-      });
-    }
-  });
+  if (cat === 'asset') {
+    info.debit = currentBalance >= 0 ? currentBalance : 0;
+    info.credit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+    trialBalance.assets.push(info); trialBalance.totals.totalAssets += currentBalance;
+  } else if (cat === 'liability') {
+    info.credit = currentBalance >= 0 ? currentBalance : 0;
+    info.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+    trialBalance.liabilities.push(info); trialBalance.totals.totalLiabilities += currentBalance;
+  } else if (cat === 'equity') {
+    info.credit = currentBalance >= 0 ? currentBalance : 0;
+    info.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+    trialBalance.equity.push(info); trialBalance.totals.totalEquity += currentBalance;
+  } else {
+    continue; // unclassified (rare) — skip, or log for review
+  }
+  trialBalance.totals.totalDebits += info.debit;
+  trialBalance.totals.totalCredits += info.credit;
+  processedAccounts++;
+}
 
   // P&L for revenue/expenses on the same date
   try {
@@ -3178,26 +3164,21 @@ app.get("/api/chart-of-accounts/:tenantId", async (req, res) => {
           largeBalance: isLargeBalance,
           unusualEquity: isUnusualEquity,
           zeroBalance: balance === 0,
-          negativeAsset: account.type === "ASSET" && balance < 0,
-          positiveExpense: account.type === "EXPENSE" && balance > 0,
+          negativeAsset: categoryForXeroType(account.type) === 'asset' && balance < 0,
+          positiveExpense: categoryForXeroType(account.type) === 'expense' && balance > 0,
         },
       };
     });
 
     // Group by account type
-    const groupedAccounts = {
-      ASSET: analysis.filter((a) => a.type === "ASSET"),
-      LIABILITY: analysis.filter((a) => a.type === "LIABILITY"),
-      EQUITY: analysis.filter((a) => a.type === "EQUITY"),
-      REVENUE: analysis.filter((a) => a.type === "REVENUE"),
-      EXPENSE: analysis.filter((a) => a.type === "EXPENSE"),
-      OTHER: analysis.filter(
-        (a) =>
-          !["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"].includes(
-            a.type
-          )
-      ),
-    };
+const groupedAccounts = {
+  ASSET: analysis.filter((a) => categoryForXeroType(a.type) === 'asset'),
+  LIABILITY: analysis.filter((a) => categoryForXeroType(a.type) === 'liability'),
+  EQUITY: analysis.filter((a) => categoryForXeroType(a.type) === 'equity'),
+  REVENUE: analysis.filter((a) => categoryForXeroType(a.type) === 'revenue'),
+  EXPENSE: analysis.filter((a) => categoryForXeroType(a.type) === 'expense'),
+  OTHER: analysis.filter((a) => categoryForXeroType(a.type) === null),
+};
 
     res.json({
       tenantId: req.params.tenantId,
@@ -3739,6 +3720,56 @@ app.get("/api/yoy-analysis/:tenantId", async (req, res) => {
     });
   }
 });
+
+// ── Xero account TYPE → category. Xero emits granular types, never "ASSET". ──
+const XERO_TYPE_CATEGORY = {
+  BANK: 'asset', CURRENT: 'asset', FIXED: 'asset', NONCURRENT: 'asset',
+  PREPAYMENT: 'asset', INVENTORY: 'asset',
+  CURRLIAB: 'liability', LIABILITY: 'liability', TERMLIAB: 'liability',
+  EQUITY: 'equity',
+  REVENUE: 'revenue', SALES: 'revenue', OTHERINCOME: 'revenue',
+  DIRECTCOSTS: 'expense', EXPENSE: 'expense', OVERHEADS: 'expense', DEPRECIATN: 'expense',
+};
+function categoryForXeroType(type) {
+  return XERO_TYPE_CATEGORY[String(type || '').toUpperCase()] || null;
+}
+
+// Build a name→type map for an entity (types are date-independent).
+async function buildAccountTypeMap(tenantId) {
+  const resp = await xero.accountingApi.getAccounts(tenantId);
+  const map = new Map();
+  for (const a of resp.body.accounts || []) {
+    if (a.name) map.set(a.name.trim().toLowerCase(), a.type);
+  }
+  return map;
+}
+
+// Recursively collect leaf "Row" cells, tagging each with nearest Section title.
+// Handles ANY nesting depth — fixes the one-level-walk truncation.
+function collectReportRows(rows, sectionTitle, out) {
+  for (const r of rows || []) {
+    if (r.rowType === 'Section') {
+      collectReportRows(r.rows, r.title || sectionTitle, out);
+    } else if (r.rowType === 'Row' && r.cells && r.cells.length >= 2) {
+      out.push({ sectionTitle: sectionTitle || '', cells: r.cells });
+    }
+  }
+  return out;
+}
+
+// Classify a BS row: account TYPE first, section-title as safety net so
+// nothing is ever silently dropped.
+function classifyBalanceSheetRow(accountName, typeMap, sectionTitle) {
+  const byType = categoryForXeroType(typeMap.get(accountName.trim().toLowerCase()));
+  if (byType) return byType;
+  const s = (sectionTitle || '').toLowerCase();
+  if (s.includes('bank') || s.includes('asset')) return 'asset';
+  if (s.includes('liabilit')) return 'liability';
+  if (s.includes('equity')) return 'equity';
+  return null;
+}
+
+
 
 // Shared P&L section categorizer ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ONE place to maintain
 // Catches all Xero section types; defaults non-revenue to expense (conservative)
@@ -4885,37 +4916,35 @@ app.get("/api/intercompany/:tenantId", async (req, res) => {
       "yirrkala",
     ];
 
-    balanceSheetRows.forEach((section) => {
-      if (section.rowType === "Section" && section.rows) {
-        section.rows.forEach((row) => {
-          if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
-            const accountName = row.cells[0]?.value || "";
-            const balance = parseFloat(row.cells[1]?.value || 0);
+    const typeMap = await buildAccountTypeMap(tenantId);
+const leaves = collectReportRows(balanceSheetRows, '', []);
+for (const leaf of leaves) {
+  const accountName = leaf.cells[0]?.value || '';
+  const currentBalance = parseFloat(String(leaf.cells[1]?.value ?? '').replace(/,/g, '')) || 0;
+  if (!accountName || accountName.toLowerCase().includes('total') || currentBalance === 0) continue;
 
-            // Check if account name contains RAC entity names
-            const isIntercompany = racEntityNames.some(
-              (entity) =>
-                accountName.toLowerCase().includes(entity) &&
-                (accountName.toLowerCase().includes("loan") ||
-                  accountName.toLowerCase().includes("due") ||
-                  accountName.toLowerCase().includes("receivable") ||
-                  accountName.toLowerCase().includes("payable"))
-            );
+  const cat = classifyBalanceSheetRow(accountName, typeMap, leaf.sectionTitle);
+  const info = { name: accountName, balance: currentBalance, debit: 0, credit: 0, section: leaf.sectionTitle };
 
-            if (isIntercompany && Math.abs(balance) > 0) {
-              intercompanyAccounts.push({
-                accountName,
-                balance,
-                section: section.title,
-                relatedEntity: racEntityNames.find((entity) =>
-                  accountName.toLowerCase().includes(entity)
-                ),
-              });
-            }
-          }
-        });
-      }
-    });
+  if (cat === 'asset') {
+    info.debit = currentBalance >= 0 ? currentBalance : 0;
+    info.credit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+    trialBalance.assets.push(info); trialBalance.totals.totalAssets += currentBalance;
+  } else if (cat === 'liability') {
+    info.credit = currentBalance >= 0 ? currentBalance : 0;
+    info.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+    trialBalance.liabilities.push(info); trialBalance.totals.totalLiabilities += currentBalance;
+  } else if (cat === 'equity') {
+    info.credit = currentBalance >= 0 ? currentBalance : 0;
+    info.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+    trialBalance.equity.push(info); trialBalance.totals.totalEquity += currentBalance;
+  } else {
+    continue; // unclassified (rare) — skip, or log for review
+  }
+  trialBalance.totals.totalDebits += info.debit;
+  trialBalance.totals.totalCredits += info.credit;
+  processedAccounts++;
+}
 
     const analysis = {
       totalIntercompanyAssets: intercompanyAccounts
@@ -5582,40 +5611,35 @@ app.post("/api/backfill-monthly-balances", async (req, res) => {
           );
           
           const bsRows = bsResponse.body.reports?.[0]?.rows || [];
-          
+
+          const typeMap = await buildAccountTypeMap(conn.tenantId);
+
           let cashPosition = 0;
           let receivablesTotal = 0;
           let totalAssets = 0;
           let totalLiabilities = 0;
           let totalEquity = 0;
-          
-          bsRows.forEach(section => {
-            if (section.rowType !== 'Section' || !section.rows || !section.title) return;
-            const sectionTitle = section.title.toLowerCase();
-            
-            section.rows.forEach(row => {
-              if (row.rowType !== 'Row' || !row.cells || row.cells.length < 2) return;
-              const accountName = row.cells[0]?.value || '';
-              const balance = parseFloat(row.cells[1]?.value || 0);
-              
-              if (accountName.toLowerCase().includes('total') || balance === 0) return;
-              
-              // Classify
-              if (sectionTitle === 'bank' || sectionTitle === 'bank accounts') {
-                cashPosition += balance;
-                totalAssets += balance;
-              } else if (sectionTitle.includes('asset')) {
-               if (accountName === 'Trade Debtors') {
-                  receivablesTotal += balance;
-                }
-                totalAssets += balance;
-              } else if (sectionTitle.includes('liabilit')) {
-                totalLiabilities += balance;
-              } else if (sectionTitle.includes('equity')) {
-                totalEquity += balance;
-              }
-            });
-          });
+
+          const leaves = collectReportRows(bsRows, '', []);
+          for (const leaf of leaves) {
+            const accountName = leaf.cells[0]?.value || '';
+            const balance = parseFloat(String(leaf.cells[1]?.value ?? '').replace(/,/g, '')) || 0;
+            if (!accountName || accountName.toLowerCase().includes('total') || balance === 0) continue;
+
+            const cat = classifyBalanceSheetRow(accountName, typeMap, leaf.sectionTitle);
+            const rawType = String(typeMap.get(accountName.trim().toLowerCase()) || '').toUpperCase();
+            const isBank = rawType === 'BANK' || leaf.sectionTitle.toLowerCase().includes('bank');
+
+            if (cat === 'asset') {
+              totalAssets += balance;
+              if (isBank) cashPosition += balance;
+              if (accountName === 'Trade Debtors') receivablesTotal += balance;
+            } else if (cat === 'liability') {
+              totalLiabilities += balance;
+            } else if (cat === 'equity') {
+              totalEquity += balance;
+            }
+          }
           
           // Insert into daily_metrics
           await pool.query(
@@ -5891,30 +5915,31 @@ async function runDailySnapshot(triggeredBy = 'scheduler') {
         const bsResponse = await xero.accountingApi.getReportBalanceSheet(conn.tenantId, todayStr);
         const bsRows = bsResponse.body.reports?.[0]?.rows || [];
 
+        const typeMap = await buildAccountTypeMap(conn.tenantId);
+
         let cashPosition = 0, receivablesTotal = 0;
         let totalAssets = 0, totalLiabilities = 0, totalEquity = 0;
 
-        bsRows.forEach((section) => {
-          if (section.rowType !== 'Section' || !section.rows || !section.title) return;
-          const sectionTitle = section.title.toLowerCase();
-          section.rows.forEach((row) => {
-            if (row.rowType !== 'Row' || !row.cells || row.cells.length < 2) return;
-            const accountName = row.cells[0]?.value || '';
-            const balance = parseFloat(row.cells[1]?.value || 0);
-            if (accountName.toLowerCase().includes('total') || balance === 0) return;
-            if (sectionTitle === 'bank' || sectionTitle === 'bank accounts') {
-              cashPosition += balance;
-              totalAssets += balance;
-            } else if (sectionTitle.includes('asset')) {
-              if (accountName === 'Trade Debtors') receivablesTotal += balance;
-              totalAssets += balance;
-            } else if (sectionTitle.includes('liabilit')) {
-              totalLiabilities += balance;
-            } else if (sectionTitle.includes('equity')) {
-              totalEquity += balance;
-            }
-          });
-        });
+        const leaves = collectReportRows(bsRows, '', []);
+        for (const leaf of leaves) {
+          const accountName = leaf.cells[0]?.value || '';
+          const balance = parseFloat(String(leaf.cells[1]?.value ?? '').replace(/,/g, '')) || 0;
+          if (!accountName || accountName.toLowerCase().includes('total') || balance === 0) continue;
+
+          const cat = classifyBalanceSheetRow(accountName, typeMap, leaf.sectionTitle);
+          const rawType = String(typeMap.get(accountName.trim().toLowerCase()) || '').toUpperCase();
+          const isBank = rawType === 'BANK' || leaf.sectionTitle.toLowerCase().includes('bank');
+
+          if (cat === 'asset') {
+            totalAssets += balance;
+            if (isBank) cashPosition += balance;
+            if (accountName === 'Trade Debtors') receivablesTotal += balance;
+          } else if (cat === 'liability') {
+            totalLiabilities += balance;
+          } else if (cat === 'equity') {
+            totalEquity += balance;
+          }
+        }
 
         await pool.query(
           `INSERT INTO daily_metrics
