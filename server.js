@@ -1698,7 +1698,7 @@ async function fetchProfitLossData(tenantId, { date, periodMonths = 1 } = {}) {
           if (amount === 0) return;
 
           // Account TYPE is authoritative; section title is fallback.
-          const category = plCategoryForType(typeMap.get(accountName.trim().toLowerCase())) || sectionCategory;
+          const category = (plCategoryForType(typeMap.get(accountName.trim().toLowerCase())) === 'revenue' && sectionCategory !== 'revenue') ? 'revenue' : sectionCategory;
           if (category === "revenue") {
             plSummary.revenueAccounts.push({ name: accountName, amount });
             plSummary.totalRevenue += amount;
@@ -4526,7 +4526,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
             const amount = sumPLRowCells(row.cells);
             if (amount === 0) return;
 
-            const category = plCategoryForType(typeMap.get(accountName.trim().toLowerCase())) || sectionCategory;
+            const category = (plCategoryForType(typeMap.get(accountName.trim().toLowerCase())) === 'revenue' && sectionCategory !== 'revenue') ? 'revenue' : sectionCategory;
             if (category === "revenue") {
               plSummary.revenueAccounts.push({
                 name: accountName,
@@ -5772,7 +5772,7 @@ async function fetchProfitLossDirect({ tenantId, date, periodMonths = 1, startDa
           if (amount === 0) return;
           // Account TYPE is authoritative (fixes OTHERINCOME accounts Xero's report layout
           // files under a non-income section, e.g. RAC grant accounts); section title is fallback.
-          const category = plCategoryForType(typeMap.get(accountName.trim().toLowerCase())) || sectionCategory;
+          const category = (plCategoryForType(typeMap.get(accountName.trim().toLowerCase())) === 'revenue' && sectionCategory !== 'revenue') ? 'revenue' : sectionCategory;
           if (category === 'revenue') { summary.revenueAccounts.push({ name: accountName, amount }); summary.totalRevenue += amount; }
           else if (category === 'cogs') { summary.cogsAccounts.push({ name: accountName, amount }); summary.totalCOGS += amount; }
           else { summary.expenseAccounts.push({ name: accountName, amount }); summary.totalExpenses += amount; }
