@@ -3966,62 +3966,39 @@ app.get("/api/trial-balance/:tenantId", async (req, res) => {
     let processedAccounts = 0;
 
     // Process each Balance Sheet section
-    balanceSheetRows.forEach((section, sectionIndex) => {
-      if (section.rowType === "Section" && section.rows && section.title) {
-        const sectionTitle = section.title.toLowerCase();
+    const typeMap = await buildAccountTypeMap(req.params.tenantId);
+    const leaves = collectReportRows(balanceSheetRows, '', []);
+    for (const leaf of leaves) {
+      const accountName = leaf.cells[0]?.value || "";
+      const currentBalance = parseFloat(String(leaf.cells[1]?.value ?? '').replace(/,/g, '')) || 0;
+      if (!accountName || accountName.toLowerCase().includes("total") || currentBalance === 0) continue;
 
-        section.rows.forEach((row) => {
-          if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
-            const accountName = row.cells[0]?.value || "";
-            const currentBalance = parseFloat(row.cells[1]?.value || 0);
+      const cat = classifyBalanceSheetRow(accountName, typeMap, leaf.sectionTitle);
+      const accountInfo = { name: accountName, balance: currentBalance, debit: 0, credit: 0, section: leaf.sectionTitle };
 
-            if (
-              accountName.toLowerCase().includes("total") ||
-              currentBalance === 0
-            ) {
-              return;
-            }
-
-            processedAccounts++;
-
-            const accountInfo = {
-              name: accountName,
-              balance: currentBalance,
-              debit: 0,
-              credit: 0,
-              section: section.title,
-            };
-
-            // Account classification logic
-            if (
-              sectionTitle.includes("bank") ||
-              sectionTitle.includes("asset")
-            ) {
-              accountInfo.debit = currentBalance >= 0 ? currentBalance : 0;
-              accountInfo.credit =
-                currentBalance < 0 ? Math.abs(currentBalance) : 0;
-              trialBalance.assets.push(accountInfo);
-              trialBalance.totals.totalAssets += currentBalance;
-            } else if (sectionTitle.includes("liabilit")) {
-              accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
-              accountInfo.debit =
-                currentBalance < 0 ? Math.abs(currentBalance) : 0;
-              trialBalance.liabilities.push(accountInfo);
-              trialBalance.totals.totalLiabilities += currentBalance;
-            } else if (sectionTitle.includes("equity")) {
-              accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
-              accountInfo.debit =
-                currentBalance < 0 ? Math.abs(currentBalance) : 0;
-              trialBalance.equity.push(accountInfo);
-              trialBalance.totals.totalEquity += currentBalance;
-            }
-
-            trialBalance.totals.totalDebits += accountInfo.debit;
-            trialBalance.totals.totalCredits += accountInfo.credit;
-          }
-        });
+      if (cat === 'asset') {
+        accountInfo.debit = currentBalance >= 0 ? currentBalance : 0;
+        accountInfo.credit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+        trialBalance.assets.push(accountInfo);
+        trialBalance.totals.totalAssets += currentBalance;
+      } else if (cat === 'liability') {
+        accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
+        accountInfo.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+        trialBalance.liabilities.push(accountInfo);
+        trialBalance.totals.totalLiabilities += currentBalance;
+      } else if (cat === 'equity') {
+        accountInfo.credit = currentBalance >= 0 ? currentBalance : 0;
+        accountInfo.debit = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+        trialBalance.equity.push(accountInfo);
+        trialBalance.totals.totalEquity += currentBalance;
+      } else {
+        continue;
       }
-    });
+
+      trialBalance.totals.totalDebits += accountInfo.debit;
+      trialBalance.totals.totalCredits += accountInfo.credit;
+      processedAccounts++;
+    }
 
     // Get P&L data for the same date
     try {
