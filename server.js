@@ -3760,13 +3760,16 @@ function collectReportRows(rows, sectionTitle, out) {
 // Classify a BS row: account TYPE first, section-title as safety net so
 // nothing is ever silently dropped.
 function classifyBalanceSheetRow(accountName, typeMap, sectionTitle) {
-  const byType = categoryForXeroType(typeMap.get(accountName.trim().toLowerCase()));
-  if (byType) return byType;
+  // Section title wins when it clearly names a balance-sheet category. This
+  // handles accounts whose TYPE is misleading — e.g. credit cards are TYPE
+  // BANK but belong under "Current Liabilities". Check liability/equity before
+  // asset so a "Non-Current Liabilities" title isn't caught by "asset".
   const s = (sectionTitle || '').toLowerCase();
-  if (s.includes('bank') || s.includes('asset')) return 'asset';
   if (s.includes('liabilit')) return 'liability';
   if (s.includes('equity')) return 'equity';
-  return null;
+  if (s.includes('asset') || s.includes('bank')) return 'asset';
+  // Custom or blank section titles → fall back to the Xero account type.
+  return categoryForXeroType(typeMap.get(accountName.trim().toLowerCase()));
 }
 
 
