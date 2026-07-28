@@ -4499,6 +4499,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
       actualReportDateStr // Use this instead of reportDate
     );
 
+    const typeMap = await buildAccountTypeMap(req.params.tenantId);
     const plRows = response.body.reports?.[0]?.rows || [];
 
     const plSummary = {
@@ -4514,8 +4515,8 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
 
     plRows.forEach((section) => {
       if (section.rowType === "Section" && section.rows && section.title) {
-        const category = categorizeSection(section.title);
-        if (category === "skip") return;
+        const sectionCategory = categorizeSection(section.title);
+        if (sectionCategory === "skip") return;
 
         section.rows.forEach((row) => {
           if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
@@ -4525,6 +4526,7 @@ app.get("/api/profit-loss/:tenantId", async (req, res) => {
             const amount = sumPLRowCells(row.cells);
             if (amount === 0) return;
 
+            const category = plCategoryForType(typeMap.get(accountName.trim().toLowerCase())) || sectionCategory;
             if (category === "revenue") {
               plSummary.revenueAccounts.push({
                 name: accountName,
