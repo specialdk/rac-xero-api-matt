@@ -1669,8 +1669,6 @@ async function fetchProfitLossData(tenantId, { date, periodMonths = 1 } = {}) {
     actualReportDateStr
   );
 
-  const typeMap = await buildAccountTypeMap(tenantId);
-
   const plRows = response.body.reports?.[0]?.rows || [];
 
   const plSummary = {
@@ -1686,8 +1684,8 @@ async function fetchProfitLossData(tenantId, { date, periodMonths = 1 } = {}) {
 
   plRows.forEach((section) => {
     if (section.rowType === "Section" && section.rows && section.title) {
-      const sectionCategory = categorizeSection(section.title);
-      if (sectionCategory === "skip") return;
+      const category = categorizeSection(section.title);
+      if (category === "skip") return;
 
       section.rows.forEach((row) => {
         if (row.rowType === "Row" && row.cells && row.cells.length >= 2) {
@@ -1697,8 +1695,6 @@ async function fetchProfitLossData(tenantId, { date, periodMonths = 1 } = {}) {
           const amount = sumPLRowCells(row.cells);
           if (amount === 0) return;
 
-          // Account TYPE is authoritative; section title is fallback.
-          const category = plCategoryForType(typeMap.get(accountName.trim().toLowerCase())) || sectionCategory;
           if (category === "revenue") {
             plSummary.revenueAccounts.push({ name: accountName, amount });
             plSummary.totalRevenue += amount;
@@ -3738,16 +3734,6 @@ function categoryForXeroType(type) {
   return XERO_TYPE_CATEGORY[String(type || '').toUpperCase()] || null;
 }
 
-// P&L classification by Xero account TYPE (authoritative). Separates COGS from
-// other expenses. Returns 'revenue' | 'cogs' | 'expense' | null.
-function plCategoryForType(type) {
-  const t = String(type || '').toUpperCase();
-  if (t === 'REVENUE' || t === 'SALES' || t === 'OTHERINCOME') return 'revenue';
-  if (t === 'DIRECTCOSTS') return 'cogs';
-  if (t === 'EXPENSE' || t === 'OVERHEADS' || t === 'DEPRECIATN') return 'expense';
-  return null;
-}
-
 // Build a name→type map for an entity (types are date-independent).
 async function buildAccountTypeMap(tenantId) {
   const resp = await xero.accountingApi.getAccounts(tenantId);
@@ -5753,24 +5739,20 @@ async function fetchProfitLossDirect({ tenantId, date, periodMonths = 1, startDa
   console.log(`P&L Date Range: ${fromDateStr} to ${toDateStr} (${periodMonths} month period)`);
 
   const response = await xero.accountingApi.getReportProfitAndLoss(tenantId, fromDateStr, toDateStr);
-  const typeMap = await buildAccountTypeMap(tenantId);
   const plRows = response.body.reports?.[0]?.rows || [];
 
   const summary = { totalRevenue: 0, totalCOGS: 0, grossProfit: 0, totalExpenses: 0, netProfit: 0, revenueAccounts: [], cogsAccounts: [], expenseAccounts: [] };
 
   plRows.forEach((section) => {
     if (section.rowType === 'Section' && section.rows && section.title) {
-      const sectionCategory = categorizeSection(section.title);
-      if (sectionCategory === 'skip') return;
+      const category = categorizeSection(section.title);
+      if (category === 'skip') return;
       section.rows.forEach((row) => {
         if (row.rowType === 'Row' && row.cells && row.cells.length >= 2) {
           const accountName = row.cells[0]?.value || '';
           if (accountName.toLowerCase().includes('total')) return;
           const amount = sumPLRowCells(row.cells);
           if (amount === 0) return;
-          // Account TYPE is authoritative (fixes OTHERINCOME accounts Xero's report layout
-          // files under a non-income section, e.g. RAC grant accounts); section title is fallback.
-          const category = plCategoryForType(typeMap.get(accountName.trim().toLowerCase())) || sectionCategory;
           if (category === 'revenue') { summary.revenueAccounts.push({ name: accountName, amount }); summary.totalRevenue += amount; }
           else if (category === 'cogs') { summary.cogsAccounts.push({ name: accountName, amount }); summary.totalCOGS += amount; }
           else { summary.expenseAccounts.push({ name: accountName, amount }); summary.totalExpenses += amount; }
