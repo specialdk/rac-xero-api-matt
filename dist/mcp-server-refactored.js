@@ -871,7 +871,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // Simple API endpoint mappings
     const API_MAPPINGS = {
-      get_trial_balance: { path: "/api/trial-balance", params: ["reportDate"] },
       get_cash_position: { path: "/api/cash-position", params: [] },
       get_outstanding_invoices: {
         path: "/api/outstanding-invoices",
@@ -922,10 +921,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       },
     };
 
+    // Single-entity trial balance: the API reads ?date=, but the tool arg is reportDate
+    if (name === "get_trial_balance") {
+      return await handleTenantAPICall(args, "/api/trial-balance", {
+        date: args.reportDate,
+      });
+    }
+
     // Non-tenant API calls
     if (name === "get_consolidated_trial_balance") {
       return await handleAPICall("/api/consolidated-trial-balance", {
-        reportDate: args.reportDate,
+        date: args.reportDate,
       });
     }
 
