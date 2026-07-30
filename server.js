@@ -313,7 +313,11 @@ if (!GATE_ENABLED) {
 // Microsoft / Entra settings for the RAC-SSO-Xero app registration
 const MS_TENANT_ID = "91165276-b14b-47c4-b358-37deee11b8e5";
 const MS_CLIENT_ID = "2f1329ac-e466-47bc-bead-da4745048997";
-const SSO_FINANCE_GROUP_ID = "3ea2c51f-5740-47f9-ae66-6bb835a25eeb";
+// Groups allowed into the dashboard: Finance, plus IT-Admin (all-apps access).
+const ALLOWED_GROUP_IDS = [
+  "3ea2c51f-5740-47f9-ae66-6bb835a25eeb", // SSO-Finance
+  "PASTE-SSO-IT-ADMIN-OBJECT-ID-HERE",    // SSO-IT-Admin
+];
 const MS_ISSUER = `https://login.microsoftonline.com/${MS_TENANT_ID}/v2.0`;
 const MS_JWKS = createRemoteJWKSet(
   new URL(`https://login.microsoftonline.com/${MS_TENANT_ID}/discovery/v2.0/keys`)
@@ -343,7 +347,7 @@ async function verifyFinanceToken(idToken) {
     audience: MS_CLIENT_ID,
   });
   const groups = Array.isArray(payload.groups) ? payload.groups : [];
-  if (!groups.includes(SSO_FINANCE_GROUP_ID)) return null;
+  if (!groups.some((g) => ALLOWED_GROUP_IDS.includes(g))) return null;
   return {
     name: payload.name || "",
     email: payload.preferred_username || payload.upn || "",
