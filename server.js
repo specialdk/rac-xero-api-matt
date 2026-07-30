@@ -316,7 +316,7 @@ const MS_CLIENT_ID = "2f1329ac-e466-47bc-bead-da4745048997";
 // Groups allowed into the dashboard: Finance, plus IT-Admin (all-apps access).
 const ALLOWED_GROUP_IDS = [
   "3ea2c51f-5740-47f9-ae66-6bb835a25eeb", // SSO-Finance
-  "PASTE-SSO-IT-ADMIN-OBJECT-ID-HERE",    // SSO-IT-Admin
+  "5f79bf88-bca7-4109-8a0b-fdd49dc5eb1e",    // SSO-IT-Admin
 ];
 const MS_ISSUER = `https://login.microsoftonline.com/${MS_TENANT_ID}/v2.0`;
 const MS_JWKS = createRemoteJWKSet(
