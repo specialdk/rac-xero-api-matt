@@ -80,49 +80,57 @@
       el.className = "msg " + (kind || "err");
       el.innerHTML = text;
     }
-    function setBusy(busy) {
+    function setBusy(busy, label) {
       const btn = document.getElementById("signInBtn");
       btn.disabled = busy;
       btn.innerHTML = busy
-        ? '<span class="spinner"></span> Signing in…'
+        ? '<span class="spinner"></span> ' + (label || 'Working…')
         : 'Sign in with Microsoft';
     }
 
-    async function signIn() {
-      setBusy(true);
-      document.getElementById("msg").style.display = "none";
-      try {
-        const result = await pca.loginPopup({
-          scopes: ["User.Read"],
-          prompt: "select_account"
-        });
-        const idToken = result.idToken;
-
-        // Hand the token to the server — the server verifies it and checks
-        // SSO-Finance membership before it will let us in.
-        const resp = await fetch("/sso/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken })
-        });
-
-        if (resp.ok) {
-          window.location.href = "/";          // signed in → into the app
-          return;
-        }
-        if (resp.status === 403) {
-          setBusy(false);
-          showMsg("You're signed in as <strong>" + (result.account && result.account.username || "") +
-                  "</strong>, but this dashboard is limited to the Finance team. If you need access, contact IT.", "warn");
-          return;
-        }
+    // Send the Microsoft token to the server. The server verifies it and checks
+    // SSO-Finance / IT-Admin membership before it will let us in.
+    async function verifyWithServer(idToken, account) {
+      const resp = await fetch("/sso/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken })
+      });
+      if (resp.ok) {
+        window.location.href = "/";            // signed in → into the app
+        return;
+      }
+      if (resp.status === 403) {
         setBusy(false);
-        showMsg("Sign-in couldn't be verified. Please try again, or contact IT if it keeps happening.");
+        showMsg("You're signed in as <strong>" + (account && account.username || "") +
+                "</strong>, but this dashboard is limited to the Finance team. If you need access, contact IT.", "warn");
+        return;
+      }
+      setBusy(false);
+      showMsg("Sign-in couldn't be verified. Please try again, or contact IT if it keeps happening.");
+    }
+
+    // Redirect-style login: the whole page goes to Microsoft and comes back here.
+    // No pop-up, so browser Cross-Origin-Opener-Policy can't block it.
+    function signIn() {
+      setBusy(true, 'Redirecting to Microsoft…');
+      document.getElementById("msg").style.display = "none";
+      pca.loginRedirect({ scopes: ["User.Read"], prompt: "select_account" });
+    }
+
+    // On load, see if we've just come BACK from Microsoft with a token.
+    window.addEventListener("load", async () => {
+      try {
+        const result = await pca.handleRedirectPromise();
+        if (result && result.idToken) {
+          setBusy(true, 'Signing you in…');
+          await verifyWithServer(result.idToken, result.account);
+        }
       } catch (e) {
         setBusy(false);
-        showMsg("Sign-in was cancelled or didn't complete. Please try again.");
+        showMsg("Sign-in didn't complete. Please try again.");
       }
-    }
+    });
   </script>
 </body>
 </html>
