@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAC Finance — Sign in</title>
+  <script src="https://alcdn.msauth.net/browser/2.38.4/js/msal-browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-dark:#1a2332; --bg-card:#222f3e; --accent:#6366F1;
+      --text:#F1F5F9; --text-muted:#94A3B8; --border:rgba(255,255,255,0.08);
+      --red:#EF4444; --red-glow:rgba(239,68,68,0.12);
+      --amber:#F59E0B; --amber-glow:rgba(245,158,11,0.12);
+    }
+    body {
+      font-family:'DM Sans',system-ui,sans-serif; background:var(--bg-dark); color:var(--text);
+      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .card {
+      width:100%; max-width:400px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:14px; padding:36px 32px; text-align:center;
+      box-shadow:0 10px 40px rgba(0,0,0,0.25);
+    }
+    .logo { font-size:40px; margin-bottom:10px; }
+    h1 { font-size:20px; font-weight:700; letter-spacing:-0.3px; }
+    .sub { font-size:13px; color:var(--text-muted); margin-top:6px; margin-bottom:28px; }
+    .ms-btn {
+      width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+      padding:14px 18px; border:0; border-radius:10px; background:var(--accent); color:#fff;
+      font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; transition:all .2s;
+    }
+    .ms-btn:hover:not(:disabled) { background:#5558E6; transform:translateY(-1px); box-shadow:0 4px 16px rgba(99,102,241,0.35); }
+    .ms-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .ms-logo { width:18px; height:18px; display:inline-block; }
+    .note { font-size:12px; color:var(--text-muted); line-height:1.6; margin-top:22px; }
+    .msg { display:none; margin-top:20px; padding:12px 14px; border-radius:8px; font-size:13px; line-height:1.5; text-align:left; }
+    .msg.err { display:block; background:var(--red-glow); border:1px solid rgba(239,68,68,0.25); color:var(--red); }
+    .msg.warn { display:block; background:var(--amber-glow); border:1px solid rgba(245,158,11,0.25); color:var(--amber); }
+    .spinner { width:16px; height:16px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🔒</div>
+    <h1>RAC Finance Dashboard</h1>
+    <div class="sub">Rirratjingu Aboriginal Corporation</div>
+
+    <button class="ms-btn" id="signInBtn" onclick="signIn()">
+      <svg class="ms-logo" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+        <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+      </svg>
+      Sign in with Microsoft
+    </button>
+
+    <div class="msg" id="msg"></div>
+
+    <div class="note">Access is limited to the RAC Finance team.<br>Sign in with your <strong>@rirratjingu.com</strong> account.</div>
+  </div>
+
+  <script>
+    // --- MSAL setup (RAC-SSO-Xero app registration) ---
+    const msalConfig = {
+      auth: {
+        clientId: "2f1329ac-e466-47bc-bead-da4745048997",
+        authority: "https://login.microsoftonline.com/91165276-b14b-47c4-b358-37deee11b8e5",
+        redirectUri: window.location.origin
+      },
+      cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false }
+    };
+    const pca = new msal.PublicClientApplication(msalConfig);
+
+    function showMsg(text, kind) {
+      const el = document.getElementById("msg");
+      el.className = "msg " + (kind || "err");
+      el.innerHTML = text;
+    }
+    function setBusy(busy) {
+      const btn = document.getElementById("signInBtn");
+      btn.disabled = busy;
+      btn.innerHTML = busy
+        ? '<span class="spinner"></span> Signing in…'
+        : 'Sign in with Microsoft';
+    }
+
+    async function signIn() {
+      setBusy(true);
+      document.getElementById("msg").style.display = "none";
+      try {
+        const result = await pca.loginPopup({
+          scopes: ["User.Read"],
+          prompt: "select_account"
+        });
+        const idToken = result.idToken;
+
+        // Hand the token to the server — the server verifies it and checks
+        // SSO-Finance membership before it will let us in.
+        const resp = await fetch("/sso/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken })
+        });
+
+        if (resp.ok) {
+          window.location.href = "/";          // signed in → into the app
+          return;
+        }
+        if (resp.status === 403) {
+          setBusy(false);
+          showMsg("You're signed in as <strong>" + (result.account && result.account.username || "") +
+                  "</strong>, but this dashboard is limited to the Finance team. If you need access, contact IT.", "warn");
+          return;
+        }
+        setBusy(false);
+        showMsg("Sign-in couldn't be verified. Please try again, or contact IT if it keeps happening.");
+      } catch (e) {
+        setBusy(false);
+        showMsg("Sign-in was cancelled or didn't complete. Please try again.");
+      }
+    }
+  </script>
+</body>
+</html>

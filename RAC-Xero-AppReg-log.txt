@@ -1,0 +1,41 @@
+2026-07-30 12:45:28  
+2026-07-30 12:45:28  ================================================================
+2026-07-30 12:45:28   RAC Xero App Registration - MODE: Preview
+2026-07-30 12:45:28   07/30/2026 12:45:28
+2026-07-30 12:45:28  ================================================================
+2026-07-30 12:45:29   PREVIEW mode: nothing will be changed.
+2026-07-30 12:45:44  
+2026-07-30 12:45:44  Signing in to Microsoft Graph (a browser window may pop up)...
+2026-07-30 12:46:51  Signed in as: 
+2026-07-30 12:46:51  Tenant       : 
+2026-07-30 12:46:51  Could not find the group 'SSO-Finance'. Create the SSO groups first.
+2026-07-30 12:46:51  Found the group but could not read its ID. Stop - do not Commit.
+2026-07-30 12:46:51  Found group  : SSO-Finance  ()
+2026-07-30 12:46:52  
+2026-07-30 12:46:52  Planned registration:
+2026-07-30 12:46:52      Name        : RAC-SSO-Xero
+2026-07-30 12:46:52      Type        : Single-tenant, SPA (MSAL.js / PKCE - no client secret)
+2026-07-30 12:46:52      Group claim : SecurityGroup (so the login token lists the user's groups)
+2026-07-30 12:46:52      Graph perm  : User.Read (sign in + read own profile)
+2026-07-30 12:46:52      Redirect    : https://rac-xero-api-matt-production.up.railway.app/
+2026-07-30 12:46:52      Redirect    : https://rac-xero-api-matt-production.up.railway.app
+2026-07-30 12:46:52      Redirect    : http://localhost:3000
+2026-07-30 12:46:52      Redirect    : http://localhost:5500
+2026-07-30 12:46:52  
+2026-07-30 12:46:52  PREVIEW complete. Nothing was changed.
+2026-07-30 12:46:52  Re-run with  -Mode Commit  when you're happy.
+2026-07-30 12:46:52  
+2026-07-30 12:46:53  
+2026-07-30 12:46:53  ================================================================
+2026-07-30 12:46:53   DONE. Registration ready. COPY THE BLOCK BELOW and send to Claude:
+2026-07-30 12:46:53  ================================================================
+2026-07-30 12:46:53  
+2026-07-30 12:46:53  ----- RAC XERO SSO CONFIG -----
+2026-07-30 12:46:53  Client (Application) ID : 
+2026-07-30 12:46:53  Tenant ID               : 
+2026-07-30 12:46:53  SSO-Finance Group ID    : 
+2026-07-30 12:46:53  Authority               : https://login.microsoftonline.com/
+2026-07-30 12:46:53  Redirect URI            : https://rac-xero-api-matt-production.up.railway.app/
+2026-07-30 12:46:53  -------------------------------
+2026-07-30 12:46:53  
+2026-07-30 12:46:53  Saved to: C:\Users\speci\OneDrive\RAC-Projects\rac-mcp\rac-xero\rac-api\rac-xero-api-matt\RAC-Xero-AppReg-log.txt

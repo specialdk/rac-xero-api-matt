@@ -14,6 +14,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import cookieParser from "cookie-parser";
 import crypto from "crypto";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
 // Spend & Revenue classifier modules — see /lib/classifier.js and
 // /lib/revenue-classifier.js. Imported as namespaces with renamed
@@ -297,109 +298,126 @@ const tokenStorage = {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// === Shared-passphrase access gate ===
-// Sits in front of static files and every route. Fails CLOSED when env vars
-// are missing. Allowlist is intentionally tiny — OAuth callbacks only, since
-// they cannot carry the gate cookie back from Xero/ApprovalMax.
-const GATE_PASSWORD = process.env.DASHBOARD_GATE_PASSWORD;
+// === Microsoft SSO access gate — SSO-Finance only ===
+// Sits in front of static files and every route. Fails CLOSED if the cookie
+// secret is missing. Allowlist is intentionally tiny — OAuth callbacks plus the
+// sign-in page + its verify endpoint. Because this app holds financial data, the
+// REAL check happens here on the server: a signed cookie is only issued after we
+// verify the person's Microsoft token AND that they are in SSO-Finance.
 const GATE_COOKIE_SECRET = process.env.GATE_COOKIE_SECRET;
-const GATE_ENABLED = Boolean(GATE_PASSWORD && GATE_COOKIE_SECRET);
+const GATE_ENABLED = Boolean(GATE_COOKIE_SECRET);
 if (!GATE_ENABLED) {
-  console.error("[GATE] FAIL-CLOSED: gate env vars missing");
+  console.error("[GATE] FAIL-CLOSED: GATE_COOKIE_SECRET missing");
 }
 
+// Microsoft / Entra settings for the RAC-SSO-Xero app registration
+const MS_TENANT_ID = "91165276-b14b-47c4-b358-37deee11b8e5";
+const MS_CLIENT_ID = "2f1329ac-e466-47bc-bead-da4745048997";
+const SSO_FINANCE_GROUP_ID = "3ea2c51f-5740-47f9-ae66-6bb835a25eeb";
+const MS_ISSUER = `https://login.microsoftonline.com/${MS_TENANT_ID}/v2.0`;
+const MS_JWKS = createRemoteJWKSet(
+  new URL(`https://login.microsoftonline.com/${MS_TENANT_ID}/discovery/v2.0/keys`)
+);
+
+// Paths that never require a Microsoft sign-in:
+//  - Xero / ApprovalMax OAuth callbacks (they can't carry our cookie back)
+//  - the sign-in page + the token-verify endpoint
+//  - a plain health check for uptime monitors
 const GATE_ALLOWLIST = new Set([
   "/auth",
   "/callback",
   "/callback/approvalmax",
+  "/sso/login",
+  "/sso/verify",
+  "/api/health",
 ]);
 
-const GATE_PAGE = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RAC Finance &mdash; Access</title>
-<style>
-  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f4f4f6;margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh}
-  form{background:#fff;padding:1.75rem 2rem;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08);width:320px;max-width:90vw}
-  h1{font-size:1.05rem;margin:0 0 1rem;color:#222;font-weight:600}
-  label{display:block;font-size:.85rem;color:#555;margin-bottom:.4rem}
-  input[type=password]{width:100%;padding:.6rem .7rem;border:1px solid #ccc;border-radius:4px;font-size:1rem;box-sizing:border-box}
-  button{margin-top:1rem;width:100%;padding:.7rem;background:#1a3a52;color:#fff;border:0;border-radius:4px;font-size:1rem;cursor:pointer}
-  button:hover{background:#244c6a}
-  .err{color:#a3261b;font-size:.85rem;margin-top:.6rem}
-</style></head>
-<body>
-  <form method="POST" action="/gate-login" autocomplete="off">
-    <h1>RAC Finance &mdash; access required</h1>
-    <label for="p">Passphrase</label>
-    <input id="p" name="passphrase" type="password" autofocus required>
-    <button type="submit">Continue</button>
-    __ERROR__
-  </form>
-</body></html>`;
+// Cookie parser must run before the gate + the /sso routes so signed cookies work.
+app.use(cookieParser(GATE_COOKIE_SECRET));
 
-function renderGatePage(showError) {
-  return GATE_PAGE.replace(
-    "__ERROR__",
-    showError ? '<div class="err">Incorrect passphrase.</div>' : ""
-  );
+// Verify a Microsoft ID token and confirm SSO-Finance membership.
+// Returns { name, email } on success, or null if the person is not in Finance.
+async function verifyFinanceToken(idToken) {
+  const { payload } = await jwtVerify(idToken, MS_JWKS, {
+    issuer: MS_ISSUER,
+    audience: MS_CLIENT_ID,
+  });
+  const groups = Array.isArray(payload.groups) ? payload.groups : [];
+  if (!groups.includes(SSO_FINANCE_GROUP_ID)) return null;
+  return {
+    name: payload.name || "",
+    email: payload.preferred_username || payload.upn || "",
+  };
 }
+
+// The sign-in page (Microsoft login) — reachable without a cookie.
+app.get("/sso/login", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "sso-login.html"));
+});
+
+// Sign out — clears the session cookie.
+app.get("/sso/logout", (req, res) => {
+  res.clearCookie("gate_ok");
+  res.redirect("/sso/login");
+});
+
+// Receives the Microsoft token from the sign-in page, verifies it + Finance
+// membership on the server, and only then issues the signed session cookie.
+app.post("/sso/verify", async (req, res) => {
+  if (!GATE_ENABLED) {
+    return res.status(503).json({ ok: false, error: "gate_disabled" });
+  }
+  const idToken = req.body && req.body.idToken;
+  if (!idToken) {
+    return res.status(400).json({ ok: false, error: "no_token" });
+  }
+  try {
+    const user = await verifyFinanceToken(idToken);
+    if (!user) {
+      return res.status(403).json({ ok: false, error: "not_finance" });
+    }
+    res.cookie("gate_ok", "1", {
+      httpOnly: true,
+      signed: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV !== "development",
+      maxAge: 12 * 60 * 60 * 1000,
+    });
+    return res.json({ ok: true, name: user.name });
+  } catch (err) {
+    console.error("[SSO] token verify failed:", err.message);
+    return res.status(401).json({ ok: false, error: "invalid_token" });
+  }
+});
 
 function gateMiddleware(req, res, next) {
   if (GATE_ALLOWLIST.has(req.path)) {
     return next();
   }
 
-  // Allow MCP server and internal service calls via API key header
-  const internalKey = req.headers['x-internal-api-key'];
+  // Allow the MCP server + internal service calls via API key header
+  const internalKey = req.headers["x-internal-api-key"];
   if (internalKey && process.env.INTERNAL_API_KEY && internalKey === process.env.INTERNAL_API_KEY) {
     return next();
   }
 
   if (!GATE_ENABLED) {
-    return res
-      .status(503)
-      .type("text/plain")
-      .send("Service unavailable");
+    return res.status(503).type("text/plain").send("Service unavailable");
   }
 
+  // Already signed in this session?
   if (req.signedCookies && req.signedCookies.gate_ok === "1") {
     return next();
   }
 
-  if (req.method === "POST" && req.path === "/gate-login") {
-    const submitted =
-      req.body && typeof req.body.passphrase === "string"
-        ? req.body.passphrase
-        : "";
-    const submittedBuf = Buffer.from(submitted, "utf8");
-    const expectedBuf = Buffer.from(GATE_PASSWORD, "utf8");
-    let ok = false;
-    if (submittedBuf.length === expectedBuf.length) {
-      try {
-        ok = crypto.timingSafeEqual(submittedBuf, expectedBuf);
-      } catch {
-        ok = false;
-      }
-    }
-    if (ok) {
-      res.cookie("gate_ok", "1", {
-        httpOnly: true,
-        signed: true,
-        sameSite: "lax",
-        secure: true,
-        maxAge: 12 * 60 * 60 * 1000,
-      });
-      return res.redirect("/");
-    }
-    return res.status(401).type("text/html").send(renderGatePage(true));
+  // No valid session: API calls get a clean 401; browsers get the sign-in page.
+  if (req.path.startsWith("/api/")) {
+    return res.status(401).json({ error: "Sign in required — Finance access only" });
   }
-
-  return res.status(200).type("text/html").send(renderGatePage(false));
+  return res.sendFile(path.join(__dirname, "public", "sso-login.html"));
 }
 
-app.use(cookieParser(GATE_COOKIE_SECRET));
-// app.use(gateMiddleware); // Temporarily disabled — SSO planned as replacement
+app.use(gateMiddleware);
 
 app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
