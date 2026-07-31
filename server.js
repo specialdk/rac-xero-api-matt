@@ -437,7 +437,7 @@ const xero = new XeroClient({
     "accounting.reports.read",
     "offline_access", // ADD THIS LINE
     "accounting.budgets.read", // ADD THIS LINE
-     "offline_access",
+    "offline_access",
   ],
 });
 
