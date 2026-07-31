@@ -2990,6 +2990,131 @@ app.get("/api/account-history/:tenantId/:accountName", async (req, res) => {
   }
 });
 
+// ============================================================
+// NEW: Full general-ledger history for one account (ALL sources)
+// Uses getJournals, so it captures bills, payments, invoices AND
+// manual journals — not just manual journals like account-history.
+// ============================================================
+app.get("/api/account-ledger/:tenantId/:accountName", async (req, res) => {
+  try {
+    const tokenData = await tokenStorage.getXeroToken(req.params.tenantId);
+    if (!tokenData) {
+      return res
+        .status(404)
+        .json({ error: "Tenant not found or token expired" });
+    }
+
+    await xero.setTokenSet(tokenData);
+
+    const accountName = decodeURIComponent(req.params.accountName);
+    const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom) : null;
+    const dateTo = req.query.dateTo ? new Date(req.query.dateTo) : null;
+
+    // 1) Find the account so we know its code
+    const accountsResponse = await xero.accountingApi.getAccounts(
+      req.params.tenantId,
+      null,
+      `Name.Contains("${accountName}")`
+    );
+    const accounts = accountsResponse.body.accounts || [];
+    const matchingAccount = accounts.find(
+      (acc) =>
+        acc.name.toLowerCase() === accountName.toLowerCase() ||
+        acc.name.toLowerCase().includes(accountName.toLowerCase())
+    );
+
+    if (!matchingAccount) {
+      return res.json({
+        error: `Account "${accountName}" not found`,
+        tenantName: tokenData.tenantName,
+        availableAccounts: accounts.slice(0, 10).map((a) => a.name),
+      });
+    }
+
+    const targetCode = matchingAccount.code;
+
+    // 2) Page through ALL journals (Xero returns 100 at a time).
+    //    The Journals API has no date filter, so we filter our side.
+    let offset = 0;
+    let keepPaging = true;
+    let pagesFetched = 0;
+    const MAX_PAGES = 200; // safety cap = 20,000 journals
+    const matches = [];
+
+    while (keepPaging && pagesFetched < MAX_PAGES) {
+      const jr = await xero.accountingApi.getJournals(
+        req.params.tenantId,
+        null,   // ifModifiedSince
+        offset  // returns journals with JournalNumber > offset
+      );
+      const journals = jr.body.journals || [];
+      pagesFetched++;
+
+      if (journals.length === 0) break;
+
+      for (const j of journals) {
+        const jDate = new Date(j.journalDate);
+        if (dateFrom && jDate < dateFrom) continue;
+        if (dateTo && jDate > dateTo) continue;
+
+        const lines = (j.journalLines || []).filter(
+          (l) => l.accountCode === targetCode
+        );
+        for (const l of lines) {
+          matches.push({
+            journalDate: j.journalDate,
+            journalNumber: j.journalNumber,
+            reference: j.reference || "",
+            sourceType: j.sourceType || "", // ACCPAY=bill, MANJOURNAL=manual, etc.
+            description: l.description || "",
+            netAmount: l.netAmount,
+            grossAmount: l.grossAmount,
+          });
+        }
+      }
+
+      // advance to the highest JournalNumber we just saw
+      offset = journals[journals.length - 1].journalNumber;
+      if (journals.length < 100) keepPaging = false; // reached the end
+    }
+
+    // 3) Summarise by source type — shows what KIND of costs hit the account
+    const bySource = {};
+    let netMovement = 0;
+    for (const m of matches) {
+      netMovement += m.netAmount || 0;
+      const key = m.sourceType || "UNKNOWN";
+      bySource[key] = (bySource[key] || 0) + (m.netAmount || 0);
+    }
+
+    matches.sort((a, b) => new Date(b.journalDate) - new Date(a.journalDate));
+
+    res.json({
+      tenantId: req.params.tenantId,
+      tenantName: tokenData.tenantName,
+      account: {
+        accountID: matchingAccount.accountID,
+        accountCode: matchingAccount.code,
+        accountName: matchingAccount.name,
+        accountType: matchingAccount.type,
+      },
+      dateFrom: req.query.dateFrom || "All time",
+      dateTo: req.query.dateTo || "All time",
+      pagesFetched,
+      transactionCount: matches.length,
+      netMovement,
+      movementBySourceType: bySource,
+      transactions: matches,
+    });
+  } catch (error) {
+    console.error("Error getting account ledger:", error);
+    res.status(500).json({
+      error: "Failed to get account ledger",
+      details: error.message,
+    });
+  }
+});
+
 // Find unbalanced transactions
 app.get("/api/find-unbalanced/:tenantId", async (req, res) => {
   try {

@@ -262,9 +262,25 @@ const TOOLS = [
       },
     },
   },
-  {
+ {
     name: "get_account_history",
     description: "Get detailed transaction history for a specific account",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tenantId: { type: "string" },
+        organizationName: { type: "string" },
+        accountName: { type: "string" },
+        dateFrom: { type: "string" },
+        dateTo: { type: "string" },
+      },
+      required: ["accountName"],
+    },
+  },
+  {
+    name: "get_account_ledger",
+    description:
+      "Get FULL general-ledger history for an account (bills, payments, invoices AND manual journals). Use this to reconstruct how a balance was built up over time.",
     inputSchema: {
       type: "object",
       properties: {
@@ -879,6 +895,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // Server route is /api/account-history/:tenantId/:accountName → tenantId FIRST
       const apiPath =
         `/api/account-history/${tenantId}/${encodeURIComponent(args.accountName)}`;
+      const data = await callRailwayAPI(`${apiPath}${query}`);
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    }
+
+    if (name === "get_account_ledger") {
+      const tenantId = await resolveTenantId(args);
+      const query = buildQueryString({
+        dateFrom: args.dateFrom,
+        dateTo: args.dateTo,
+      });
+      const apiPath =
+        `/api/account-ledger/${tenantId}/${encodeURIComponent(args.accountName)}`;
       const data = await callRailwayAPI(`${apiPath}${query}`);
       return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
     }
