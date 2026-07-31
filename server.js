@@ -3111,7 +3111,9 @@ app.get("/api/account-ledger/:tenantId/:accountName", async (req, res) => {
     console.error("Error getting account ledger:", error);
     res.status(500).json({
       error: "Failed to get account ledger",
-      details: error.message,
+      message: error.message || String(error),
+      statusCode: error.response?.statusCode || null,
+      xeroError: error.response?.body || null,
     });
   }
 });
