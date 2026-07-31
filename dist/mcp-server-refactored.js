@@ -869,6 +869,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: result }] };
     }
 
+    // ---- NEW: dedicated handler so tenantId comes BEFORE accountName ----
+    if (name === "get_account_history") {
+      const tenantId = await resolveTenantId(args);
+      const query = buildQueryString({
+        dateFrom: args.dateFrom,
+        dateTo: args.dateTo,
+      });
+      // Server route is /api/account-history/:tenantId/:accountName → tenantId FIRST
+      const apiPath =
+        `/api/account-history/${tenantId}/${encodeURIComponent(args.accountName)}`;
+      const data = await callRailwayAPI(`${apiPath}${query}`);
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    }
+
+
     // Simple API endpoint mappings
     const API_MAPPINGS = {
       get_cash_position: { path: "/api/cash-position", params: [] },
@@ -888,11 +903,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         path: "/api/equity-analysis",
         params: ["equityAccountName", "monthsBack"],
       },
-      get_account_history: {
-        path: "/api/account-history",
-        params: ["dateFrom", "dateTo"],
-        pathParam: "accountName",
-      },
+      
       find_unbalanced_transactions: {
         path: "/api/find-unbalanced",
         params: ["minimumAmount", "dateRange"],
