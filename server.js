@@ -4338,7 +4338,8 @@ app.get("/api/consolidated-trial-balance", async (req, res) => {
         const trialBalanceResponse = await fetch(
           `${req.protocol}://${req.get("host")}/api/trial-balance/${
             connection.tenantId
-          }?date=${reportDate}`
+          }?date=${reportDate}`,
+          { headers: { "x-internal-api-key": process.env.INTERNAL_API_KEY } }
         );
 
         if (trialBalanceResponse.ok) {
