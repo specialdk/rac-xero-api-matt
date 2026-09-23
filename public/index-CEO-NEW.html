@@ -7385,7 +7385,9 @@ const colors = {
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
-        const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                const withBold = escaped
+          .replace(/^#{1,6}\s*(.+)$/gm, '<strong>$1</strong>')
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         const paragraphs = withBold.split(/\n\s*\n/).map(p => `<p>${p.trim()}</p>`).join('');
         return paragraphs;
       }
