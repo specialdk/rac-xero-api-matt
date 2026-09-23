@@ -5940,12 +5940,12 @@ async function fetchProfitLossDirect({ tenantId, date, periodMonths = 1, startDa
 
 // Self-loopback fetch helper. Reuses our own /api/profit-loss-summary so we
 // don't reimplement Xero P&L parsing inside the snapshot function.
-async function snapshotFetchInternal(endpoint, body) {
+async function snapshotFetchInternal(endpoint, body, authHeaders = {}) {
   const baseUrl = `http://localhost:${process.env.PORT || 8080}`;
   try {
     const resp = await fetch(`${baseUrl}${endpoint}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(body),
     });
     if (!resp.ok) return { error: `HTTP ${resp.status}` };
@@ -6754,13 +6754,13 @@ app.post('/api/account-variance', async (req, res) => {
           snapshotFetchInternal('/api/profit-loss-summary', {
             organizationName: tenantName,
             date: currentEndDate,
-            periodMonths: currentMonths,
-          }),
+                        periodMonths: currentMonths,
+          }, { ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}), ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {}) }),
           snapshotFetchInternal('/api/profit-loss-summary', {
             organizationName: tenantName,
             date: priorEndDate,
-            periodMonths: priorMonths,
-          }),
+                        periodMonths: priorMonths,
+          }, { ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}), ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {}) }),
         ]);
 
         if (curResp.error || !curResp.summary || priorResp.error || !priorResp.summary) {
@@ -7736,14 +7736,21 @@ app.post("/api/ai-chat", async (req, res) => {
     // â”€â”€ Fetch REAL financial data from our own API endpoints â”€â”€
     console.log(`ðŸ¤– AI Chat: Fetching live data for "${entityName}" (${period}, ${periodMonths}mo to ${reportDate || 'today'})...`);
 
-    const fetchInternal = async (endpoint, body) => {
+        const fetchInternal = async (endpoint, body) => {
       try {
         const resp = await fetch(`${baseUrl}${endpoint}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
+            ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {}),
+          },
           body: JSON.stringify(body),
         });
-        if (!resp.ok) return null;
+        if (!resp.ok) {
+          console.warn(`AI Chat: ${endpoint} returned HTTP ${resp.status}`);
+          return null;
+        }
         return await resp.json();
       } catch (e) {
         console.warn(`AI Chat: Failed to fetch ${endpoint}:`, e.message);
